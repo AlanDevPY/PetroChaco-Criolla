@@ -98,3 +98,20 @@ export const actualizarStockporId = async (id, stockActualizado ) => {
     console.error("Error al actualizar stock:", error);
   }
 };
+
+// FUNCION PARA OBTENER STOCK POR ID
+export const obtenerStockPorId = async (id) => {
+  try {
+    const servicioRef = doc(db, 'Stock', id); // Referencia al documento con el id proporcionado
+    const servicioSnapshot = await getDoc(servicioRef);
+
+    if (servicioSnapshot.exists()) {
+      return { ...servicioSnapshot.data(), id: servicioSnapshot.id };
+    } else {
+      console.error("No se encontró item con el id proporcionado.");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error al obtener el item por id:", error);
+  }
+};

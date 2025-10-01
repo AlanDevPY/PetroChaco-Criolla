@@ -18,7 +18,7 @@ const loginForm = document.getElementById("loginForm");
 
       setTimeout(() => {
         loginSuccessModal.hide();
-        window.location.href = "html/home.html";
+        window.location.href = "html/ventas.html";
       }, 2000);
 
     } else {

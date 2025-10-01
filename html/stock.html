@@ -14,14 +14,14 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="home.html">PETROCHACHO POS</a>
+            <a class="navbar-brand fw-bold" href="ventas.html">PETROCHACHO POS</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarStock">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarStock">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
-                        <a class="nav-link" href="home.html">Ventas</a>
+                        <a class="nav-link" href="ventas.html">Ventas</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#">Reportes</a>
@@ -45,7 +45,8 @@
 
             <div class="d-flex gap-2">
                 <input type="text" class="form-control" placeholder="🔍 Buscar producto">
-                <button class="btn btn-primary" id="btnAgregar" data-bs-toggle="modal" data-bs-target="#modalAgregarProducto">
+                <button class="btn btn-primary" id="btnAgregar" data-bs-toggle="modal"
+                    data-bs-target="#modalAgregarProducto">
                     ➕ Agregar Producto
                 </button>
             </div>
@@ -60,6 +61,7 @@
                         <th>#</th>
                         <th>Producto</th>
                         <th>Categoría</th>
+                        <th>Codigo de Barra</th>
                         <th class="text-center">Stock</th>
                         <th class="text-end">Precio</th>
                         <th class="text-center">Acciones</th>
@@ -85,6 +87,11 @@
                             <label class="form-label">Nombre del Producto</label>
                             <input type="text" id="nuevoItemStock" class="form-control"
                                 placeholder="Ej: Lomito Completo" required autocomplete="off">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Codigo de Barra</label>
+                            <input type="number" id="nuevoCodigoBarraStock" class="form-control"
+                                placeholder="Tickear codigo de barra aqui!!" required autocomplete="off">
                         </div>
 
                         <div class="mb-3">
@@ -112,7 +119,8 @@
 
                         <div class="mb-3">
                             <label class="form-label">Precio</label>
-                            <input type="text" autocomplete="off" required id="nuevoCostoStock" class="form-control text-end" placeholder="0">
+                            <input type="text" autocomplete="off" required id="nuevoCostoStock"
+                                class="form-control text-end" placeholder="0">
                         </div>
 
                         <div class="modal-footer">
@@ -124,7 +132,7 @@
             </div>
         </div>
     </div>
-        <!-- Modal actualizar Producto -->
+    <!-- Modal actualizar Producto -->
     <div class="modal fade" id="modalActualizarProducto" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -138,6 +146,12 @@
                             <label class="form-label">Nombre del Producto</label>
                             <input type="text" id="actualizarItemStock" class="form-control"
                                 placeholder="Ej: Lomito Completo" required autocomplete="off">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Codigo de Barra</label>
+                            <input type="number" id="actualizarCodigoBarraStock" class="form-control"
+                                placeholder="Tickear codigo de barra aqui!!" required autocomplete="off">
                         </div>
 
                         <div class="mb-3">
@@ -159,13 +173,14 @@
 
                         <div class="mb-3">
                             <label class="form-label">Stock</label>
-                            <input type="number" disabled id="actualizarCantidadStock" required class="form-control text-center"
-                                placeholder="0">
+                            <input type="number" disabled id="actualizarCantidadStock" required
+                                class="form-control text-center" placeholder="0">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Precio</label>
-                            <input type="text" autocomplete="off" required id="actualizarCostoStock" class="form-control text-end" placeholder="0">
+                            <input type="text" autocomplete="off" required id="actualizarCostoStock"
+                                class="form-control text-end" placeholder="0">
                         </div>
 
                         <div class="modal-footer">
@@ -233,7 +248,7 @@
         </div>
     </div>
 
-        <!-- Modal Stock atualizado -->
+    <!-- Modal Stock atualizado -->
     <div class="modal fade" id="modalStockActualizado" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content text-center">
@@ -247,7 +262,7 @@
     </div>
 
 
-    
+
 
 
     <!-- Footer -->

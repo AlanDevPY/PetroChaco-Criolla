@@ -35,6 +35,7 @@ btnAgregar.addEventListener("click", () => {
 
 // Referencias a elementos
 const registrarStockForm = document.getElementById("registrarStockForm");
+const actualizarStockForm = document.getElementById("actualizarStockForm");
 const stockTable = document.getElementById("stockTable");
 
 // Instancias de modales
@@ -74,7 +75,8 @@ const mostrarStock = async () => {
         <td>${++contador}</td>
         <td>${item.item}</td>
         <td>${item.categoria}</td>
-        <td class="text-end">${Number(item.cantidad).toLocaleString("es-PY")}</td>
+        <td>${item.codigoBarra}</td>
+        <td class="text-center">${Number(item.cantidad).toLocaleString("es-PY")}</td>
         <td class="text-end">${Number(item.costo).toLocaleString("es-PY")} Gs</td>
         <td class="text-center">
           <button data-id="${item.id}" class="btn btn-sm btn-warning">✏️</button>
@@ -113,6 +115,7 @@ const mostrarStock = async () => {
         if (item.id === idStock) {
           document.getElementById("actualizarItemStock").value = item.item;
           document.getElementById("actualizarCategoriaStock").value = item.categoria;
+          document.getElementById("actualizarCodigoBarraStock").value = item.codigoBarra;
           document.getElementById("actualizarCantidadStock").value = item.cantidad;
           document.getElementById("actualizarCostoStock").value = Number(item.costo).toLocaleString("es-PY");
         }
@@ -154,8 +157,10 @@ registrarStockForm.addEventListener("submit", async (e) => {
 
 
   const FechaDeRegistro = dayjs().format("DD/MM/YYYY, h:mm:ss A");
-  const item = document.getElementById("nuevoItemStock").value;
+  // registrar item con mayuscular y evitar espacio en blanco
+  const item = document.getElementById("nuevoItemStock").value.trim().toUpperCase();
   const categoria = document.getElementById("nuevoCategoriaStock").value;
+  const codigoBarra = document.getElementById("nuevoCodigoBarraStock").value;
   const cantidad = Number(document.getElementById("nuevoCantidadStock").value);
 
   // Convertir el costo de string a number
@@ -164,7 +169,7 @@ registrarStockForm.addEventListener("submit", async (e) => {
   // Quitar los puntos antes de guardar
   costo = Number(costo.replace(/\./g, ""));
 
-  const stockData = { FechaDeRegistro, item, categoria, cantidad, costo };
+  const stockData = { FechaDeRegistro, item, codigoBarra, categoria, cantidad, costo };
 
   // ⚡ Cerrar modal "Agregar Producto"
   modalAgregarProducto.hide();
