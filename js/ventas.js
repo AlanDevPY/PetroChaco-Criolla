@@ -1,23 +1,32 @@
-import { obtenerStock, obtenerStockPorId } from "./firebase.js";
+import {
+  obtenerStock,
+  obtenerStockPorId,
+  registrarCliente,
+  obtenerClientes,
+  obtenerCajas,
+  registrarCaja,
+  actualizarCajaporId,
+} from "./firebase.js";
 
 // VARIABLES GLOBALES
 let pedido = [];
 let pedidoGenerado = {};
+let cliente;
 
 // FUNCION DE SUMAR SUB TOTALES
 function calcularTotalPedido() {
-    //   desabilitar boton de cobro si el pedido esta vacio
-    if (pedido.length === 0) {
-        btnCobrar.disabled = true;
-    }else{
-        btnCobrar.disabled = false;
-    }
-    
-    return pedido.reduce((acumulador, item) => acumulador + item.subTotal, 0);
+  //   desabilitar boton de cobro si el pedido esta vacio
+  if (pedido.length === 0) {
+    btnCobrar.disabled = true;
+  } else {
+    btnCobrar.disabled = false;
+  }
+
+  return pedido.reduce((acumulador, item) => acumulador + item.subTotal, 0);
 }
 
 // Detectamos todos los inputs de tipo number
-document.querySelectorAll("body input[type='text']").forEach(input => {
+document.querySelectorAll(".formatearInput").forEach((input) => {
   // Guardamos el valor "puro" en un atributo dataset
   input.dataset.value = input.value;
 
@@ -32,7 +41,6 @@ document.querySelectorAll("body input[type='text']").forEach(input => {
     input.value = valorPuro ? Number(valorPuro).toLocaleString("de-DE") : "";
   });
 });
-
 
 // FUNCION DE MODAL ALERTA
 
@@ -184,18 +192,13 @@ const mostrarPedidoCargado = () => {
   });
 };
 
-// FUNCION PRINCIPAL AL CARGAR LA PAGINA
-window.addEventListener("DOMContentLoaded", async () => {
-  await mostrarStockDataList();
-});
-
-// FUNCIONES EN MODAL DE COBRO
+//? FUNCIONES EN MODAL DE COBRO--------------------------------------------------
 btnCobrar.addEventListener("click", async () => {
   modalTotalCobro.textContent =
     "Total a pagar: " + calcularTotalPedido().toLocaleString("es-PY") + " Gs";
 
-    // reset form
-    document.getElementById("modalCobrarForm").reset();
+  // reset form
+  document.getElementById("modalCobrarForm").reset();
 });
 
 const efectivoInput = document.getElementById("efectivo");
@@ -203,23 +206,27 @@ const tarjetaInput = document.getElementById("tarjeta");
 const transferenciaInput = document.getElementById("transferencia");
 const modalTotalCobro = document.getElementById("modalTotalCobro");
 
-
-
 function actualizarCobro() {
   const totalPedido = calcularTotalPedido(); // total que el cliente debe
-const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
-const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
-const transferencia = Number(transferenciaInput.value.replace(/\./g, "") || 0);
-
+  const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
+  const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
+  const transferencia = Number(
+    transferenciaInput.value.replace(/\./g, "") || 0
+  );
 
   const pagado = efectivo + tarjeta + transferencia;
   const diferencia = totalPedido - pagado;
 
-  modalTotalCobro.classList.remove("alert-danger", "alert-warning", "alert-success");
+  modalTotalCobro.classList.remove(
+    "alert-danger",
+    "alert-warning",
+    "alert-success"
+  );
 
   if (diferencia > 0) {
     // Falta pagar → rojo
-    modalTotalCobro.textContent = "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs";
+    modalTotalCobro.textContent =
+      "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs";
     modalTotalCobro.classList.add("alert-danger");
   } else if (diferencia === 0) {
     // Exacto → verde
@@ -227,7 +234,8 @@ const transferencia = Number(transferenciaInput.value.replace(/\./g, "") || 0);
     modalTotalCobro.classList.add("alert-success");
   } else {
     // Vuelto → amarillo
-    modalTotalCobro.textContent = "Vuelto: " + (-diferencia).toLocaleString("es-PY") + " Gs";
+    modalTotalCobro.textContent =
+      "Vuelto: " + (-diferencia).toLocaleString("es-PY") + " Gs";
     modalTotalCobro.classList.add("alert-warning");
   }
 }
@@ -235,4 +243,168 @@ const transferencia = Number(transferenciaInput.value.replace(/\./g, "") || 0);
 // Escuchar cambios en los inputs
 [efectivoInput, tarjetaInput, transferenciaInput].forEach((input) => {
   input.addEventListener("input", actualizarCobro);
+});
+
+// funcion con modal cobro cliente
+
+let timeout;
+clienteRucCobro.addEventListener("input", () => {
+  clearTimeout(timeout);
+  timeout = setTimeout(async () => {
+    const ruc = clienteRucCobro.value.trim();
+    if (!ruc) return;
+    const clientes = await obtenerClientes();
+    cliente = clientes.find((c) => c.ruc === ruc);
+    if (cliente) {
+      clienteNombreCobro.value = cliente.nombre;
+      clienteDireccionCobro.value = cliente.direccion;
+      clienteTelefonoCobro.value = cliente.telefono;
+    }
+  }, 400);
+});
+
+// FUNCION PARA REGISTRAR LA VENTA
+document
+  .getElementById("modalCobrarForm")
+  .addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // Obtengo todas las cajas
+    const Cajas = await obtenerCajas();
+
+    // Busco si hay alguna caja abierta
+    let cajaAbierta = Cajas.find((caja) => caja.estado === "abierta");
+
+    // Datos de la venta actual
+    const venta = {
+      cliente: cliente, // asumiendo que ya definiste el objeto cliente
+      venta: pedido, // array de productos de la venta actual
+      fecha: dayjs().format("DD/MM/YYYY, h:mm:ss A"),
+      total: calcularTotalPedido(),
+    };
+
+    if (!cajaAbierta) {
+      // No hay caja abierta → creo la primera caja y agrego la venta
+      const nuevaCaja = {
+        fechaApertura: dayjs().format("DD/MM/YYYY, h:mm:ss A"),
+        estado: "abierta",
+        totalRecaudado: venta.total,
+        ventas: [venta], // registro la venta directamente
+      };
+
+      await registrarCaja(nuevaCaja);
+      // obtenner instancia de modalcobro y cerrar
+      const modalCobro = bootstrap.Modal.getInstance(
+        document.getElementById("modalCobro")
+      );
+      modalCobro.hide();
+          const badge = document.getElementById("estadoCajaBadge");
+    badge.textContent = "Caja Abierta";
+    badge.classList.remove("bg-danger");
+    badge.classList.add("bg-success");
+    } else {
+      // Caja abierta → agrego la venta al array de ventas existente
+      cajaAbierta.ventas.push(venta);
+
+      // Actualizo el total recaudado
+      cajaAbierta.totalRecaudado += venta.total;
+
+      const totalPedido = calcularTotalPedido(); // total que el cliente debe
+      const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
+      const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
+      const transferencia = Number(
+        transferenciaInput.value.replace(/\./g, "") || 0
+      );
+
+      const pagado = efectivo + tarjeta + transferencia;
+      const diferencia = totalPedido - pagado;
+
+      if (diferencia > 0) {
+        console.log("no se puede realizar cobro, monto insuficiente");
+      } else {
+        // Actualizo la caja en Firestore
+        await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
+        // obtenner instancia de modalcobro y cerrar
+        const modalCobro = bootstrap.Modal.getInstance(
+          document.getElementById("modalCobro")
+        );
+        modalCobro.hide();
+      }
+    }
+
+    // Aquí podrías limpiar el formulario y resetear el pedido
+    pedido = [];
+    document.getElementById("modalCobrarForm").reset();
+    // resetear tabla de pedido
+
+    mostrarAviso("success", "Venta registrada con exito.");
+    mostrarPedidoCargado();
+    actualizarCobro();
+    // Mostrar total en Guaraníes
+    document.getElementById("totalPedido").textContent =
+      calcularTotalPedido().toLocaleString("es-PY") + " Gs";
+  });
+
+// ?FUNCIONES CON MODAL GESTION DE CLIENTES
+
+document.getElementById("formCliente").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const nombre = document
+    .getElementById("clienteNombre")
+    .value.trim()
+    .toUpperCase();
+  const ruc = document.getElementById("clienteRuc").value.trim();
+  const telefono = document
+    .getElementById("clienteTelefono")
+    .value.trim()
+    .toUpperCase();
+  const direccion = document
+    .getElementById("clienteDireccion")
+    .value.trim()
+    .toUpperCase();
+
+  const cliente = {
+    nombre: nombre,
+    ruc: ruc,
+    telefono: telefono,
+    direccion: direccion,
+  };
+
+  // verificar si hay cliente con ese mismo ruc registrado
+  const clientes = await obtenerClientes();
+  const clienteExistente = clientes.find((c) => c.ruc === ruc);
+  if (clienteExistente) {
+    mostrarAviso("warning", "Ya existe un cliente con ese RUC registrado.");
+    return;
+  }
+
+  await registrarCliente(cliente);
+  // await mostrarClientes();
+});
+
+window.addEventListener("DOMContentLoaded", async () => {
+  const spinner = document.getElementById("spinnerCarga");
+  const contenido = document.getElementById("contenidoPrincipal");
+
+  // Mostrar spinner
+  spinner.style.display = "flex";
+  contenido.style.display = "none";
+
+  // Esperar a que se carguen los datos
+  await mostrarStockDataList();
+
+  const Cajas = await obtenerCajas();
+  let cajaAbierta = Cajas.find((caja) => caja.estado === "abierta");
+
+  if (cajaAbierta) {
+    const badge = document.getElementById("estadoCajaBadge");
+    badge.textContent = "Caja Abierta";
+    badge.classList.remove("bg-danger");
+    badge.classList.add("bg-success");
+  }
+
+  // Ocultar spinner y mostrar contenido
+  spinner.style.display = "none";
+  contenido.style.display = "block";
 });

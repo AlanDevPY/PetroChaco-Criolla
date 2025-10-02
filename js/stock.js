@@ -131,6 +131,7 @@ actualizarStockForm.addEventListener("submit", async (e) => {
   const item = document.getElementById("actualizarItemStock").value;
   const categoria = document.getElementById("actualizarCategoriaStock").value;
   const cantidad = Number(document.getElementById("actualizarCantidadStock").value);
+  const codigoBarra = Number(document.getElementById("actualizarCodigoBarraStock").value);
 
   // Convertir el costo de string a number
   let costo = document.getElementById("actualizarCostoStock").value;
@@ -138,7 +139,7 @@ actualizarStockForm.addEventListener("submit", async (e) => {
   // Quitar los puntos antes de guardar
   costo = Number(costo.replace(/\./g, ""));
 
-  const stockData = { item, categoria, cantidad, costo };
+  const stockData = { item, categoria, cantidad, costo, codigoBarra };
 
   await actualizarStockporId(idStock, stockData);
   modalActualizarProducto.hide();
