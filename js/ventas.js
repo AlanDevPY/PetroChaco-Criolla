@@ -172,8 +172,8 @@ const mostrarPedidoCargado = () => {
             <td class="text-center"> ${item.cantidad}</td>
             <td class="text-end">${item.costo.toLocaleString("es-PY")} Gs</td>
             <td class="text-end">${item.subTotal.toLocaleString(
-              "es-PY"
-            )} Gs</td>
+      "es-PY"
+    )} Gs</td>
              <td><button class="btn btn-sm btn-danger">❌</button></td>
         </tr>
         `;
@@ -280,6 +280,9 @@ document
       cliente: cliente, // asumiendo que ya definiste el objeto cliente
       venta: pedido, // array de productos de la venta actual
       fecha: dayjs().format("DD/MM/YYYY, h:mm:ss A"),
+      efectivo: Number(efectivoInput.value.replace(/\./g, "")),
+      tarjeta: Number(tarjetaInput.value.replace(/\./g, "")),
+      transferencia: Number(transferenciaInput.value.replace(/\./g, "")),
       total: calcularTotalPedido(),
     };
 
@@ -292,16 +295,27 @@ document
         ventas: [venta], // registro la venta directamente
       };
 
-      await registrarCaja(nuevaCaja);
-      // obtenner instancia de modalcobro y cerrar
-      const modalCobro = bootstrap.Modal.getInstance(
-        document.getElementById("modalCobro")
-      );
-      modalCobro.hide();
-          const badge = document.getElementById("estadoCajaBadge");
-    badge.textContent = "Caja Abierta";
-    badge.classList.remove("bg-danger");
-    badge.classList.add("bg-success");
+      const totalPedido = calcularTotalPedido(); // total que el cliente debe
+      const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
+      const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
+      const transferencia = Number(transferenciaInput.value.replace(/\./g, "") || 0);
+
+      const pagado = efectivo + tarjeta + transferencia;
+      const diferencia = totalPedido - pagado;
+
+      if (diferencia > 0) {
+        mostrarAviso("warning", "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs");
+        return;
+      } else {
+        await registrarCaja(nuevaCaja);
+        // obtenner instancia de modalcobro y cerrar
+        const modalCobro = bootstrap.Modal.getInstance(document.getElementById("modalCobro"));
+        modalCobro.hide();
+        const badge = document.getElementById("estadoCajaBadge");
+        badge.textContent = "Caja Abierta";
+        badge.classList.remove("bg-danger");
+        badge.classList.add("bg-success");
+      }
     } else {
       // Caja abierta → agrego la venta al array de ventas existente
       cajaAbierta.ventas.push(venta);
@@ -312,9 +326,7 @@ document
       const totalPedido = calcularTotalPedido(); // total que el cliente debe
       const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
       const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
-      const transferencia = Number(
-        transferenciaInput.value.replace(/\./g, "") || 0
-      );
+      const transferencia = Number(transferenciaInput.value.replace(/\./g, "") || 0);
 
       const pagado = efectivo + tarjeta + transferencia;
       const diferencia = totalPedido - pagado;
