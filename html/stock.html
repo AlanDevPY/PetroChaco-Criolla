@@ -42,7 +42,7 @@
     </nav>
 
     <!-- Contenido principal -->
-    <div class="container py-4">
+    <div class="py-4">
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
             <h3 class="fw-bold">📦 Gestión de Stock</h3>
 
@@ -88,8 +88,8 @@
                     <form id="registrarStockForm">
                         <div class="mb-3">
                             <label class="form-label">Nombre del Producto</label>
-                            <input type="text" id="nuevoItemStock" class="form-control"
-                                placeholder="Ej: Lomito Completo" required autocomplete="off">
+                            <input type="text" id="nuevoItemStock" class="form-control" placeholder="Ej: Mouse Logitech"
+                                required autocomplete="off">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Codigo de Barra</label>
@@ -112,6 +112,7 @@
                                 <option>Utensilios / Equipamiento</option>
                                 <option>Otros</option>
                             </select>
+
                         </div>
 
                         <div class="mb-3">
@@ -122,7 +123,7 @@
 
                         <div class="mb-3">
                             <label class="form-label">Precio</label>
-                            <input type="text" autocomplete="off" required id="nuevoCostoStock"
+                            <input type="text" value="0" autocomplete="off" required id="nuevoCostoStock"
                                 class="form-control text-end" placeholder="0">
                         </div>
 

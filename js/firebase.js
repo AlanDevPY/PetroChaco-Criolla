@@ -28,14 +28,13 @@ import {
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCQsOTPjzFk7xZfZL8BiQ4fIDBXKPssBNw",
-  authDomain: "petrochaco-criolla.firebaseapp.com",
-  projectId: "petrochaco-criolla",
-  storageBucket: "petrochaco-criolla.firebasestorage.app",
-  messagingSenderId: "418269470247",
-  appId: "1:418269470247:web:dc72b4ed57d98322027802",
-};
-
+    apiKey: "AIzaSyCQsOTPjzFk7xZfZL8BiQ4fIDBXKPssBNw",
+    authDomain: "petrochaco-criolla.firebaseapp.com",
+    projectId: "petrochaco-criolla",
+    storageBucket: "petrochaco-criolla.firebasestorage.app",
+    messagingSenderId: "418269470247",
+    appId: "1:418269470247:web:dc72b4ed57d98322027802"
+  };
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 // 2. Obtén una referencia al servicio de autenticación

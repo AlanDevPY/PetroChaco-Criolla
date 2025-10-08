@@ -69,6 +69,8 @@ const mostrarStock = async () => {
   stockTable.innerHTML = "";
   let contador = 0;
 
+  stock.sort((a, b) => a.item.localeCompare(b.item));
+
   stock.forEach((item) => {
     stockTable.innerHTML += `
       <tr>
@@ -170,7 +172,20 @@ registrarStockForm.addEventListener("submit", async (e) => {
   // Quitar los puntos antes de guardar
   costo = Number(costo.replace(/\./g, ""));
 
+
   const stockData = { FechaDeRegistro, item, codigoBarra, categoria, cantidad, costo };
+
+  let obtenerStockTotal = await obtenerStock();
+ 
+
+  // Verificar si el codigo de barra ya existe en el stock
+  if (obtenerStockTotal.some((item) => item.codigoBarra === codigoBarra)) {
+    alert("El codigo de barra ya existe en el stock.");
+    return;
+  }
+
+
+  
 
   // ⚡ Cerrar modal "Agregar Producto"
   modalAgregarProducto.hide();

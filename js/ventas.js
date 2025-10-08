@@ -4,6 +4,7 @@ import {
   registrarCliente,
   obtenerClientes,
   obtenerCajas,
+  actualizarStockporId,
   registrarCaja,
   actualizarCajaporId,
 } from "./firebase.js";
@@ -90,75 +91,73 @@ const mostrarStockDataList = async () => {
 };
 
 // FUNCION PARA AGREGAR PEDIDO
-document
-  .getElementById("agregarProductoForm")
-  .addEventListener("submit", async (e) => {
-    e.preventDefault();
+document.getElementById("agregarProductoForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-    const cantidad = Number(document.getElementById("cantidad").value);
-    const inputValue = document.getElementById("inputProducto").value.trim();
-    const dataList = document.getElementById("listaProductos");
-    const options = dataList.querySelectorAll("option");
+  const cantidad = Number(document.getElementById("cantidad").value);
+  const inputValue = document.getElementById("inputProducto").value.trim();
+  const dataList = document.getElementById("listaProductos");
+  const options = dataList.querySelectorAll("option");
 
-    // Validar cantidad
-    if (cantidad <= 0) {
-      alert("Ingrese una cantidad válida.");
-      return;
+  // Validar cantidad
+  if (cantidad <= 0) {
+    alert("Ingrese una cantidad válida.");
+    return;
+  }
+
+  // Buscar el ID del producto por nombre o código de barra
+  let selectedId = null;
+  options.forEach((option) => {
+    const nombre = option.value.trim();
+    const codigo = option.textContent.trim();
+    if (inputValue === nombre || inputValue === codigo) {
+      selectedId = option.getAttribute("data-id");
     }
-
-    // Buscar el ID del producto por nombre o código de barra
-    let selectedId = null;
-    options.forEach((option) => {
-      const nombre = option.value.trim();
-      const codigo = option.textContent.trim();
-      if (inputValue === nombre || inputValue === codigo) {
-        selectedId = option.getAttribute("data-id");
-      }
-    });
-
-    // Validar si seleccionó un item válido
-    if (!selectedId) {
-      mostrarAviso("warning", "Producto no encontrado.");
-      return;
-    }
-
-    // Obtener el producto del stock
-    const stockItem = await obtenerStockPorId(selectedId);
-
-    // Buscar si ya existe el item en el pedido
-    const pedidoExistente = pedido.find((p) => p.id === stockItem.id);
-
-    if (stockItem.cantidad < cantidad) {
-      mostrarAviso("warning", "No hay suficiente stock.");
-      return;
-    } else if (pedidoExistente) {
-      // Si ya existe, aumentar la cantidad y actualizar subtotal
-      pedidoExistente.cantidad += cantidad;
-      pedidoExistente.subTotal =
-        pedidoExistente.cantidad * pedidoExistente.costo;
-    } else {
-      // Si no existe, agregar como nuevo item
-      const pedidoItem = {
-        id: stockItem.id,
-        item: stockItem.item,
-        cantidad,
-        costo: stockItem.costo,
-        subTotal: stockItem.costo * cantidad,
-      };
-      pedido.push(pedidoItem);
-    }
-
-    mostrarPedidoCargado();
-
-    // Limpiar el formulario y mantener el foco
-    document.getElementById("agregarProductoForm").reset();
-    document.getElementById("inputProducto").focus();
-
-    // Mostrar total en Guaraníes
-    document.getElementById("totalPedido").textContent =
-      calcularTotalPedido().toLocaleString("es-PY") + " Gs";
-    console.log(pedidoGenerado);
   });
+
+  // Validar si seleccionó un item válido
+  if (!selectedId) {
+    mostrarAviso("warning", "Producto no encontrado.");
+    return;
+  }
+
+  // Obtener el producto del stock
+  const stockItem = await obtenerStockPorId(selectedId);
+
+  // Buscar si ya existe el item en el pedido
+  const pedidoExistente = pedido.find((p) => p.id === stockItem.id);
+
+  if (stockItem.cantidad < cantidad) {
+    mostrarAviso("warning", "No hay suficiente stock.");
+    return;
+  } else if (pedidoExistente) {
+    // Si ya existe, aumentar la cantidad y actualizar subtotal
+    pedidoExistente.cantidad += cantidad;
+    pedidoExistente.subTotal =
+      pedidoExistente.cantidad * pedidoExistente.costo;
+  } else {
+    // Si no existe, agregar como nuevo item
+    const pedidoItem = {
+      id: stockItem.id,
+      item: stockItem.item,
+      cantidad,
+      costo: stockItem.costo,
+      subTotal: stockItem.costo * cantidad,
+    };
+    pedido.push(pedidoItem);
+  }
+
+  mostrarPedidoCargado();
+
+  // Limpiar el formulario y mantener el foco
+  document.getElementById("agregarProductoForm").reset();
+  document.getElementById("inputProducto").focus();
+
+  // Mostrar total en Guaraníes
+  document.getElementById("totalPedido").textContent =
+    calcularTotalPedido().toLocaleString("es-PY") + " Gs";
+  console.log(pedidoGenerado);
+});
 
 // FUNCION PARA MOSTRAR PEDIDO CARGADO
 const mostrarPedidoCargado = () => {
@@ -264,98 +263,125 @@ clienteRucCobro.addEventListener("input", () => {
 });
 
 // FUNCION PARA REGISTRAR LA VENTA
-document
-  .getElementById("modalCobrarForm")
-  .addEventListener("submit", async (e) => {
-    e.preventDefault();
+document.getElementById("modalCobrarForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-    // Obtengo todas las cajas
-    const Cajas = await obtenerCajas();
+  // Obtengo todas las cajas
+  const Cajas = await obtenerCajas();
 
-    // Busco si hay alguna caja abierta
-    let cajaAbierta = Cajas.find((caja) => caja.estado === "abierta");
+  // Busco si hay alguna caja abierta
+  let cajaAbierta = Cajas.find((caja) => caja.estado === "abierta");
 
-    // Datos de la venta actual
-    const venta = {
-      cliente: cliente, // asumiendo que ya definiste el objeto cliente
-      venta: pedido, // array de productos de la venta actual
-      fecha: dayjs().format("DD/MM/YYYY, h:mm:ss A"),
-      efectivo: Number(efectivoInput.value.replace(/\./g, "")),
-      tarjeta: Number(tarjetaInput.value.replace(/\./g, "")),
-      transferencia: Number(transferenciaInput.value.replace(/\./g, "")),
-      total: calcularTotalPedido(),
+  // Datos de la venta actual
+  const venta = {
+    cliente: cliente, // asumiendo que ya definiste el objeto cliente
+    venta: pedido, // array de productos de la venta actual
+    fecha: dayjs().format("DD/MM/YYYY, h:mm:ss A"),
+    efectivo: Number(efectivoInput.value.replace(/\./g, "")),
+    tarjeta: Number(tarjetaInput.value.replace(/\./g, "")),
+    transferencia: Number(transferenciaInput.value.replace(/\./g, "")),
+    total: calcularTotalPedido(),
+  };
+
+
+  // funcion para descontar stock de la venta
+async function descontarStock(venta) {
+  for (const item of venta.venta) {
+    const id = item.id;
+    const cantidadItemVenta = Number(item.cantidad); // 🔹 Convertir a número
+
+    const cantidadStock = await obtenerStockPorId(id);
+    const stockActual = Number(cantidadStock.cantidad); // 🔹 Convertir a número
+
+    console.log(
+      `🔹 ${id}: ${stockActual} - ${cantidadItemVenta} = ${stockActual - cantidadItemVenta}`);
+    
+
+    if (stockActual >= cantidadItemVenta) {
+      const nuevoStock = stockActual - cantidadItemVenta;
+      await actualizarStockporId(id, { cantidad: nuevoStock });
+      console.log(`✅ ${id}: ${stockActual} → ${nuevoStock}`);
+    } else {
+      console.log(`❌ No hay stock suficiente para ${id}`);
+    }
+  }
+}
+
+  if (!cajaAbierta) {
+    // No hay caja abierta → creo la primera caja y agrego la venta
+    const nuevaCaja = {
+      fechaApertura: dayjs().format("DD/MM/YYYY, h:mm:ss A"),
+      estado: "abierta",
+      totalRecaudado: venta.total,
+      ventas: [venta], // registro la venta directamente
     };
 
-    if (!cajaAbierta) {
-      // No hay caja abierta → creo la primera caja y agrego la venta
-      const nuevaCaja = {
-        fechaApertura: dayjs().format("DD/MM/YYYY, h:mm:ss A"),
-        estado: "abierta",
-        totalRecaudado: venta.total,
-        ventas: [venta], // registro la venta directamente
-      };
+    const totalPedido = calcularTotalPedido(); // total que el cliente debe
+    const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
+    const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
+    const transferencia = Number(transferenciaInput.value.replace(/\./g, "") || 0);
 
-      const totalPedido = calcularTotalPedido(); // total que el cliente debe
-      const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
-      const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
-      const transferencia = Number(transferenciaInput.value.replace(/\./g, "") || 0);
+    const pagado = efectivo + tarjeta + transferencia;
+    const diferencia = totalPedido - pagado;
 
-      const pagado = efectivo + tarjeta + transferencia;
-      const diferencia = totalPedido - pagado;
-
-      if (diferencia > 0) {
-        mostrarAviso("warning", "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs");
-        return;
-      } else {
-        await registrarCaja(nuevaCaja);
-        // obtenner instancia de modalcobro y cerrar
-        const modalCobro = bootstrap.Modal.getInstance(document.getElementById("modalCobro"));
-        modalCobro.hide();
-        const badge = document.getElementById("estadoCajaBadge");
-        badge.textContent = "Caja Abierta";
-        badge.classList.remove("bg-danger");
-        badge.classList.add("bg-success");
-      }
+    if (diferencia > 0) {
+      mostrarAviso("warning", "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs");
+      return;
     } else {
-      // Caja abierta → agrego la venta al array de ventas existente
-      cajaAbierta.ventas.push(venta);
+      await registrarCaja(nuevaCaja);
+      descontarStock(venta);
 
-      // Actualizo el total recaudado
-      cajaAbierta.totalRecaudado += venta.total;
+      // obtenner instancia de modalcobro y cerrar
+      const modalCobro = bootstrap.Modal.getInstance(document.getElementById("modalCobro"));
+      modalCobro.hide();
+      const badge = document.getElementById("estadoCajaBadge");
+      badge.textContent = "Caja Abierta";
+      badge.classList.remove("bg-danger");
+      badge.classList.add("bg-success");
 
-      const totalPedido = calcularTotalPedido(); // total que el cliente debe
-      const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
-      const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
-      const transferencia = Number(transferenciaInput.value.replace(/\./g, "") || 0);
-
-      const pagado = efectivo + tarjeta + transferencia;
-      const diferencia = totalPedido - pagado;
-
-      if (diferencia > 0) {
-        console.log("no se puede realizar cobro, monto insuficiente");
-      } else {
-        // Actualizo la caja en Firestore
-        await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
-        // obtenner instancia de modalcobro y cerrar
-        const modalCobro = bootstrap.Modal.getInstance(
-          document.getElementById("modalCobro")
-        );
-        modalCobro.hide();
-      }
     }
+  } else {
+    // Caja abierta → agrego la venta al array de ventas existente
+    cajaAbierta.ventas.push(venta);
 
-    // Aquí podrías limpiar el formulario y resetear el pedido
-    pedido = [];
-    document.getElementById("modalCobrarForm").reset();
-    // resetear tabla de pedido
+    // Actualizo el total recaudado
+    cajaAbierta.totalRecaudado += venta.total;
 
-    mostrarAviso("success", "Venta registrada con exito.");
-    mostrarPedidoCargado();
-    actualizarCobro();
-    // Mostrar total en Guaraníes
-    document.getElementById("totalPedido").textContent =
-      calcularTotalPedido().toLocaleString("es-PY") + " Gs";
-  });
+    const totalPedido = calcularTotalPedido(); // total que el cliente debe
+    const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
+    const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
+    const transferencia = Number(transferenciaInput.value.replace(/\./g, "") || 0);
+
+    const pagado = efectivo + tarjeta + transferencia;
+    const diferencia = totalPedido - pagado;
+
+    if (diferencia > 0) {
+      console.log("no se puede realizar cobro, monto insuficiente");
+    } else {
+      // Actualizo la caja en Firestore
+      await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
+      descontarStock(venta);
+
+      // obtenner instancia de modalcobro y cerrar
+      const modalCobro = bootstrap.Modal.getInstance(
+        document.getElementById("modalCobro")
+      );
+      modalCobro.hide();
+    }
+  }
+
+  // Aquí podrías limpiar el formulario y resetear el pedido
+  pedido = [];
+  document.getElementById("modalCobrarForm").reset();
+  // resetear tabla de pedido
+
+  mostrarAviso("success", "Venta registrada con exito.");
+  mostrarPedidoCargado();
+  actualizarCobro();
+  // Mostrar total en Guaraníes
+  document.getElementById("totalPedido").textContent =
+    calcularTotalPedido().toLocaleString("es-PY") + " Gs";
+});
 
 // ?FUNCIONES CON MODAL GESTION DE CLIENTES
 
@@ -399,9 +425,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   const spinner = document.getElementById("spinnerCarga");
   const contenido = document.getElementById("contenidoPrincipal");
 
-  // Mostrar spinner
-  spinner.style.display = "flex";
-  contenido.style.display = "none";
+  // Mostrar spinner usando Bootstrap;
+  spinner.classList.add("d-flex");
+
 
   // Esperar a que se carguen los datos
   await mostrarStockDataList();
@@ -416,7 +442,10 @@ window.addEventListener("DOMContentLoaded", async () => {
     badge.classList.add("bg-success");
   }
 
-  // Ocultar spinner y mostrar contenido
-  spinner.style.display = "none";
-  contenido.style.display = "block";
+  // Ocultar spinner y mostrar contenido usando clases Bootstrap
+  spinner.classList.remove("d-flex");
+  spinner.classList.add("d-none");
+
 });
+
+
