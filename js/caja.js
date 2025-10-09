@@ -1,4 +1,4 @@
-import { obtenerCajas, obtenerCajaPorId } from "./firebase.js";
+import { obtenerCajas, obtenerCajaPorId, actualizarCajaporId } from "./firebase.js";
 
 let idCajaIndividual
 
@@ -21,7 +21,11 @@ const mostrarCajas = async () => {
             <td>${caja.fechaApertura}</td>
             <td>${caja.fechaCierre || "--"}</td>
             <td>${caja.totalRecaudado.toLocaleString("es-PY") + " Gs"}</td>
-            <td><span class="badge bg-success">${caja.estado}</span></td>
+            <td>
+              <span class="badge ${caja.estado === 'abierta' ? 'bg-success' : 'bg-danger'}">
+                ${caja.estado}
+              </span>
+            </td>
             <td>
               <button data-id="${caja.id}" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detalleCajaModal">
                 Ver detalle
@@ -84,7 +88,7 @@ const mostrarDetalleCaja = async () => {
   const ventasAccordion = document.getElementById("ventasAccordion");
   ventasAccordion.innerHTML = "";
 
-   caja.ventas.forEach((venta, index) => {
+  caja.ventas.forEach((venta, index) => {
     let restante = venta.total;
 
     const efectivoAplicado = Math.min(venta.efectivo, restante);
@@ -149,4 +153,39 @@ const mostrarDetalleCaja = async () => {
 
 
 }
+
+//? FUNCION DE REALIZAR CIERRE DE CAJA
+
+document.getElementById("formCierreCaja").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  // buscamos la caja que esta abierto y cambiamos a estado cerrado
+  // 1️⃣ Esperamos a que la promesa se resuelva
+  const cajas = await obtenerCajas();
+
+  // 2️⃣ Ahora sí podemos usar .find sobre el array
+  const cajaAbierta = cajas.find(caja => caja.estado === "abierta");
+
+
+  if (!cajaAbierta) {
+    alert("No hay una caja abierta para cerrar.");
+    return;
+  }
+
+  const datoActualizado = {
+    estado: "cerrada",
+    fechaCierre: dayjs().format("DD/MM/YYYY, h:mm:ss A")
+  };
+
+  await actualizarCajaporId(cajaAbierta.id, datoActualizado);
+
+  mostrarCajas();
+
+  // Obtener la instancia existente y cerrarla
+bootstrap.Modal.getInstance(document.getElementById('cierreCajaModal')).hide();
+
+
+
+
+});
 

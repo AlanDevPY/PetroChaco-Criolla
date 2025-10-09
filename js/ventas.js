@@ -5,6 +5,7 @@ import {
   obtenerClientes,
   obtenerCajas,
   actualizarStockporId,
+  eliminarClientePorID,
   registrarCaja,
   actualizarCajaporId,
 } from "./firebase.js";
@@ -385,6 +386,8 @@ async function descontarStock(venta) {
 
 // ?FUNCIONES CON MODAL GESTION DE CLIENTES
 
+
+// Evento submit para registrar cliente
 document.getElementById("formCliente").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -418,10 +421,58 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
   }
 
   await registrarCliente(cliente);
-  // await mostrarClientes();
+
+// Obtener la instancia existente y cerrarla
+bootstrap.Modal.getInstance(document.getElementById('modalCliente')).hide();
+
+
+  await mostrarClientes();
 });
 
+// funcion para mostrar los clientes registrados
+async function mostrarClientes() {
+  const clientes = await obtenerClientes();
+  const tbody = document.getElementById("tablaClientes");
+  tbody.innerHTML = "";
+
+  // ordenar clientes por nombre
+  clientes.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  clientes.forEach((cliente) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <tr>
+        <td>${cliente.nombre}</td>
+        <td>${cliente.ruc}</td>
+        <td>${cliente.telefono}</td>
+        <td>${cliente.direccion}</td>
+        <td>
+          <button class="btn btn-sm btn-danger" data-id="${cliente.id}">
+            Eliminar
+          </button>
+        </td>
+      </tr>
+    `;
+    tbody.appendChild(row);
+  });
+
+  // eliminar clientes por id
+  const botonesEliminar = document.querySelectorAll(".btn-danger");
+  botonesEliminar.forEach((boton) => {
+    boton.addEventListener("click", async () => {
+      const id = boton.getAttribute("data-id");
+      await eliminarClientePorID(id);
+      await mostrarClientes();
+    });
+  });
+}
+
+
+ 
+
+
 window.addEventListener("DOMContentLoaded", async () => {
+  await mostrarClientes();
   const spinner = document.getElementById("spinnerCarga");
   const contenido = document.getElementById("contenidoPrincipal");
 
