@@ -563,8 +563,8 @@ function imprimirTicket(venta) {
       <body>${ticketHTML}</body>
     </html>
   `);
-  ventana.document.close();
-  ventana.focus();
-  ventana.print();
-  ventana.close();
+ setTimeout(() => {
+  window.print();
+}, 3000);
+
 }
