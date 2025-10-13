@@ -16,6 +16,15 @@ inputPrecio.addEventListener("input", () => {
   inputPrecio.value = valor ? Number(valor).toLocaleString("es-PY") : "";
 });
 
+const inputPrecioCompra = document.getElementById("nuevoPrecioCompraStock");
+inputPrecioCompra.addEventListener("input", () => {
+  // Quitamos cualquier caracter que no sea número
+  let valor = inputPrecioCompra.value.replace(/\D/g, "");
+
+  // Formateamos con separadores de miles
+  inputPrecioCompra.value = valor ? Number(valor).toLocaleString("es-PY") : "";
+});
+
 const actualizarCostoStock = document.getElementById("actualizarCostoStock");
 actualizarCostoStock.addEventListener("input", () => {
   // Quitamos cualquier caracter que no sea número
@@ -23,6 +32,15 @@ actualizarCostoStock.addEventListener("input", () => {
 
   // Formateamos con separadores de miles
   actualizarCostoStock.value = valor ? Number(valor).toLocaleString("es-PY") : "";
+});
+
+const actualizarPrecioCompraStock = document.getElementById("actualizarPrecioCompraStock");
+actualizarPrecioCompraStock.addEventListener("input", () => {
+  // Quitamos cualquier caracter que no sea número
+  let valor = actualizarPrecioCompraStock.value.replace(/\D/g, "");
+
+  // Formateamos con separadores de miles
+  actualizarPrecioCompraStock.value = valor ? Number(valor).toLocaleString("es-PY") : "";
 });
 
 
@@ -79,6 +97,7 @@ const mostrarStock = async () => {
         <td>${item.categoria}</td>
         <td>${item.codigoBarra}</td>
         <td class="text-center">${Number(item.cantidad).toLocaleString("es-PY")}</td>
+        <td class="text-end">${Number(item.costoCompra).toLocaleString("es-PY")} Gs</td>
         <td class="text-end">${Number(item.costo).toLocaleString("es-PY")} Gs</td>
         <td class="text-center">
           <button data-id="${item.id}" class="btn btn-sm btn-warning">✏️</button>
@@ -120,6 +139,7 @@ const mostrarStock = async () => {
           document.getElementById("actualizarCodigoBarraStock").value = item.codigoBarra;
           document.getElementById("actualizarCantidadStock").value = item.cantidad;
           document.getElementById("actualizarCostoStock").value = Number(item.costo).toLocaleString("es-PY");
+          document.getElementById("actualizarPrecioCompraStock").value = Number(item.costoCompra).toLocaleString("es-PY");
         }
       });
     });
@@ -137,11 +157,13 @@ actualizarStockForm.addEventListener("submit", async (e) => {
 
   // Convertir el costo de string a number
   let costo = document.getElementById("actualizarCostoStock").value;
+  let costoCompra = document.getElementById("actualizarPrecioCompraStock").value;
 
   // Quitar los puntos antes de guardar
   costo = Number(costo.replace(/\./g, ""));
+  costoCompra = Number(costoCompra.replace(/\./g, ""));
 
-  const stockData = { item, categoria, cantidad, costo, codigoBarra };
+  const stockData = { item, categoria, cantidad, costo, costoCompra, codigoBarra };
 
   await actualizarStockporId(idStock, stockData);
   modalActualizarProducto.hide();
@@ -168,12 +190,14 @@ registrarStockForm.addEventListener("submit", async (e) => {
 
   // Convertir el costo de string a number
   let costo = document.getElementById("nuevoCostoStock").value;
+  let costoCompra = document.getElementById("nuevoPrecioCompraStock").value;
 
   // Quitar los puntos antes de guardar
   costo = Number(costo.replace(/\./g, ""));
+  costoCompra = Number(costoCompra.replace(/\./g, ""));
 
 
-  const stockData = { FechaDeRegistro, item, codigoBarra, categoria, cantidad, costo };
+  const stockData = { FechaDeRegistro, item, codigoBarra, categoria, cantidad, costo, costoCompra };
 
   let obtenerStockTotal = await obtenerStock();
  

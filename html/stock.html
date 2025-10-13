@@ -66,7 +66,8 @@
                         <th>Categoría</th>
                         <th>Codigo de Barra</th>
                         <th class="text-center">Stock</th>
-                        <th class="text-end">Precio</th>
+                        <th class="text-end">Costo Compra</th>
+                        <th class="text-end">Costo Venta</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
@@ -88,8 +89,8 @@
                     <form id="registrarStockForm">
                         <div class="mb-3">
                             <label class="form-label">Nombre del Producto</label>
-                            <input type="text" id="nuevoItemStock" class="form-control" placeholder="Ej: Lomito Completo"
-                                required autocomplete="off">
+                            <input type="text" id="nuevoItemStock" class="form-control"
+                                placeholder="Ej: Lomito Completo" required autocomplete="off">
                         </div>
 
                         <div class="mb-3">
@@ -115,13 +116,17 @@
                             <input type="number" id="nuevoCantidadStock" required class="form-control text-center"
                                 placeholder="0">
                         </div>
-
                         <div class="mb-3">
-                            <label class="form-label">Precio</label>
+                            <label class="form-label">Precio Compra</label>
+                            <input type="text" value="0" autocomplete="off" required id="nuevoPrecioCompraStock"
+                                class="form-control text-end" placeholder="0">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Precio Venta</label>
                             <input type="text" value="0" autocomplete="off" required id="nuevoCostoStock"
                                 class="form-control text-end" placeholder="0">
                         </div>
-                                                <div class="mb-3">
+                        <div class="mb-3">
                             <label class="form-label">Codigo de Barra</label>
                             <input type="number" id="nuevoCodigoBarraStock" class="form-control"
                                 placeholder="Tickear codigo de barra aqui!!" required autocomplete="off">
@@ -153,12 +158,6 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Codigo de Barra</label>
-                            <input type="number" id="actualizarCodigoBarraStock" class="form-control"
-                                placeholder="Tickear codigo de barra aqui!!" required autocomplete="off">
-                        </div>
-
-                        <div class="mb-3">
                             <label class="form-label">Categoría</label>
                             <select class="form-select" required id="actualizarCategoriaStock">
                                 <option>Comida</option>
@@ -177,14 +176,26 @@
 
                         <div class="mb-3">
                             <label class="form-label">Stock</label>
-                            <input type="number" disabled id="actualizarCantidadStock" required
+                            <input type="number"  id="actualizarCantidadStock" required
                                 class="form-control text-center" placeholder="0">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Precio Compra</label>
+                            <input type="text" value="0" autocomplete="off" required id="actualizarPrecioCompraStock"
+                                class="form-control text-end" placeholder="0">
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Precio</label>
                             <input type="text" autocomplete="off" required id="actualizarCostoStock"
                                 class="form-control text-end" placeholder="0">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Codigo de Barra</label>
+                            <input type="number" id="actualizarCodigoBarraStock" class="form-control"
+                                placeholder="Tickear codigo de barra aqui!!" required autocomplete="off">
                         </div>
 
                         <div class="modal-footer">
