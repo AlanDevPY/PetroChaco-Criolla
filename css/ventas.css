@@ -1,4 +1,5 @@
   :root{
+    --ticket-width: 320px;
     --ticket-font: "Courier New", Courier, monospace;
   }
   .ticket-wrapper {
