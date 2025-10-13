@@ -548,21 +548,6 @@ function imprimirTicket(venta) {
   const msg = document.getElementById("ticket-msg");
   msg.textContent = `¡Gracias ${cliente.nombre || "por tu compra"}! Vuelve pronto 🚗⛽`;
 
-  // --- IMPRIMIR SOLO EL TICKET ---
-  const ticketHTML = document.getElementById("ticket-container").outerHTML;
-  const ventana = window.open("", "PRINT", "height=600,width=400");
-  ventana.document.write(`
-    <html>
-      <head>
-        <title>Ticket</title>
-        <style>
-          body { font-family: monospace; }
-          ${document.querySelector("style")?.innerHTML || ""}
-        </style>
-      </head>
-      <body>${ticketHTML}</body>
-    </html>
-  `);
  setTimeout(() => {
   window.print();
 }, 3000);
