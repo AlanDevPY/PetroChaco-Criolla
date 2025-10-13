@@ -45,4 +45,14 @@
   .ticket-wrapper { display: flex !important; justify-content: center; background: none; padding: 0; }
   .ticket-container { box-shadow: none; margin: 0 auto; width: var(--ticket-width); }
   #contenidoPrincipal { display: none; } /* si querés ocultar otras secciones */
+
+   @page { 
+    margin: 0; /* elimina márgenes del navegador */
+    size: auto; /* deja que el ancho se ajuste al contenido */
+  }
+  body { margin: 0; }
+  .ticket-container { margin: 0 auto; }
+
+  
 }
+
