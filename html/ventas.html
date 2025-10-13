@@ -7,68 +7,73 @@
   <title>Pantalla de Venta Visual</title>
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/ventas.css">
 </head>
 
 <body class="bg-light">
 
   <!-- Spinner de carga solo con Bootstrap -->
-<div id="spinnerCarga" class="d-flex justify-content-center align-items-center vh-100 bg-white bg-opacity-75 flex-column">
-  <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
-    <span class="visually-hidden">Cargando...</span>
+  <div id="spinnerCarga"
+    class="d-flex justify-content-center align-items-center vh-100 bg-white bg-opacity-75 flex-column">
+    <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+      <span class="visually-hidden">Cargando...</span>
+    </div>
+    <p class="mt-3 fw-bold text-primary fs-5">Cargando, por favor espere...</p>
   </div>
-  <p class="mt-3 fw-bold text-primary fs-5">Cargando, por favor espere...</p>
-</div>
 
 
   <!-- Todo tu contenido, como navbar y demás, puede ir aquí -->
   <div id="contenidoPrincipal">
     <!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-  <div class="container-fluid">
-    <!-- Nombre del sistema -->
-    <a class="navbar-brand fw-bold" href="ventas.html">PETROCHACHO POS</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+      <div class="container-fluid">
+        <!-- Nombre del sistema -->
+        <a class="navbar-brand fw-bold" href="ventas.html">PETROCHACHO POS</a>
 
-    <!-- Botón de hamburguesa para responsive -->
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-      <span class="navbar-toggler-icon"></span>
-    </button>
+        <!-- Botón de hamburguesa para responsive -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+          <span class="navbar-toggler-icon"></span>
+        </button>
 
-    <!-- Opciones -->
-    <div class="collapse navbar-collapse" id="navbarContent">
-      <!-- Enlaces de navegación -->
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item">
-          <a data-bs-toggle="modal" data-bs-target="#modalCliente" class="nav-link" href="#">Clientes</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="caja.html">Control de Caja</a>
-        </li>
+        <!-- Opciones -->
+        <div class="collapse navbar-collapse" id="navbarContent">
+          <!-- Enlaces de navegación -->
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a data-bs-toggle="modal" data-bs-target="#modalCliente" class="nav-link" href="#">Clientes</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="caja.html">Control de Caja</a>
+            </li>
 
-        <!-- Dropdown agregado -->
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="configDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Configuración
-          </a>
-          <ul class="dropdown-menu" aria-labelledby="configDropdown">
-            <li><a class="dropdown-item" href="usuario.html">Usuarios</a></li>
-            <li><a class="dropdown-item" href="#">CargarStock</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="stock.html">stock</a></li>
+            <!-- Dropdown agregado -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="configDropdown" role="button" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                Configuración
+              </a>
+              <ul class="dropdown-menu" aria-labelledby="configDropdown">
+                <li><a class="dropdown-item" href="usuario.html">Usuarios</a></li>
+                <li><a class="dropdown-item" href="#">CargarStock</a></li>
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
+                <li><a class="dropdown-item" href="stock.html">stock</a></li>
+              </ul>
+            </li>
           </ul>
-        </li>
-      </ul>
 
-      <!-- Usuario y estado de caja -->
-      <div class="d-flex align-items-center text-white">
-        <!-- Estado de caja -->
-        <span id="estadoCajaBadge" class="badge bg-danger me-3">
-          Caja Cerrada
-        </span>
-          <span class="me-3">👤 AlanDevPy</span>
+          <!-- Usuario y estado de caja -->
+          <div class="d-flex align-items-center text-white">
+            <!-- Estado de caja -->
+            <span id="estadoCajaBadge" class="badge bg-danger me-3">
+              Caja Cerrada
+            </span>
+            <span class="me-3">👤 AlanDevPy</span>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</nav>
+    </nav>
 
 
 
@@ -81,20 +86,23 @@
           <h4 class="mb-4 text-center">Cargar Producto</h4>
 
           <form id="agregarProductoForm">
-            <div class="mb-3">
-              <label for="producto" class="form-label">Producto</label>
-              <input list="listaProductos" id="inputProducto" class="form-control form-control-lg"
-                placeholder="Escriba o escanee el producto" autocomplete="off" required>
 
-              <!-- agregar items al datalist -->
-              <datalist id="listaProductos" required>
-              </datalist>
-            </div>
+
 
             <div class="mb-3">
               <label for="cantidad" class="form-label">Cantidad</label>
               <input type="number" required value="1" min="1" id="cantidad"
                 class="form-control form-control-lg text-center" placeholder="0">
+            </div>
+
+            <div class="mb-3">
+              <label for="producto" class="form-label">Producto</label>
+              <input list="listaProductos" id="inputProducto" class="form-control form-control-lg"
+                placeholder="Escriba o escanee el producto"  autocomplete="off" required>
+
+              <!-- agregar items al datalist -->
+              <datalist id="listaProductos" required>
+              </datalist>
             </div>
 
             <button type="submit" class="btn btn-success btn-lg w-100">➕ Agregar</button>
@@ -324,6 +332,70 @@
             <!-- Mensaje dinámico -->
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ticket de venta -->
+
+  <div class="ticket-wrapper">
+    <div class="ticket-container" id="ticket-container">
+      <div class="ticket-header ticket-center">
+        <div class="ticket-bold">Petro Chaco Criolla</div>
+        <div class="ticket-small">Ruta N20° - Santiago, Misiones</div>
+        <div class="ticket-small">Tel: 0984 000 000</div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+        <div><span class="ticket-small ticket-bold">Cliente:</span> <span id="ticket-cliente">Consumidor Final</span>
+        </div>
+        <div class="ticket-right ticket-small" id="ticket-fecha">--/--/---- --:--</div>
+      </div>
+
+      <table class="ticket-items">
+        <thead>
+          <tr>
+            <th class="ticket-qty">Cant</th>
+            <th class="ticket-desc">Descripción</th>
+            <th class="ticket-price">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody id="ticket-items-body">
+          <!-- filas -->
+        </tbody>
+      </table>
+
+      <div class="ticket-total-row">
+        <div style="display:flex;justify-content:space-between;">
+          <div class="ticket-small">Subtotal</div>
+          <div id="ticket-subtotal" class="ticket-small ticket-right">0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <div class="ticket-small">Impuestos</div>
+          <div id="ticket-tax" class="ticket-small ticket-right">0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:14px;font-weight:700;">
+          <div>Total</div>
+          <div id="ticket-total" class="ticket-right">0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;">
+          <div class="ticket-small">Pago</div>
+          <div id="ticket-pago" class="ticket-small ticket-right">0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <div class="ticket-small">Vuelto</div>
+          <div id="ticket-vuelto" class="ticket-small ticket-right">0</div>
+        </div>
+      </div>
+
+      <div class="ticket-msg" id="ticket-msg">
+        ¡Gracias por elegirnos! Vuelve pronto 🚗⛽
+      </div>
+
+      <div class="ticket-center ticket-small" style="margin-top:6px;">
+        <div>-----------------------------</div>
+        <div>¡Vuelva siempre!</div>
       </div>
     </div>
   </div>

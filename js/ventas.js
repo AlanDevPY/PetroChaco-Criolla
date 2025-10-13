@@ -286,27 +286,27 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
 
   // funcion para descontar stock de la venta
-async function descontarStock(venta) {
-  for (const item of venta.venta) {
-    const id = item.id;
-    const cantidadItemVenta = Number(item.cantidad); // 🔹 Convertir a número
+  async function descontarStock(venta) {
+    for (const item of venta.venta) {
+      const id = item.id;
+      const cantidadItemVenta = Number(item.cantidad); // 🔹 Convertir a número
 
-    const cantidadStock = await obtenerStockPorId(id);
-    const stockActual = Number(cantidadStock.cantidad); // 🔹 Convertir a número
+      const cantidadStock = await obtenerStockPorId(id);
+      const stockActual = Number(cantidadStock.cantidad); // 🔹 Convertir a número
 
-    console.log(
-      `🔹 ${id}: ${stockActual} - ${cantidadItemVenta} = ${stockActual - cantidadItemVenta}`);
-    
+      console.log(
+        `🔹 ${id}: ${stockActual} - ${cantidadItemVenta} = ${stockActual - cantidadItemVenta}`);
 
-    if (stockActual >= cantidadItemVenta) {
-      const nuevoStock = stockActual - cantidadItemVenta;
-      await actualizarStockporId(id, { cantidad: nuevoStock });
-      console.log(`✅ ${id}: ${stockActual} → ${nuevoStock}`);
-    } else {
-      console.log(`❌ No hay stock suficiente para ${id}`);
+
+      if (stockActual >= cantidadItemVenta) {
+        const nuevoStock = stockActual - cantidadItemVenta;
+        await actualizarStockporId(id, { cantidad: nuevoStock });
+        console.log(`✅ ${id}: ${stockActual} → ${nuevoStock}`);
+      } else {
+        console.log(`❌ No hay stock suficiente para ${id}`);
+      }
     }
   }
-}
 
   if (!cajaAbierta) {
     // No hay caja abierta → creo la primera caja y agrego la venta
@@ -331,6 +331,8 @@ async function descontarStock(venta) {
     } else {
       await registrarCaja(nuevaCaja);
       descontarStock(venta);
+      imprimirTicket(venta);
+
 
       // obtenner instancia de modalcobro y cerrar
       const modalCobro = bootstrap.Modal.getInstance(document.getElementById("modalCobro"));
@@ -362,6 +364,7 @@ async function descontarStock(venta) {
       // Actualizo la caja en Firestore
       await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
       descontarStock(venta);
+      imprimirTicket(venta);
 
       // obtenner instancia de modalcobro y cerrar
       const modalCobro = bootstrap.Modal.getInstance(
@@ -422,8 +425,8 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
 
   await registrarCliente(cliente);
 
-// Obtener la instancia existente y cerrarla
-bootstrap.Modal.getInstance(document.getElementById('modalCliente')).hide();
+  // Obtener la instancia existente y cerrarla
+  bootstrap.Modal.getInstance(document.getElementById('modalCliente')).hide();
 
 
   await mostrarClientes();
@@ -468,7 +471,7 @@ async function mostrarClientes() {
 }
 
 
- 
+
 
 
 window.addEventListener("DOMContentLoaded", async () => {
@@ -500,3 +503,68 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 
 
+// FUNCION PARA GENERAR TICKTE DE VENTA
+function imprimirTicket(venta) {
+  // --- DATOS DEL CLIENTE ---
+  const cliente = venta.cliente || {};
+  document.getElementById("ticket-cliente").textContent = cliente.nombre || "Consumidor Final";
+
+  // --- FECHA ---
+  document.getElementById("ticket-fecha").textContent = venta.fecha || new Date().toLocaleString("es-PY");
+
+  // --- LIMPIAR ITEMS ANTERIORES ---
+  const cuerpo = document.getElementById("ticket-items-body");
+  cuerpo.innerHTML = "";
+
+  // --- AGREGAR PRODUCTOS ---
+  if (venta.venta && Array.isArray(venta.venta)) {
+    venta.venta.forEach((item) => {
+      const fila = document.createElement("tr");
+
+      fila.innerHTML = `
+        <td class="ticket-qty">${item.cantidad}</td>
+        <td class="ticket-desc">${item.item}</td>
+        <td class="ticket-price">${item.subTotal.toLocaleString("es-PY")}</td>
+      `;
+
+      cuerpo.appendChild(fila);
+    });
+  }
+
+  // --- TOTALES ---
+  const subtotal = venta.venta?.reduce((acc, v) => acc + v.subTotal, 0) || 0;
+  const impuestos = Math.round(subtotal * 0.1); // por ejemplo, 10%
+  const total = venta.total || subtotal;
+  const pago = venta.efectivo || 0;
+  const vuelto = pago - total;
+
+  document.getElementById("ticket-subtotal").textContent = subtotal.toLocaleString("es-PY");
+  document.getElementById("ticket-tax").textContent = impuestos.toLocaleString("es-PY");
+  document.getElementById("ticket-total").textContent = total.toLocaleString("es-PY");
+  document.getElementById("ticket-pago").textContent = pago.toLocaleString("es-PY");
+  document.getElementById("ticket-vuelto").textContent = vuelto > 0 ? vuelto.toLocaleString("es-PY") : "0";
+
+  // --- MENSAJE FINAL PERSONALIZADO ---
+  const msg = document.getElementById("ticket-msg");
+  msg.textContent = `¡Gracias ${cliente.nombre || "por tu compra"}! Vuelve pronto 🚗⛽`;
+
+  // --- IMPRIMIR SOLO EL TICKET ---
+  const ticketHTML = document.getElementById("ticket-container").outerHTML;
+  const ventana = window.open("", "PRINT", "height=600,width=400");
+  ventana.document.write(`
+    <html>
+      <head>
+        <title>Ticket</title>
+        <style>
+          body { font-family: monospace; }
+          ${document.querySelector("style")?.innerHTML || ""}
+        </style>
+      </head>
+      <body>${ticketHTML}</body>
+    </html>
+  `);
+  ventana.document.close();
+  ventana.focus();
+  ventana.print();
+  ventana.close();
+}
