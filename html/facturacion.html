@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestión de Facturación</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="d-flex flex-column min-vh-100 bg-light">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="ventas.html">PETROCHACHO POS</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarFactura">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarFactura">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="ventas.html">Ventas</a></li>
+          <li class="nav-item"><a class="nav-link" href="reportes.html">Reportes</a></li>
+          <li class="nav-item"><a class="nav-link" href="stock.html">Stock</a></li>
+          <li class="nav-item"><a class="nav-link" href="caja.html">Control de Caja</a></li>
+          <li class="nav-item"><a class="nav-link active" href="#">Facturación</a></li>
+        </ul>
+        <div class="d-flex align-items-center text-white">
+          <span class="me-3">👤 AlanDevPy</span>
+          <button class="btn btn-outline-light btn-sm">Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Contenido principal -->
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+      <h3 class="fw-bold mb-0">🧾 Gestión de Facturación</h3>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaFactura">
+        ➕ Nueva Factura
+      </button>
+    </div>
+
+    <!-- Tabla de facturas -->
+    <div class="table-responsive shadow-sm">
+      <table class="table table-hover align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Timbrado</th>
+            <th>RUC</th>
+            <th>Empresa</th>
+            <th>Inicio</th>
+            <th>Vencimiento</th>
+            <th>N° Actual</th>
+            <th>Rango</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>12345678</td>
+            <td>80012345-6</td>
+            <td>PetroChacho S.A.</td>
+            <td>2025-01-01</td>
+            <td>2025-12-31</td>
+            <td>001-001-0000429</td>
+            <td>0000001 - 0010000</td>
+            <td class="text-center">
+              <button class="btn btn-sm btn-warning me-1">✏️</button>
+              <button class="btn btn-sm btn-danger">🗑️</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Nueva Factura -->
+  <div class="modal fade" id="modalNuevaFactura" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Registrar Nueva Factura</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formNuevaFactura">
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Número de Timbrado</label>
+                <input type="text" class="form-control" placeholder="Ej: 12345678" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">RUC de la Empresa</label>
+                <input type="text" class="form-control" placeholder="Ej: 80012345-6" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Nombre de la Empresa</label>
+                <input type="text" class="form-control" placeholder="Ej: PetroChacho S.A." required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Dirección</label>
+                <input type="text" class="form-control" placeholder="Ej: Av. San Roque González 123">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Fecha de Inicio</label>
+                <input type="date" class="form-control" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Fecha de Vencimiento</label>
+                <input type="date" class="form-control" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">N° de Factura Actual</label>
+                <input type="text" class="form-control" placeholder="Ej: 001-001-0000429" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Rango de Facturas</label>
+                <input type="text" class="form-control" placeholder="Ej: 0000001 - 0010000" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Observaciones</label>
+                <textarea class="form-control" rows="2" placeholder="Notas o detalles opcionales..."></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer mt-3">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-success">Guardar Factura</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-dark text-white text-center py-3 mt-auto">
+    <small>© 2025 Todos los derechos reservados | Creado por <strong>AlanDevPy</strong></small>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
