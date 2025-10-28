@@ -272,6 +272,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
   // Busco si hay alguna caja abierta
   let cajaAbierta = Cajas.find((caja) => caja.estado === "abierta");
+  let usuarioLogueado = document.getElementById("usuariologuado").textContent 
 
   // Datos de la venta actual
   const venta = {
@@ -315,6 +316,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
       estado: "abierta",
       totalRecaudado: venta.total,
       ventas: [venta], // registro la venta directamente
+      usuario: usuarioLogueado
     };
 
     const totalPedido = calcularTotalPedido(); // total que el cliente debe
@@ -481,6 +483,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   // Mostrar spinner usando Bootstrap;
   spinner.classList.add("d-flex");
+
 
 
   // Esperar a que se carguen los datos

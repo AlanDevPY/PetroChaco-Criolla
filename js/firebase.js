@@ -87,7 +87,6 @@ export const registrarUsuario = async (usuario) => {
 export const obtenerUsuariosEnTiempoReal = (callback) => onSnapshot(collection(db, 'usuarios'), callback)
 
 
-
 // Escucha cambios en el estado del usuario
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -107,7 +106,6 @@ onAuthStateChanged(auth, async (user) => {
       console.log("Rol del usuario:", rol);
       document.getElementById("usuariologuado").textContent = `👤 ${nombre.toUpperCase()}`;
 
-
       // Aquí llamás tu función para aplicar permisos según rol
       aplicarPermisos(rol);
     }
@@ -121,7 +119,7 @@ const aplicarPermisos = (rol) => {
 
   if (rol === "admin") {
     // Mostrar botones y secciones exclusivas
-    elementosAdmin.forEach(el => el.style.display = "inline-block");
+    elementosAdmin.forEach(el => el.style.display = "block");
   } else {
     // Ocultar todo lo que es solo para administradores
     elementosAdmin.forEach(el => el.style.display = "none");
