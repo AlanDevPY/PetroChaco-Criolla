@@ -28,13 +28,13 @@ import {
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyCQsOTPjzFk7xZfZL8BiQ4fIDBXKPssBNw",
-    authDomain: "petrochaco-criolla.firebaseapp.com",
-    projectId: "petrochaco-criolla",
-    storageBucket: "petrochaco-criolla.firebasestorage.app",
-    messagingSenderId: "418269470247",
-    appId: "1:418269470247:web:dc72b4ed57d98322027802"
-  };
+  apiKey: "AIzaSyCQsOTPjzFk7xZfZL8BiQ4fIDBXKPssBNw",
+  authDomain: "petrochaco-criolla.firebaseapp.com",
+  projectId: "petrochaco-criolla",
+  storageBucket: "petrochaco-criolla.firebasestorage.app",
+  messagingSenderId: "418269470247",
+  appId: "1:418269470247:web:dc72b4ed57d98322027802"
+};
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 // 2. Obtén una referencia al servicio de autenticación
@@ -83,8 +83,8 @@ export const registrarUsuario = async (usuario) => {
   }
 };
 
- // obtener usuarios en tiempo real
-    export const obtenerUsuariosEnTiempoReal = (callback) => onSnapshot(collection(db, 'usuarios'), callback)
+// obtener usuarios en tiempo real
+export const obtenerUsuariosEnTiempoReal = (callback) => onSnapshot(collection(db, 'usuarios'), callback)
 
 
 
@@ -103,7 +103,10 @@ onAuthStateChanged(auth, async (user) => {
     const docSnap = await getDoc(doc(db, "usuarios", user.uid));
     if (docSnap.exists()) {
       const rol = docSnap.data().rol;
+      const nombre = docSnap.data().nombre;
       console.log("Rol del usuario:", rol);
+      document.getElementById("usuariologuado").textContent = `👤 ${nombre.toUpperCase()}`;
+
 
       // Aquí llamás tu función para aplicar permisos según rol
       aplicarPermisos(rol);
@@ -147,7 +150,7 @@ setPersistence(auth, browserSessionPersistence)
   })
   .catch((error) => {
     console.error("Error al activar la persistencia de sesión:", error);
-    
+
   });
 
 
