@@ -57,47 +57,96 @@ export const iniciarSesion = async function (email, password) {
   }
 };
 
-// Para registrar un nuevo usuario
-export const registrarUsuario = async function (email, password) {
+export const registrarUsuario = async (usuario) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(
       auth,
-      email,
-      password
+      usuario.email,
+      usuario.password
     );
-    return { success: true, user: userCredential.user };
+    const user = userCredential.user;
+
+    // Guardamos TODO el objeto usuario en Firestore
+    await setDoc(doc(db, "usuarios", user.uid), {
+      ...usuario,   // 🔹 Desestructuramos todo el objeto
+      estado: "activo" // podemos agregar campos extra si queremos
+    });
+
+    return { success: true, user };
+
   } catch (error) {
-    return { success: false, error: error.message };
+    return {
+      success: false,
+      errorCode: error.code,      // <- agregado
+      errorMessage: error.message // <- agregado
+    };
   }
 };
 
+ // obtener usuarios en tiempo real
+    export const obtenerUsuariosEnTiempoReal = (callback) => onSnapshot(collection(db, 'usuarios'), callback)
+
+
+
 // Escucha cambios en el estado del usuario
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    // Usuario logueado, opcionalmente obtener datos y aplicar permisos
-    const docRef = doc(db, "usuarios", user.uid);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      const rol = docSnap.data().rol;
-      aplicarPermisos(rol);
-    }
-  } else {
-    // Usuario no logueado
-    const estaEnIndex = window.location.pathname.endsWith("/index.html") || window.location.pathname === "/";
-
-    if (!estaEnIndex) {
-      // Redirigir solo si no está ya en index.html
+  if (!user) {
+    // Usuario no logueado → redirigir a index
+    if (!window.location.pathname.endsWith("/index.html") && window.location.pathname !== "/") {
       window.location.href = "../index.html";
     }
-    // Si ya está en index.html, no hacer nada
+    return;
+  }
+
+  // Usuario logueado → obtener rol y aplicar permisos
+  try {
+    const docSnap = await getDoc(doc(db, "usuarios", user.uid));
+    if (docSnap.exists()) {
+      const rol = docSnap.data().rol;
+      console.log("Rol del usuario:", rol);
+
+      // Aquí llamás tu función para aplicar permisos según rol
+      aplicarPermisos(rol);
+    }
+  } catch (error) {
+    console.error("Error al obtener datos del usuario:", error);
   }
 });
+
+const aplicarPermisos = (rol) => {
+  const elementosAdmin = document.querySelectorAll(".solo-admin");
+
+  if (rol === "admin") {
+    // Mostrar botones y secciones exclusivas
+    elementosAdmin.forEach(el => el.style.display = "inline-block");
+  } else {
+    // Ocultar todo lo que es solo para administradores
+    elementosAdmin.forEach(el => el.style.display = "none");
+
+    // 🔒 Lista de páginas restringidas solo para administradores
+    const paginasRestringidas = ["stock.html", "usuarios.html", "reportes.html", "usuario.html"];
+
+    // Detectar en qué página está el usuario
+    const paginaActual = window.location.pathname.split("/").pop();
+
+    // Si la página actual está en la lista restringida, redirigir
+    if (paginasRestringidas.includes(paginaActual)) {
+      window.location.href = "ventas.html"; // o la página que sí puede ver
+    }
+  }
+};
+
+
+
+
 
 // O persistencia de sesión (pierde sesión al cerrar el navegador)
 setPersistence(auth, browserSessionPersistence)
   .then(() => {
     console.log("Persistencia de sesión activada");
+  })
+  .catch((error) => {
+    console.error("Error al activar la persistencia de sesión:", error);
     
   });
 
@@ -282,3 +331,4 @@ export const obtenerCajaPorId = async (id) => {
     console.error("Error al obtener el item por id:", error);
   }
 };
+

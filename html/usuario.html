@@ -70,28 +70,6 @@
           </tr>
         </thead>
         <tbody id="tablaUsuarios">
-          <tr>
-            <td>Juan</td>
-            <td>Pérez</td>
-            <td>juan@email.com</td>
-            <td>0981123456</td>
-            <td>Administrador</td>
-            <td>
-              <button class="btn btn-sm btn-warning">✏️ Editar</button>
-              <button class="btn btn-sm btn-danger">🗑️ Eliminar</button>
-            </td>
-          </tr>
-          <tr>
-            <td>María</td>
-            <td>Gómez</td>
-            <td>maria@email.com</td>
-            <td>0982123456</td>
-            <td>Vendedor</td>
-            <td>
-              <button class="btn btn-sm btn-warning">✏️ Editar</button>
-              <button class="btn btn-sm btn-danger">🗑️ Eliminar</button>
-            </td>
-          </tr>
         </tbody>
       </table>
     </div>
@@ -119,10 +97,6 @@
                   <input type="text" class="form-control" id="usuarioApellido" required>
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">📧 Correo Electrónico</label>
-                  <input type="email" class="form-control" id="usuarioCorreo" required>
-                </div>
-                <div class="mb-3">
                   <label class="form-label">🔑 Contraseña</label>
                   <input type="password" class="form-control" id="usuarioContrasena" required>
                 </div>
@@ -137,7 +111,7 @@
                   <label class="form-label">Rol</label>
                   <select class="form-select" id="usuarioRol">
                     <option value="admin">Administrador</option>
-                    <option value="vendedor">Vendedor</option>
+                    <option value="cajero">Cajero</option>
                   </select>
                 </div>
                 <div class="text-end mt-4">
@@ -155,8 +129,29 @@
     </div>
   </div>
 
+
+      <!-- Modal de aviso dinámico -->
+    <div class="modal fade" id="modalAviso" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header" id="modalAvisoHeader">
+            <h5 class="modal-title" id="modalAvisoTitulo"></h5>
+          </div>
+          <div class="modal-body" id="modalAvisoMensaje">
+            <!-- Mensaje dinámico -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Dasy.js -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <!-- Custom JS -->
+  <script type="module" src="../js/usuario.js"></script>
+</body>
 </body>
 
 </html>
