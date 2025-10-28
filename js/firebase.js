@@ -104,7 +104,7 @@ onAuthStateChanged(auth, async (user) => {
       const rol = docSnap.data().rol;
       const nombre = docSnap.data().nombre;
       console.log("Rol del usuario:", rol);
-      document.getElementById("usuariologuado").textContent = `👤 ${nombre.toUpperCase()}`;
+      document.getElementById("usuariologuado").textContent = `${nombre.toUpperCase()}`;
 
       // Aquí llamás tu función para aplicar permisos según rol
       aplicarPermisos(rol);
@@ -125,7 +125,7 @@ const aplicarPermisos = (rol) => {
     elementosAdmin.forEach(el => el.style.display = "none");
 
     // 🔒 Lista de páginas restringidas solo para administradores
-    const paginasRestringidas = ["stock.html", "usuarios.html", "reportes.html", "usuario.html"];
+    const paginasRestringidas = ["stock.html", "usuarios.html", "usuario.html"];
 
     // Detectar en qué página está el usuario
     const paginaActual = window.location.pathname.split("/").pop();

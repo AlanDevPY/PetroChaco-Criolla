@@ -1,6 +1,7 @@
 import { obtenerCajas, obtenerCajaPorId, actualizarCajaporId } from "./firebase.js";
 
 let idCajaIndividual
+  dayjs.extend(dayjs_plugin_customParseFormat);
 
 window.addEventListener("DOMContentLoaded", async () => {
   await mostrarCajas();
@@ -12,6 +13,13 @@ const mostrarCajas = async () => {
   const tablaCajas = document.getElementById("cajasTable");
   let contador = 1;
 
+// ordenar por fecha de apertura, hora, minuto y segundo
+  cajas.sort((a, b) => {
+    const fechaA = dayjs(a.fechaApertura, "DD/MM/YYYY, h:mm:ss A");
+    const fechaB = dayjs(b.fechaApertura, "DD/MM/YYYY, h:mm:ss A");
+    return fechaB.diff(fechaA);
+  });
+
   tablaCajas.innerHTML = "";
   cajas.forEach((caja) => {
     const fila = document.createElement("tr");
@@ -19,6 +27,7 @@ const mostrarCajas = async () => {
           <tr>
             <td>${contador++}</td>
             <td>${caja.fechaApertura}</td>
+            <td>${caja.usuario}</td>
             <td>${caja.fechaCierre || "--"}</td>
             <td>${caja.totalRecaudado.toLocaleString("es-PY") + " Gs"}</td>
             <td>
@@ -174,7 +183,7 @@ document.getElementById("formCierreCaja").addEventListener("submit", async (e) =
 
   const datoActualizado = {
     estado: "cerrada",
-    fechaCierre: dayjs().format("DD/MM/YYYY, h:mm:ss A")
+    fechaCierre: dayjs().format("DD/MM/YYYY HH:mm:ss")
   };
 
   await actualizarCajaporId(cajaAbierta.id, datoActualizado);

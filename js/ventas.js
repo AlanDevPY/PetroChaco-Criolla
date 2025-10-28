@@ -278,7 +278,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   const venta = {
     cliente: cliente, // asumiendo que ya definiste el objeto cliente
     venta: pedido, // array de productos de la venta actual
-    fecha: dayjs().format("DD/MM/YYYY, h:mm:ss A"),
+    fecha: dayjs().format("DD/MM/YYYY HH:mm:ss"),
     efectivo: Number(efectivoInput.value.replace(/\./g, "")),
     tarjeta: Number(tarjetaInput.value.replace(/\./g, "")),
     transferencia: Number(transferenciaInput.value.replace(/\./g, "")),
@@ -312,7 +312,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   if (!cajaAbierta) {
     // No hay caja abierta → creo la primera caja y agrego la venta
     const nuevaCaja = {
-      fechaApertura: dayjs().format("DD/MM/YYYY, h:mm:ss A"),
+      fechaApertura: dayjs().format("DD/MM/YYYY HH:mm:ss"),
       estado: "abierta",
       totalRecaudado: venta.total,
       ventas: [venta], // registro la venta directamente

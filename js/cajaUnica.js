@@ -175,7 +175,7 @@ document.getElementById("formCierreCaja").addEventListener("submit", async (e) =
 
   const datoActualizado = {
     estado: "cerrada",
-    fechaCierre: dayjs().format("DD/MM/YYYY, h:mm:ss A")
+    fechaCierre: dayjs().format("DD/MM/YYYY HH:mm:ss")
   };
 
   await actualizarCajaporId(cajaAbierta.id, datoActualizado);
