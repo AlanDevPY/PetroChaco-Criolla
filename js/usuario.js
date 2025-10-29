@@ -38,11 +38,13 @@ document.getElementById("formUsuario").addEventListener("submit", async (e) => {
 
     const nombre = document.getElementById("usuarioNombre").value.trim();
     const apellido = document.getElementById("usuarioApellido").value.trim();
+    const contraseña = document.getElementById("usuarioContrasena").value.trim();
     const correoGenerado = `${nombre.toLowerCase()}.${apellido.toLowerCase()}@petrocriolla.com`;
 
     const usuario = {
         nombre: nombre,
         apellido: apellido,
+        contraseña: contraseña,
         email: correoGenerado,
         password: document.getElementById("usuarioContrasena").value.trim(),
         telefono: document.getElementById("usuarioTelefono").value.trim(),
