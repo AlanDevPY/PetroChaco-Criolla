@@ -94,6 +94,7 @@ const mostrarStockDataList = async () => {
 // FUNCION PARA AGREGAR PEDIDO
 document.getElementById("agregarProductoForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  btnConfirmarVenta.disabled = false;
 
   const cantidad = Number(document.getElementById("cantidad").value);
   const inputValue = document.getElementById("inputProducto").value.trim();
@@ -267,6 +268,7 @@ clienteRucCobro.addEventListener("input", () => {
 document.getElementById("modalCobrarForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
+
   // Obtengo todas las cajas
   const Cajas = await obtenerCajas();
 
@@ -329,6 +331,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
     if (diferencia > 0) {
       mostrarAviso("warning", "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs");
+      btnConfirmarVenta.disabled = true;
       return;
     } else {
       await registrarCaja(nuevaCaja);
@@ -362,7 +365,11 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
     if (diferencia > 0) {
       console.log("no se puede realizar cobro, monto insuficiente");
+      mostrarAviso("warning", "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs");
+      return;
     } else {
+
+      btnConfirmarVenta.disabled = true;
       // Actualizo la caja en Firestore
       await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
       descontarStock(venta);
@@ -381,6 +388,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   document.getElementById("modalCobrarForm").reset();
   // resetear tabla de pedido
 
+  btnConfirmarVenta.disabled = true;
   mostrarAviso("success", "Venta registrada con exito.");
   mostrarPedidoCargado();
   actualizarCobro();
