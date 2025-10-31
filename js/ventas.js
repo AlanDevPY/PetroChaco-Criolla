@@ -261,12 +261,13 @@ clienteRucCobro.addEventListener("input", () => {
       clienteDireccionCobro.value = cliente.direccion;
       clienteTelefonoCobro.value = cliente.telefono;
     }
-  }, 400);
+  }, 100);
 });
 
 // FUNCION PARA REGISTRAR LA VENTA
 document.getElementById("modalCobrarForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  btnConfirmarVenta.disabled = true;
 
 
   // Obtengo todas las cajas
@@ -331,7 +332,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
     if (diferencia > 0) {
       mostrarAviso("warning", "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs");
-      btnConfirmarVenta.disabled = true;
+      btnConfirmarVenta.disabled = false;
       return;
     } else {
       await registrarCaja(nuevaCaja);
@@ -366,6 +367,8 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
     if (diferencia > 0) {
       console.log("no se puede realizar cobro, monto insuficiente");
       mostrarAviso("warning", "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs");
+      btnConfirmarVenta.disabled = false;
+
       return;
     } else {
 

@@ -12,14 +12,14 @@ const mostrarCajas = async () => {
   const tablaCajas = document.getElementById("cajasTable");
   let contador = 1;
 
- tablaCajas.innerHTML = "";
+  tablaCajas.innerHTML = "";
 
 
-cajas
-  .filter(caja => caja.estado === "abierta") // solo cajas abiertas
-  .forEach(caja => {
-    const fila = document.createElement("tr");
-    fila.innerHTML = `
+  cajas
+    .filter(caja => caja.estado === "abierta") // solo cajas abiertas
+    .forEach(caja => {
+      const fila = document.createElement("tr");
+      fila.innerHTML = `
       <td>${contador++}</td>
       <td>${caja.fechaApertura}</td>
       <td>${caja.fechaCierre || "--"}</td>
@@ -36,8 +36,8 @@ cajas
       </td>
     `;
 
-    tablaCajas.appendChild(fila); // mejor que innerHTML +=
-  });
+      tablaCajas.appendChild(fila); // mejor que innerHTML +=
+    });
   // obtener dataId de la caja seleccionada
   const botonesVerDetalle = document.querySelectorAll(".btn-primary");
   botonesVerDetalle.forEach((boton) => {
@@ -183,10 +183,111 @@ document.getElementById("formCierreCaja").addEventListener("submit", async (e) =
   mostrarCajas();
 
   // Obtener la instancia existente y cerrarla
-bootstrap.Modal.getInstance(document.getElementById('cierreCajaModal')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('cierreCajaModal')).hide();
 
-
-
+  setTimeout(() => {
+    imprimirCierre(cajaAbierta);
+  }, 3000);
 
 });
 
+
+
+
+function imprimirCierre(caja) {
+  // Fecha de cierre
+  const fechaCierre = dayjs().format("DD/MM/YYYY HH:mm:ss");
+
+  // Wrapper del ticket
+  const wrapper = document.getElementById("ticket-wrapper");
+  wrapper.innerHTML = ""; // Limpiamos
+
+  // Creamos el contenido del ticket
+  const ticketHTML = `
+    <div style="width: 280px; font-family: monospace; text-align: center; line-height: 1.2;">
+      <h2 style="margin:0;">Petro Chaco</h2>
+      <p style="margin:0;">Criolla</p>
+      <hr>
+      <h3 style="margin:5px 0;">CIERRE DE CAJA - ${caja.usuario}</h3>
+      <p style="margin:0; font-size:12px;">Apertura: ${caja.fechaApertura}</p>
+      <p style="margin:0; font-size:12px;">Cierre: ${fechaCierre}</p>
+      <hr>
+      <table style="width:100%; font-size:12px; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Cant</th>
+            <th style="text-align:left;">Producto</th>
+            <th style="text-align:right;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody id="ticket-items-body">
+        </tbody>
+      </table>
+      <hr>
+      <p style="text-align:right; margin:2px 0; font-weight:bold;" id="ticket-total"></p>
+      <p style="text-align:right; margin:2px 0;" id="ticket-pago"></p>
+      <hr>
+      <p style="font-size:10px;">Este es un ticket de cierre de caja generado por el sistema.</p>
+    </div>
+  `;
+  wrapper.insertAdjacentHTML("beforeend", ticketHTML);
+  wrapper.classList.add("show");
+
+  // Totales y resumen de productos
+  let total = 0, efectivoEnCaja = 0, tarjeta = 0, transferencia = 0;
+  const resumenProductos = {};
+
+  caja.ventas.forEach(v => {
+    v.venta.forEach(p => {
+      if (!resumenProductos[p.item]) resumenProductos[p.item] = { cantidad: 0, total: 0 };
+      resumenProductos[p.item].cantidad += p.cantidad;
+      resumenProductos[p.item].total += p.subTotal;
+      total += p.subTotal;
+    });
+
+    efectivoEnCaja += v.efectivo || 0;
+    tarjeta += v.tarjeta || 0;
+    transferencia += v.transferencia || 0;
+  });
+
+  // Ajustar exceso de pagos
+  const sumaPagos = efectivoEnCaja + tarjeta + transferencia;
+  if (sumaPagos > total) {
+    const exceso = sumaPagos - total;
+    if (efectivoEnCaja >= exceso) efectivoEnCaja -= exceso;
+    else {
+      let restante = exceso - efectivoEnCaja;
+      efectivoEnCaja = 0;
+      if (tarjeta >= restante) tarjeta -= restante;
+      else {
+        restante -= tarjeta;
+        tarjeta = 0;
+        transferencia -= restante;
+      }
+    }
+  }
+
+  // Llenar tabla
+  const cuerpo = document.getElementById("ticket-items-body");
+  for (const [item, info] of Object.entries(resumenProductos)) {
+    const fila = `
+      <tr>
+        <td style="text-align:left;">${info.cantidad}</td>
+        <td style="text-align:left;">${item}</td>
+        <td style="text-align:right;">${info.total.toLocaleString()} Gs</td>
+      </tr>
+    `;
+    cuerpo.insertAdjacentHTML("beforeend", fila);
+  }
+
+  // Totales finales
+  document.getElementById("ticket-total").textContent = `Total: ${total.toLocaleString()} Gs`;
+  document.getElementById("ticket-pago").textContent =
+    `Efectivo: ${efectivoEnCaja.toLocaleString()} Gs | Tarjeta: ${tarjeta.toLocaleString()} Gs | Transferencia: ${transferencia.toLocaleString()} Gs`;
+
+  // Imprimir
+  setTimeout(() => {
+    window.print();
+    wrapper.classList.remove("show");
+  }, 500);
+}
