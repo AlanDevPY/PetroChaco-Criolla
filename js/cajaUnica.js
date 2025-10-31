@@ -283,7 +283,7 @@ function imprimirCierre(caja) {
   // Totales finales
   document.getElementById("ticket-total").textContent = `Total: ${total.toLocaleString()} Gs`;
   document.getElementById("ticket-pago").textContent =
-    `Efectivo: ${efectivoEnCaja.toLocaleString()} Gs | Tarjeta: ${tarjeta.toLocaleString()} Gs | Transferencia: ${transferencia.toLocaleString()} Gs`;
+    `Efectivo: ${efectivoEnCaja.toLocaleString()} Gs | Pos/Qr: ${tarjeta.toLocaleString()} Gs | Transferencia: ${transferencia.toLocaleString()} Gs`;
 
   // Imprimir
   setTimeout(() => {
