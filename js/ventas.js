@@ -272,7 +272,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
   // Busco si hay alguna caja abierta
   let cajaAbierta = Cajas.find((caja) => caja.estado === "abierta");
-  let usuarioLogueado = document.getElementById("usuariologuado").textContent 
+  let usuarioLogueado = document.getElementById("usuarioLogueado").textContent
 
   // Datos de la venta actual
   const venta = {
@@ -551,8 +551,8 @@ function imprimirTicket(venta) {
   const msg = document.getElementById("ticket-msg");
   msg.textContent = `¡Gracias ${cliente.nombre || "por tu compra"}! Vuelve pronto 🚗⛽`;
 
- setTimeout(() => {
-  window.print();
-}, 3000);
+  setTimeout(() => {
+    window.print();
+  }, 3000);
 
 }
