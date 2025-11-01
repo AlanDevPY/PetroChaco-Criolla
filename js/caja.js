@@ -1,7 +1,7 @@
 import { obtenerCajas, obtenerCajaPorId, actualizarCajaporId } from "./firebase.js";
 
 let idCajaIndividual
-  dayjs.extend(dayjs_plugin_customParseFormat);
+dayjs.extend(dayjs_plugin_customParseFormat);
 
 window.addEventListener("DOMContentLoaded", async () => {
   await mostrarCajas();
@@ -13,7 +13,7 @@ const mostrarCajas = async () => {
   const tablaCajas = document.getElementById("cajasTable");
   let contador = 1;
 
-// ordenar por fecha de apertura, hora, minuto y segundo
+  // ordenar por fecha de apertura, hora, minuto y segundo
   cajas.sort((a, b) => {
     const fechaA = dayjs(a.fechaApertura, "DD/MM/YYYY, h:mm:ss A");
     const fechaB = dayjs(b.fechaApertura, "DD/MM/YYYY, h:mm:ss A");
@@ -62,7 +62,6 @@ const mostrarDetalleCaja = async () => {
   const caja = await obtenerCajaPorId(idCajaIndividual);
   document.getElementById("detalleAperturaCaja").textContent = caja.fechaApertura;
   document.getElementById("detalleCierreCaja").textContent = caja.fechaCierre || "--";
-  document.getElementById("detalleTotalRecaudadoCaja").textContent = caja.totalRecaudado.toLocaleString("es-PY") + " Gs";
 
 
   // recorres ventas y guardat total efectivo, total tarjeta y total transferencia
@@ -87,6 +86,12 @@ const mostrarDetalleCaja = async () => {
     totalTransferencia += transferenciaAplicado;
 
   });
+
+  // sumar todo
+  let totalVentas = totalEfectivo + totalTarjeta + totalTransferencia;
+  console.log("Total Ventas:", totalVentas);
+  document.getElementById("detalleTotalRecaudadoCaja").textContent = totalVentas.toLocaleString("es-PY") + " Gs";
+
 
 
   document.getElementById("detalleTotalEfectivoCaja").textContent = totalEfectivo.toLocaleString("es-PY") + " Gs";
@@ -191,7 +196,7 @@ document.getElementById("formCierreCaja").addEventListener("submit", async (e) =
   mostrarCajas();
 
   // Obtener la instancia existente y cerrarla
-bootstrap.Modal.getInstance(document.getElementById('cierreCajaModal')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('cierreCajaModal')).hide();
 
 
 
