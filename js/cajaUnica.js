@@ -115,7 +115,7 @@ const mostrarDetalleCaja = async () => {
       <h2 class="accordion-header" id="heading${index}">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
           data-bs-target="#collapse${index}" aria-expanded="false" aria-controls="collapse${index}">
-          📅 ${venta.fecha} - Cliente: ${venta.cliente} | Total: ${venta.total.toLocaleString("es-PY")} Gs
+          📅 ${venta.fecha} - Cliente: ${venta.cliente.nombre} | Total: ${venta.total.toLocaleString("es-PY")} Gs
         </button>
       </h2>
       <div id="collapse${index}" class="accordion-collapse collapse" aria-labelledby="heading${index}"
