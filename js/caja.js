@@ -29,7 +29,6 @@ const mostrarCajas = async () => {
             <td>${caja.fechaApertura}</td>
             <td>${caja.usuario}</td>
             <td>${caja.fechaCierre || "--"}</td>
-            <td>${caja.totalRecaudado.toLocaleString("es-PY") + " Gs"}</td>
             <td>
               <span class="badge ${caja.estado === 'abierta' ? 'bg-success' : 'bg-danger'}">
                 ${caja.estado}
