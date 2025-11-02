@@ -262,12 +262,24 @@ clienteRucCobro.addEventListener("input", () => {
       clienteTelefonoCobro.value = cliente.telefono;
     }
   }, 100);
-});
+});;
+
 
 // FUNCION PARA REGISTRAR LA VENTA
 document.getElementById("modalCobrarForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   btnConfirmarVenta.disabled = true;
+
+
+  // Validar cliente
+  if (!cliente || !cliente.ruc || cliente.ruc.trim() === "") {
+    mostrarAviso("error", "Ingrese un RUC válido antes de cobrar.");
+    clienteRucCobro.focus();
+    btnConfirmarVenta.disabled = false;
+    return;
+  }
+
+
 
 
   // Obtengo todas las cajas
