@@ -2,18 +2,29 @@ import {
   obtenerStock,
   obtenerStockPorId,
   registrarCliente,
-  obtenerClientes,
+  obtenerClientesCached,
   obtenerCajas,
   actualizarStockporId,
   eliminarClientePorID,
   registrarCaja,
   actualizarCajaporId,
+  obtenerStockCached,
+  descontarStockTransaccional,
 } from "./firebase.js";
+import { formatGs, mostrarAviso, debounce } from "./utils.js";
 
 // VARIABLES GLOBALES
 let pedido = [];
 let pedidoGenerado = {};
 let cliente;
+
+// Referencias a elementos por id (evita depender de variables globales implícitas)
+const btnCobrar = document.getElementById("btnCobrar");
+const btnConfirmarVenta = document.getElementById("btnConfirmarVenta");
+const clienteRucCobro = document.getElementById("clienteRucCobro");
+const clienteNombreCobro = document.getElementById("clienteNombreCobro");
+const clienteDireccionCobro = document.getElementById("clienteDireccionCobro");
+const clienteTelefonoCobro = document.getElementById("clienteTelefonoCobro");
 
 // FUNCION DE SUMAR SUB TOTALES
 function calcularTotalPedido() {
@@ -44,43 +55,11 @@ document.querySelectorAll(".formatearInput").forEach((input) => {
   });
 });
 
-// FUNCION DE MODAL ALERTA
-
-function mostrarAviso(tipo, mensaje) {
-  const modalTitulo = document.getElementById("modalAvisoTitulo");
-  const modalMensaje = document.getElementById("modalAvisoMensaje");
-  const modalHeader = document.getElementById("modalAvisoHeader");
-
-  // Limpiar clases previas
-  modalHeader.className = "modal-header";
-
-  // Ajustar estilo según tipo
-  if (tipo === "success") {
-    modalHeader.classList.add("bg-success", "text-white");
-    modalTitulo.textContent = "✅ Éxito";
-  } else if (tipo === "warning") {
-    modalHeader.classList.add("bg-warning", "text-dark");
-    modalTitulo.textContent = "⚠️ Advertencia";
-  } else {
-    modalHeader.classList.add("bg-secondary", "text-white");
-    modalTitulo.textContent = "ℹ️ Aviso";
-  }
-
-  modalMensaje.textContent = mensaje;
-
-  const modal = new bootstrap.Modal(document.getElementById("modalAviso"));
-  modal.show();
-
-  //   OCULATAR MODAL LUEGO DE 2 SEGUNDOS
-  setTimeout(() => {
-    modal.hide();
-  }, 1200);
-  document.getElementById("inputProducto").focus();
-}
 
 // FUNCION PARA OBTENER STOCK Y MOSTRAR EN EL DATALIST
 const mostrarStockDataList = async () => {
-  const stock = await obtenerStock();
+  // Usa caché para evitar lecturas repetidas
+  const stock = (await obtenerStockCached?.()) || (await obtenerStock());
 
   let stockDataList = document.getElementById("listaProductos");
 
@@ -156,8 +135,7 @@ document.getElementById("agregarProductoForm").addEventListener("submit", async 
   document.getElementById("inputProducto").focus();
 
   // Mostrar total en Guaraníes
-  document.getElementById("totalPedido").textContent =
-    calcularTotalPedido().toLocaleString("es-PY") + " Gs";
+  document.getElementById("totalPedido").textContent = formatGs(calcularTotalPedido());
   console.log(pedidoGenerado);
 });
 
@@ -181,22 +159,21 @@ const mostrarPedidoCargado = () => {
   });
 
   // eliminar pedido
-  const botonesEliminar = document.querySelectorAll(".btn-danger");
+  // Limitar al tbody del carrito para no capturar otros botones .btn-danger de la página
+  const botonesEliminar = document.querySelectorAll("#carritoTable .btn-danger");
   botonesEliminar.forEach((boton) => {
     boton.addEventListener("click", async () => {
       const index = Array.from(botonesEliminar).indexOf(boton);
       pedido.splice(index, 1);
       mostrarPedidoCargado();
-      document.getElementById("totalPedido").textContent =
-        calcularTotalPedido().toLocaleString("es-PY") + " Gs";
+      document.getElementById("totalPedido").textContent = formatGs(calcularTotalPedido());
     });
   });
 };
 
 //? FUNCIONES EN MODAL DE COBRO--------------------------------------------------
-btnCobrar.addEventListener("click", async () => {
-  modalTotalCobro.textContent =
-    "Total a pagar: " + calcularTotalPedido().toLocaleString("es-PY") + " Gs";
+btnCobrar?.addEventListener("click", async () => {
+  modalTotalCobro.textContent = "Total a pagar: " + formatGs(calcularTotalPedido());
 
   // reset form
   document.getElementById("modalCobrarForm").reset();
@@ -226,8 +203,7 @@ function actualizarCobro() {
 
   if (diferencia > 0) {
     // Falta pagar → rojo
-    modalTotalCobro.textContent =
-      "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs";
+    modalTotalCobro.textContent = "Falta pagar: " + formatGs(diferencia);
     modalTotalCobro.classList.add("alert-danger");
   } else if (diferencia === 0) {
     // Exacto → verde
@@ -235,8 +211,7 @@ function actualizarCobro() {
     modalTotalCobro.classList.add("alert-success");
   } else {
     // Vuelto → amarillo
-    modalTotalCobro.textContent =
-      "Vuelto: " + (-diferencia).toLocaleString("es-PY") + " Gs";
+    modalTotalCobro.textContent = "Vuelto: " + formatGs(-diferencia);
     modalTotalCobro.classList.add("alert-warning");
   }
 }
@@ -248,21 +223,18 @@ function actualizarCobro() {
 
 // funcion con modal cobro cliente
 
-let timeout;
-clienteRucCobro.addEventListener("input", () => {
-  clearTimeout(timeout);
-  timeout = setTimeout(async () => {
-    const ruc = clienteRucCobro.value.trim();
-    if (!ruc) return;
-    const clientes = await obtenerClientes();
-    cliente = clientes.find((c) => c.ruc === ruc);
-    if (cliente) {
-      clienteNombreCobro.value = cliente.nombre;
-      clienteDireccionCobro.value = cliente.direccion;
-      clienteTelefonoCobro.value = cliente.telefono;
-    }
-  }, 100);
-});;
+const buscarClientePorRuc = debounce(async () => {
+  const ruc = clienteRucCobro.value.trim();
+  if (!ruc) return;
+  const clientes = await obtenerClientesCached();
+  cliente = clientes.find((c) => c.ruc === ruc);
+  if (cliente) {
+    clienteNombreCobro.value = cliente.nombre;
+    clienteDireccionCobro.value = cliente.direccion;
+    clienteTelefonoCobro.value = cliente.telefono;
+  }
+}, 150);
+clienteRucCobro?.addEventListener("input", buscarClientePorRuc);
 
 
 // FUNCION PARA REGISTRAR LA VENTA
@@ -291,9 +263,9 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
   // Datos de la venta actual
   const venta = {
-    cliente: cliente, // asumiendo que ya definiste el objeto cliente
-    venta: pedido, // array de productos de la venta actual
-    fecha: dayjs().format("DD/MM/YYYY HH:mm:ss"),
+    cliente: cliente, // objeto cliente
+    venta: pedido, // array de productos
+    fecha: dayjs().format("DD/MM/YYYY HH:mm:ss"), // string legacy conservada
     efectivo: Number(efectivoInput.value.replace(/\./g, "")),
     tarjeta: Number(tarjetaInput.value.replace(/\./g, "")),
     transferencia: Number(transferenciaInput.value.replace(/\./g, "")),
@@ -302,27 +274,16 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
 
   // funcion para descontar stock de la venta
-  async function descontarStock(venta) {
-    for (const item of venta.venta) {
-      const id = item.id;
-      const cantidadItemVenta = Number(item.cantidad); // 🔹 Convertir a número
-
-      const cantidadStock = await obtenerStockPorId(id);
-      const stockActual = Number(cantidadStock.cantidad); // 🔹 Convertir a número
-
-      console.log(
-        `🔹 ${id}: ${stockActual} - ${cantidadItemVenta} = ${stockActual - cantidadItemVenta}`);
-
-
-      if (stockActual >= cantidadItemVenta) {
-        const nuevoStock = stockActual - cantidadItemVenta;
-        await actualizarStockporId(id, { cantidad: nuevoStock });
-        console.log(`✅ ${id}: ${stockActual} → ${nuevoStock}`);
-      } else {
-        console.log(`❌ No hay stock suficiente para ${id}`);
-      }
+  // Descuento transaccional de stock para evitar condiciones de carrera
+  const descontarStock = async (ventaActual) => {
+    try {
+      await descontarStockTransaccional(ventaActual.venta.map(i => ({ id: i.id, cantidad: Number(i.cantidad) })));
+      return true;
+    } catch (err) {
+      console.error("Error transaccional al descontar stock:", err);
+      return false;
     }
-  }
+  };
 
   if (!cajaAbierta) {
     // No hay caja abierta → creo la primera caja y agrego la venta
@@ -343,12 +304,13 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
     const diferencia = totalPedido - pagado;
 
     if (diferencia > 0) {
-      mostrarAviso("warning", "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs");
+      mostrarAviso("warning", "Falta pagar: " + formatGs(diferencia));
       btnConfirmarVenta.disabled = false;
       return;
     } else {
       await registrarCaja(nuevaCaja);
-      descontarStock(venta);
+      const ok = await descontarStock(venta);
+      if (!ok) { btnConfirmarVenta.disabled = false; return; }
       imprimirTicket(venta);
 
 
@@ -378,7 +340,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
     if (diferencia > 0) {
       console.log("no se puede realizar cobro, monto insuficiente");
-      mostrarAviso("warning", "Falta pagar: " + diferencia.toLocaleString("es-PY") + " Gs");
+      mostrarAviso("warning", "Falta pagar: " + formatGs(diferencia));
       btnConfirmarVenta.disabled = false;
 
       return;
@@ -387,7 +349,8 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
       btnConfirmarVenta.disabled = true;
       // Actualizo la caja en Firestore
       await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
-      descontarStock(venta);
+      const ok = await descontarStock(venta);
+      if (!ok) { btnConfirmarVenta.disabled = false; return; }
       imprimirTicket(venta);
 
       // obtenner instancia de modalcobro y cerrar
@@ -408,8 +371,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   mostrarPedidoCargado();
   actualizarCobro();
   // Mostrar total en Guaraníes
-  document.getElementById("totalPedido").textContent =
-    calcularTotalPedido().toLocaleString("es-PY") + " Gs";
+  document.getElementById("totalPedido").textContent = formatGs(calcularTotalPedido());
 });
 
 // ?FUNCIONES CON MODAL GESTION DE CLIENTES
@@ -441,7 +403,7 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
   };
 
   // verificar si hay cliente con ese mismo ruc registrado
-  const clientes = await obtenerClientes();
+  const clientes = await obtenerClientesCached();
   const clienteExistente = clientes.find((c) => c.ruc === ruc);
   if (clienteExistente) {
     mostrarAviso("warning", "Ya existe un cliente con ese RUC registrado.");
@@ -459,7 +421,7 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
 
 // funcion para mostrar los clientes registrados
 async function mostrarClientes() {
-  const clientes = await obtenerClientes();
+  const clientes = await obtenerClientesCached();
   const tbody = document.getElementById("tablaClientes");
   tbody.innerHTML = "";
 

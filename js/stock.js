@@ -1,4 +1,4 @@
-import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId } from "./firebase.js";
+import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId, obtenerStockPorId } from "./firebase.js";
 
 // variables globales
 
@@ -47,8 +47,8 @@ actualizarPrecioCompraStock.addEventListener("input", () => {
 // -------------------------------------------------------------------------------
 
 
-btnAgregar.addEventListener("click", () => {
-      registrarStockForm.reset();
+document.getElementById("btnAgregar").addEventListener("click", () => {
+  registrarStockForm.reset();
 })
 
 // Referencias a elementos
@@ -108,7 +108,7 @@ const mostrarStock = async () => {
   });
 
   // Eliminar stock
-  const botonesEliminar = document.querySelectorAll(".btn-danger");
+  const botonesEliminar = document.querySelectorAll("#stockTable .btn-danger");
   botonesEliminar.forEach((boton) => {
     boton.addEventListener("click", async () => {
       const id = boton.getAttribute("data-id");
@@ -122,26 +122,23 @@ const mostrarStock = async () => {
     });
   });
 
-//   actualizar stock
-  const botonesActualizar = document.querySelectorAll(".btn-warning");
+  //   actualizar stock
+  const botonesActualizar = document.querySelectorAll("#stockTable .btn-warning");
   botonesActualizar.forEach((boton) => {
     boton.addEventListener("click", async () => {
-       idStock = boton.getAttribute("data-id");
+      idStock = boton.getAttribute("data-id");
       modalActualizarProducto.show();
 
-    //   obtener stock por id
-      const stock = await obtenerStock();
-
-      stock.forEach((item) => {
-        if (item.id === idStock) {
-          document.getElementById("actualizarItemStock").value = item.item;
-          document.getElementById("actualizarCategoriaStock").value = item.categoria;
-          document.getElementById("actualizarCodigoBarraStock").value = item.codigoBarra;
-          document.getElementById("actualizarCantidadStock").value = item.cantidad;
-          document.getElementById("actualizarCostoStock").value = Number(item.costo).toLocaleString("es-PY");
-          document.getElementById("actualizarPrecioCompraStock").value = Number(item.costoCompra).toLocaleString("es-PY");
-        }
-      });
+      // obtener stock por id (evita traer toda la colección)
+      const item = await obtenerStockPorId(idStock);
+      if (item) {
+        document.getElementById("actualizarItemStock").value = item.item;
+        document.getElementById("actualizarCategoriaStock").value = item.categoria;
+        document.getElementById("actualizarCodigoBarraStock").value = item.codigoBarra;
+        document.getElementById("actualizarCantidadStock").value = item.cantidad;
+        document.getElementById("actualizarCostoStock").value = Number(item.costo).toLocaleString("es-PY");
+        document.getElementById("actualizarPrecioCompraStock").value = Number(item.costoCompra).toLocaleString("es-PY");
+      }
     });
   });
 };
@@ -181,7 +178,7 @@ registrarStockForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
 
-  const FechaDeRegistro = dayjs().format("DD/MM/YYYY, h:mm:ss A");
+  const FechaDeRegistro = dayjs().format("DD/MM/YYYY, h:mm:ss A"); // legacy string
   // registrar item con mayuscular y evitar espacio en blanco
   const item = document.getElementById("nuevoItemStock").value.trim().toUpperCase();
   const categoria = document.getElementById("nuevoCategoriaStock").value;
@@ -200,7 +197,7 @@ registrarStockForm.addEventListener("submit", async (e) => {
   const stockData = { FechaDeRegistro, item, codigoBarra, categoria, cantidad, costo, costoCompra };
 
   let obtenerStockTotal = await obtenerStock();
- 
+
 
   // Verificar si el codigo de barra ya existe en el stock
   if (obtenerStockTotal.some((item) => item.codigoBarra === codigoBarra)) {
@@ -209,7 +206,7 @@ registrarStockForm.addEventListener("submit", async (e) => {
   }
 
 
-  
+
 
   // ⚡ Cerrar modal "Agregar Producto"
   modalAgregarProducto.hide();

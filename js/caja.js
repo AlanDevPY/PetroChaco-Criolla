@@ -1,33 +1,62 @@
 import { obtenerCajas, obtenerCajaPorId, actualizarCajaporId } from "./firebase.js";
 
-let idCajaIndividual
-dayjs.extend(dayjs_plugin_customParseFormat);
+let idCajaIndividual;
+// Extensión de formato custom (verificar disponibilidad global)
+try { dayjs.extend(dayjs_plugin_customParseFormat); } catch (e) { console.warn("CustomParseFormat no disponible", e); }
 
 window.addEventListener("DOMContentLoaded", async () => {
-  await mostrarCajas();
+  if (document.body?.dataset?.rol) {
+    await mostrarCajas();
+  } else {
+    // Esperar a que firebase.js propague el rol
+    document.addEventListener('rol-ready', async () => {
+      await mostrarCajas();
+    }, { once: true });
+  }
 });
 
 // FUNCION DE MOSTRAR LAS CAJAS EN TABLA
 const mostrarCajas = async () => {
   const cajas = await obtenerCajas();
+  const rol = document.body?.dataset?.rol || 'cajero'; // default cajero si no llega
   const tablaCajas = document.getElementById("cajasTable");
   let contador = 1;
 
   // ordenar por fecha de apertura, hora, minuto y segundo
+  const parseFecha = (s) => {
+    // Intenta múltiples formatos conocidos
+    const f = ["DD/MM/YYYY, h:mm:ss A", "DD/MM/YYYY HH:mm:ss"]; // 12h y 24h
+    for (const fmt of f) {
+      const d = dayjs(s, fmt, true);
+      if (d.isValid()) return d;
+    }
+    // fallback: intentar parsear nativo
+    return dayjs(s);
+  };
+
+  // Preferir Timestamp si existe (fechaAperturaTS) para orden consistente
   cajas.sort((a, b) => {
-    const fechaA = dayjs(a.fechaApertura, "DD/MM/YYYY, h:mm:ss A");
-    const fechaB = dayjs(b.fechaApertura, "DD/MM/YYYY, h:mm:ss A");
-    return fechaB.diff(fechaA);
+    const db = b.fechaAperturaTS?.seconds ? dayjs.unix(b.fechaAperturaTS.seconds) : parseFecha(b.fechaApertura);
+    const da = a.fechaAperturaTS?.seconds ? dayjs.unix(a.fechaAperturaTS.seconds) : parseFecha(a.fechaApertura);
+    return db.diff(da);
   });
 
+  // Filtrar según rol: admin ve todas, otros solo la abierta
+  const visibles = rol === 'admin' ? cajas : cajas.filter(c => c.estado === 'abierta');
+
   tablaCajas.innerHTML = "";
-  cajas.forEach((caja) => {
+  if (visibles.length === 0) {
+    tablaCajas.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No hay caja abierta</td></tr>`;
+    return;
+  }
+
+  visibles.forEach((caja) => {
     const fila = document.createElement("tr");
     fila.innerHTML = `
           <tr>
             <td>${contador++}</td>
             <td>${caja.fechaApertura}</td>
-            <td>${caja.usuario}</td>
+            <td>${caja.usuario || '-'}</td>
             <td>${caja.fechaCierre || "--"}</td>
             <td>
               <span class="badge ${caja.estado === 'abierta' ? 'bg-success' : 'bg-danger'}">
@@ -38,6 +67,7 @@ const mostrarCajas = async () => {
               <button data-id="${caja.id}" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detalleCajaModal">
                 Ver detalle
               </button>
+              ${rol === 'admin' && caja.estado === 'abierta' ? `<button data-id="${caja.id}" class="btn btn-sm btn-outline-danger ms-1" data-bs-toggle="modal" data-bs-target="#cierreCajaModal">Cerrar</button>` : ''}
             </td>
           </tr>
         `;
@@ -46,7 +76,8 @@ const mostrarCajas = async () => {
   });
 
   // obtener dataId de la caja seleccionada
-  const botonesVerDetalle = document.querySelectorAll(".btn-primary");
+  // Limitar seleccion a la tabla para evitar capturar otros .btn-primary
+  const botonesVerDetalle = document.querySelectorAll("#cajasTable .btn-primary");
   botonesVerDetalle.forEach((boton) => {
     boton.addEventListener("click", async () => {
       idCajaIndividual = boton.getAttribute("data-id");
@@ -169,36 +200,143 @@ const mostrarDetalleCaja = async () => {
 
 //? FUNCION DE REALIZAR CIERRE DE CAJA
 
-document.getElementById("formCierreCaja").addEventListener("submit", async (e) => {
+// Cierre de caja + impresión (fusionado desde cajaUnica.js)
+document.getElementById("formCierreCaja")?.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const rol = document.body?.dataset?.rol || 'cajero';
+  if (rol !== 'admin' && rol !== 'cajero') return; // seguridad básica
 
-  // buscamos la caja que esta abierto y cambiamos a estado cerrado
-  // 1️⃣ Esperamos a que la promesa se resuelva
   const cajas = await obtenerCajas();
-
-  // 2️⃣ Ahora sí podemos usar .find sobre el array
   const cajaAbierta = cajas.find(caja => caja.estado === "abierta");
-
-
   if (!cajaAbierta) {
     alert("No hay una caja abierta para cerrar.");
     return;
   }
-
-  const datoActualizado = {
-    estado: "cerrada",
-    fechaCierre: dayjs().format("DD/MM/YYYY HH:mm:ss")
-  };
-
+  const datoActualizado = { estado: "cerrada", fechaCierre: dayjs().format("DD/MM/YYYY HH:mm:ss") };
   await actualizarCajaporId(cajaAbierta.id, datoActualizado);
-
   mostrarCajas();
-
-  // Obtener la instancia existente y cerrarla
-  bootstrap.Modal.getInstance(document.getElementById('cierreCajaModal')).hide();
-
-
-
-
+  bootstrap.Modal.getInstance(document.getElementById('cierreCajaModal'))?.hide();
+  setTimeout(() => imprimirCierre(cajaAbierta), 500); // imprimir rápido
 });
+
+// Preparar modal de cierre cuando se abre
+const cierreModalEl = document.getElementById('cierreCajaModal');
+if (cierreModalEl) {
+  cierreModalEl.addEventListener('show.bs.modal', async () => {
+    const cajas = await obtenerCajas();
+    const cajaAbierta = cajas.find(c => c.estado === 'abierta');
+    const ahora = dayjs();
+    if (!cajaAbierta) {
+      document.getElementById('cierreTotalRecaudado').textContent = 'Sin caja abierta';
+      return;
+    }
+    let efectivo = 0, tarjeta = 0, transferencia = 0, itemsVendidos = 0;
+    const ventas = cajaAbierta.ventas || [];
+    ventas.forEach(v => {
+      let restante = v.total;
+      const efectivoAplicado = Math.min(v.efectivo, restante); restante -= efectivoAplicado;
+      const tarjetaAplicado = Math.min(v.tarjeta, restante); restante -= tarjetaAplicado;
+      const transferenciaAplicado = Math.min(v.transferencia, restante); restante -= transferenciaAplicado;
+      efectivo += efectivoAplicado; tarjeta += tarjetaAplicado; transferencia += transferenciaAplicado;
+      (v.venta || []).forEach(item => { itemsVendidos += item.cantidad; });
+    });
+    const total = efectivo + tarjeta + transferencia;
+    // Rellenar tarjetas
+    const fmt = n => n.toLocaleString('es-PY') + ' Gs';
+    document.getElementById('cierreTotalRecaudado').textContent = fmt(total);
+    document.getElementById('cierreTotalEfectivo').textContent = fmt(efectivo);
+    document.getElementById('cierreTotalTarjeta').textContent = fmt(tarjeta);
+    document.getElementById('cierreTotalTransferencia').textContent = fmt(transferencia);
+    document.getElementById('cierreCantVentas').textContent = ventas.length;
+    document.getElementById('cierreItemsVendidos').textContent = itemsVendidos;
+    document.getElementById('cierreApertura').textContent = cajaAbierta.fechaApertura || '--';
+    document.getElementById('cierreAhoraTime').textContent = ahora.format('DD/MM/YYYY HH:mm:ss');
+    // Rellenar tabla de ventas
+    const tbody = document.getElementById('cajaVentasTableModal');
+    if (tbody) {
+      tbody.innerHTML = '';
+      ventas.forEach(v => {
+        const metodoPago = v.efectivo > 0 ? 'Efectivo' : (v.tarjeta > 0 ? 'Pos/Qr' : (v.transferencia > 0 ? 'Transferencia' : '-'));
+        tbody.insertAdjacentHTML('beforeend', `<tr><td>${v.fecha}</td><td>${v.cliente?.nombre || 'Consumidor Final'}</td><td>${v.total.toLocaleString('es-PY')} Gs</td><td>${metodoPago}</td></tr>`);
+      });
+      if (ventas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sin ventas registradas</td></tr>';
+      }
+    }
+  });
+}
+
+function imprimirCierre(caja) {
+  const fechaCierre = dayjs().format("DD/MM/YYYY HH:mm:ss");
+  let wrapper = document.getElementById("ticket-wrapper");
+  if (!wrapper) {
+    // crear contenedor mínimo si no existe
+    wrapper = document.createElement('div');
+    wrapper.id = 'ticket-wrapper';
+    document.body.appendChild(wrapper);
+  }
+  wrapper.innerHTML = "";
+  const ticketHTML = `
+    <div style="width:280px;font-family:monospace;text-align:center;line-height:1.25;">
+      <div style="font-size:18px;font-weight:700;">Petro Chaco Criolla</div>
+      <div style="font-size:11px;">Sistema POS - Cierre de Caja</div>
+      <hr style="margin:4px 0;">
+      <div style="font-size:13px;font-weight:600;">CAJA: ${caja.usuario || '-'} (${caja.estado})</div>
+      <div style="font-size:11px;text-align:left;margin-top:4px;">Apertura: ${caja.fechaApertura}</div>
+      <div style="font-size:11px;text-align:left;">Cierre: ${fechaCierre}</div>
+      <hr style="margin:4px 0;">
+      <table style="width:100%;font-size:11px;border-collapse:collapse;">
+        <thead><tr><th style="text-align:left;">Cant</th><th style="text-align:left;">Producto</th><th style="text-align:right;">Subtotal</th></tr></thead>
+        <tbody id="ticket-items-body"></tbody>
+      </table>
+      <hr style="margin:4px 0;">
+      <div id="ticket-resumen" style="font-size:11px;text-align:left;"></div>
+      <div style="font-size:12px;font-weight:700;text-align:right;margin-top:4px;" id="ticket-total"></div>
+      <div style="font-size:11px;text-align:right;" id="ticket-pago"></div>
+      <div style="font-size:11px;text-align:right;" id="ticket-extra"></div>
+      <hr style="margin:4px 0;">
+      <div style="font-size:10px;">Generado: ${fechaCierre}</div>
+      <div style="font-size:10px;">Gracias por su trabajo ✔</div>
+    </div>`;
+  wrapper.insertAdjacentHTML("beforeend", ticketHTML);
+  let total = 0, efectivoEnCaja = 0, tarjeta = 0, transferencia = 0;
+  const resumenProductos = {};
+  let ventasCount = 0, itemsCount = 0;
+  (caja.ventas || []).forEach(v => {
+    ventasCount++;
+    (v.venta || []).forEach(p => {
+      if (!resumenProductos[p.item]) resumenProductos[p.item] = { cantidad: 0, total: 0 };
+      resumenProductos[p.item].cantidad += p.cantidad;
+      resumenProductos[p.item].total += p.subTotal;
+      total += p.subTotal;
+      itemsCount += p.cantidad;
+    });
+    efectivoEnCaja += v.efectivo || 0;
+    tarjeta += v.tarjeta || 0;
+    transferencia += v.transferencia || 0;
+  });
+  const sumaPagos = efectivoEnCaja + tarjeta + transferencia;
+  if (sumaPagos > total) {
+    let exceso = sumaPagos - total;
+    if (efectivoEnCaja >= exceso) efectivoEnCaja -= exceso; else {
+      exceso -= efectivoEnCaja; efectivoEnCaja = 0;
+      if (tarjeta >= exceso) tarjeta -= exceso; else {
+        exceso -= tarjeta; tarjeta = 0; transferencia -= exceso;
+      }
+    }
+  }
+  const cuerpo = document.getElementById("ticket-items-body");
+  for (const [item, info] of Object.entries(resumenProductos)) {
+    cuerpo.insertAdjacentHTML("beforeend", `<tr><td style="text-align:left;">${info.cantidad}</td><td style="text-align:left;">${item}</td><td style="text-align:right;">${info.total.toLocaleString()} Gs</td></tr>`);
+  }
+  document.getElementById("ticket-total").textContent = `TOTAL VENTAS: ${total.toLocaleString()} Gs`;
+  document.getElementById("ticket-pago").textContent = `Efec: ${efectivoEnCaja.toLocaleString()} | Pos/Qr: ${tarjeta.toLocaleString()} | Transf: ${transferencia.toLocaleString()} Gs`;
+  document.getElementById("ticket-resumen").innerHTML = `Ventas: <strong>${ventasCount}</strong> | Items: <strong>${itemsCount}</strong>`;
+  const exceso = (efectivoEnCaja + tarjeta + transferencia) - total;
+  if (exceso > 0) {
+    document.getElementById("ticket-extra").textContent = `Ajuste de exceso pagos: -${exceso.toLocaleString()} Gs`;
+  }
+  setTimeout(() => { window.print(); }, 300);
+}
+
 

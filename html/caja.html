@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Control de Caja - PETROCHACHO POS</title>
+  <title>Control de Caja — Petro Chaco Criolla POS</title>
   <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <link rel="stylesheet" href="../css/roles.css">
@@ -14,53 +14,19 @@
 
 <body class="bg-light">
 
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-    <div class="container-fluid">
-      <a class="navbar-brand fw-bold" href="ventas.html">PETROCHACHO POS</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="navbarContent">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <!-- <li class="nav-item"><a class="nav-link" href="ventas.html">Ventas</a></li> -->
-          <li class="nav-item solo-admin"><a class="nav-link" href="clientes.html">Clientes</a></li>
-          <li class="nav-item solo-admin"><a class="nav-link" href="stock.html">Stock</a></li>
-          <li class="nav-item solo-admin"><a class="nav-link active" href="#">Control de Caja</a></li>
-
-          <!-- Dropdown -->
-          <li class="nav-item dropdown solo-admin">
-            <a class="nav-link dropdown-toggle" href="#" id="configDropdown" role="button" data-bs-toggle="dropdown"
-              aria-expanded="false">
-              Configuración
-            </a>
-            <ul class="dropdown-menu" aria-labelledby="configDropdown">
-              <li><a class="dropdown-item" href="#">Usuarios</a></li>
-              <li><a class="dropdown-item" href="#">Roles</a></li>
-              <li>
-                <hr class="dropdown-divider">
-              </li>
-              <li><a class="dropdown-item" href="#">Opciones Avanzadas</a></li>
-            </ul>
-          </li>
-        </ul>
-      </div>
-
-      <div class="d-flex align-items-center text-white">
-        <span class="me-3" id="usuarioLogueado">👤 </span>
-        <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#cierreCajaModal">
-          Realizar Cierre de Caja
-        </button>
-      </div>
-    </div>
-  </nav>
+  <!-- Navbar (parcial) -->
+  <div id="navbar-placeholder" class="fixed-top"></div>
 
 
   <!-- Contenido -->
   <div class="container-fluid pt-5 mt-3">
 
-    <h3 class="mb-4">Listado de Cajas</h3>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="mb-0">Listado de Cajas</h3>
+      <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#cierreCajaModal">
+        <i class="bi bi-calendar2-x me-1"></i> Realizar Cierre de Caja
+      </button>
+    </div>
 
     <!-- Tabla de cajas -->
     <div class="table-responsive">
@@ -204,6 +170,77 @@
                   </div>
                 </div>
 
+                <!-- Resumen dinámico de la caja abierta -->
+                <div class="row g-3 mt-1">
+                  <div class="col-md-3">
+                    <div class="card border-success h-100">
+                      <div class="card-body">
+                        <div class="text-muted small">Total Recaudado</div>
+                        <div class="fs-4 fw-bold" id="cierreTotalRecaudado">--</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="card border-success h-100">
+                      <div class="card-body">
+                        <div class="text-muted small"><i class="bi bi-cash me-1"></i>Efectivo</div>
+                        <div class="fs-5 fw-semibold" id="cierreTotalEfectivo">--</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="card border-primary h-100">
+                      <div class="card-body">
+                        <div class="text-muted small"><i class="bi bi-credit-card me-1"></i>Pos/Qr</div>
+                        <div class="fs-5 fw-semibold" id="cierreTotalTarjeta">--</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="card border-warning h-100">
+                      <div class="card-body">
+                        <div class="text-muted small"><i class="bi bi-bank me-1"></i>Transferencia</div>
+                        <div class="fs-5 fw-semibold" id="cierreTotalTransferencia">--</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row g-3 mt-1">
+                  <div class="col-md-3">
+                    <div class="card h-100">
+                      <div class="card-body">
+                        <div class="text-muted small">Ventas</div>
+                        <div class="fs-5 fw-semibold" id="cierreCantVentas">--</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="card h-100">
+                      <div class="card-body">
+                        <div class="text-muted small">Items vendidos</div>
+                        <div class="fs-5 fw-semibold" id="cierreItemsVendidos">--</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="card h-100">
+                      <div class="card-body">
+                        <div class="text-muted small">Apertura</div>
+                        <div class="fw-semibold" id="cierreApertura">--</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="card h-100">
+                      <div class="card-body">
+                        <div class="text-muted small">Cierre (ahora)</div>
+                        <div class="fw-semibold" id="cierreAhoraTime">--</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Inputs para validar cierre -->
                 <form id="formCierreCaja">
                 </form>
@@ -221,20 +258,7 @@
                         <th>Método de Pago</th>
                       </tr>
                     </thead>
-                    <tbody id="cajaVentasTableModal">
-                      <tr>
-                        <td>10:15 AM</td>
-                        <td>Juan Pérez</td>
-                        <td>50.000 Gs</td>
-                        <td>Efectivo</td>
-                      </tr>
-                      <tr>
-                        <td>10:30 AM</td>
-                        <td>María Gómez</td>
-                        <td>75.000 Gs</td>
-                        <td>Tarjeta</td>
-                      </tr>
-                    </tbody>
+                    <tbody id="cajaVentasTableModal"></tbody>
                   </table>
                 </div>
               </div>
@@ -260,6 +284,7 @@
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="../js/navbar.js"></script>
 
   <!-- Dasy.js -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>

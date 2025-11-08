@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/usuarios/$(uid));
+    }
+    function userRole() {
+      return isSignedIn() ? userDoc(request.auth.uid).data.rol : null;
+    }
+    function isAdmin() {
+      return userRole() == 'admin';
+    }
+
+    // -------------------- USUARIOS --------------------
+    // Colección: usuarios (minúscula)
+    match /usuarios/{uid} {
+      // Leer: el propio usuario o un admin
+      allow read: if isSignedIn() && (isAdmin() || request.auth.uid == uid);
+
+      // Escribir: solo admin
+      allow create, update, delete: if isSignedIn() && isAdmin();
+    }
+
+    // -------------------- STOCK --------------------
+    // Colección: Stock (S mayúscula)
+    match /Stock/{docId} {
+      // Lectura para cualquier usuario autenticado
+      allow read: if isSignedIn();
+
+      // Escritura solo admin + validaciones básicas
+      allow create, update, delete: if isSignedIn() && isAdmin() && validateStock(request.resource.data);
+    }
+
+    function validateStock(d) {
+      return d.keys().hasAll(['item','categoria','codigoBarra','cantidad','costo','costoCompra']) &&
+        d.item is string && d.item.size() > 0 &&
+        d.categoria is string && d.categoria.size() > 0 &&
+        (d.codigoBarra is string || d.codigoBarra is int) &&
+        d.cantidad is int && d.cantidad >= 0 &&
+        d.costo is int && d.costo >= 0 &&
+        d.costoCompra is int && d.costoCompra >= 0;
+    }
+
+    // -------------------- CLIENTES --------------------
+    // Colección: Clientes (C mayúscula)
+    match /Clientes/{docId} {
+      // Lectura para cualquier usuario autenticado
+      allow read: if isSignedIn();
+
+      // Crear/actualizar/eliminar: usuarios autenticados con datos válidos
+      // (Permite que cajeros registren clientes desde ventas)
+      allow create, update, delete: if isSignedIn() && validateCliente(request.resource.data);
+    }
+
+    function validateCliente(d) {
+      return d.keys().hasAny(['nombre','ruc','telefono','direccion']) &&
+        d.nombre is string && d.nombre.size() > 0 &&
+        d.ruc is string && d.ruc.size() > 0 &&
+        (!('telefono' in d) || d.telefono is string) &&
+        (!('direccion' in d) || d.direccion is string);
+    }
+
+    // -------------------- CAJA --------------------
+    // Colección: Caja (C mayúscula)
+    match /Caja/{docId} {
+      // Lectura para cualquier usuario autenticado
+      allow read: if isSignedIn();
+
+      // Crear caja: usuario autenticado + datos válidos, solo en estado 'abierta'
+      allow create: if isSignedIn() && validateCajaCreate(request.resource.data);
+
+      // Actualizar caja: autenticado + validación; no se permite modificar una caja ya cerrada
+      allow update: if isSignedIn() && validateCajaUpdate(resource.data, request.resource.data);
+
+      // Eliminar: solo admin
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    function validateCajaBase(d) {
+      return d.keys().hasAll(['fechaApertura','estado','totalRecaudado','ventas','usuario']) &&
+        d.fechaApertura is string &&
+        (!('fechaCierre' in d) || d.fechaCierre is string) &&
+        (d.estado in ['abierta','cerrada']) &&
+        d.totalRecaudado is int && d.totalRecaudado >= 0 &&
+        d.usuario is string && d.usuario.size() > 0 &&
+        d.ventas is list && validateVentasList(d.ventas);
+    }
+
+    function validateVenta(v) {
+      return v.keys().hasAll(['cliente','venta','fecha','efectivo','tarjeta','transferencia','total']) &&
+        v.fecha is string &&
+        v.efectivo is int && v.efectivo >= 0 &&
+        v.tarjeta is int && v.tarjeta >= 0 &&
+        v.transferencia is int && v.transferencia >= 0 &&
+        v.total is int && v.total >= 0 &&
+        v.venta is list;
+    }
+
+    function validateVentasList(list) {
+      return list.size() >= 0 && list.every(v => v is map && validateVenta(v));
+    }
+
+    function validateCajaCreate(d) {
+      return validateCajaBase(d) && d.estado == 'abierta';
+    }
+
+    function validateCajaUpdate(prev, next) {
+      // No permitir modificar una caja cerrada
+      if (prev.estado == 'cerrada') return false;
+
+      // Si se cierra en esta operación, exigir fechaCierre
+      let closingOk = (prev.estado == 'abierta' && next.estado == 'cerrada') ? ('fechaCierre' in next && next.fechaCierre is string) : true;
+
+      // Siempre validar estructura base y que total no disminuya
+      return closingOk && validateCajaBase(next) && next.totalRecaudado >= prev.totalRecaudado;
+    }
+
+    // Fallback: denegar cualquier otra ruta no contemplada explícitamente
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

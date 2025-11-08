@@ -21,6 +21,8 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  runTransaction,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
 // TODO: Add SDKs for Firebase products that you want to use
@@ -53,7 +55,7 @@ export const iniciarSesion = async function (email, password) {
     );
     return { success: true, user: userCredential.user };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: mapAuthError(error.code) };
   }
 };
 
@@ -77,11 +79,26 @@ export const registrarUsuario = async (usuario) => {
   } catch (error) {
     return {
       success: false,
-      errorCode: error.code,      // <- agregado
-      errorMessage: error.message // <- agregado
+      errorCode: error.code,
+      errorMessage: mapAuthError(error.code)
     };
   }
 };
+
+// Mapeo de errores de Firebase Auth a mensajes amigables
+function mapAuthError(code) {
+  const mapa = {
+    "auth/invalid-email": "Correo con formato inválido.",
+    "auth/user-disabled": "Usuario deshabilitado. Contacta al administrador.",
+    "auth/user-not-found": "No existe un usuario con ese correo.",
+    "auth/wrong-password": "Contraseña incorrecta.",
+    "auth/missing-password": "Debes ingresar una contraseña.",
+    "auth/email-already-in-use": "El correo ya está registrado.",
+    "auth/weak-password": "La contraseña es demasiado débil.",
+    "auth/too-many-requests": "Demasiados intentos fallidos. Intenta más tarde.",
+  };
+  return mapa[code] || "Error de autenticación. Verifica los datos.";
+}
 
 // obtener usuarios en tiempo real
 export const obtenerUsuariosEnTiempoReal = (callback) => onSnapshot(collection(db, 'usuarios'), callback)
@@ -108,6 +125,18 @@ onAuthStateChanged(auth, async (user) => {
 
       // Aquí llamás tu función para aplicar permisos según rol
       aplicarPermisos(rol);
+      // Exponer rol en el DOM para que otras páginas/scripts lo usen
+      try {
+        document.body.dataset.rol = rol;
+        document.dispatchEvent(new CustomEvent('rol-ready', { detail: { rol } }));
+      } catch (e) {
+        console.warn('No se pudo propagar rol al DOM:', e);
+      }
+      // Redirigir de la antigua vista de cajaUnica a la nueva unificada
+      const paginaActual = window.location.pathname.split("/").pop();
+      if (paginaActual === 'cajaUnica.html') {
+        window.location.href = 'caja.html';
+      }
     }
   } catch (error) {
     console.error("Error al obtener datos del usuario:", error);
@@ -157,21 +186,41 @@ setPersistence(auth, browserSessionPersistence)
 // * FUNCION QUE TENGA QUE VER CON LA BASE DE DATOS DE STOCK
 export const registrarStock = async (stock) => {
   try {
-    await addDoc(collection(db, "Stock"), stock);
+    await addDoc(collection(db, "Stock"), { ...stock, fechaTS: serverTimestamp() });
     console.log("stock registrado con éxito");
+    // invalidar caché de stock tras mutación
+    _stockCache = null;
+    _stockCacheTimestamp = 0;
   } catch (error) {
     console.error("Error al registrar stock:", error);
   }
 };
 
+// Cache simple en memoria para evitar lecturas repetidas en una sesión
+let _stockCache = null;
+let _stockCacheTimestamp = 0;
+const STOCK_CACHE_TTL = 30 * 1000; // 30s
+
 // FUNCION PARA OBTENER LOS STOCK
 export const obtenerStock = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, "Stock"));
-    return querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+    return querySnapshot.docs.map((docSnap) => ({ ...docSnap.data(), id: docSnap.id }));
   } catch (error) {
     console.error("Error al obtener stock:", error);
+    return [];
   }
+};
+
+export const obtenerStockCached = async () => {
+  const ahora = Date.now();
+  if (_stockCache && (ahora - _stockCacheTimestamp) < STOCK_CACHE_TTL) {
+    return _stockCache;
+  }
+  const data = await obtenerStock();
+  _stockCache = data;
+  _stockCacheTimestamp = ahora;
+  return data;
 };
 
 // FUNCION PARA ELIMINAR STOCK
@@ -180,6 +229,9 @@ export const eliminarStockPorID = async (id) => {
     const clienteRef = doc(db, "Stock", id);
     await deleteDoc(clienteRef);
     console.log("Stock eliminado con éxito");
+    // invalidar caché de stock tras mutación
+    _stockCache = null;
+    _stockCacheTimestamp = 0;
   } catch (error) {
     console.error("Error al eliminar Stock:", error);
   }
@@ -188,29 +240,52 @@ export const eliminarStockPorID = async (id) => {
 // FUNCION PARA ACTUALIZAR STOCK
 export const actualizarStockporId = async (id, stockActualizado) => {
   try {
-    const clienteRef = doc(db, "Stock", id);
-    await updateDoc(clienteRef, stockActualizado);
-    console.log("Stock actualizado conxito");
+    const stockRef = doc(db, "Stock", id);
+    await updateDoc(stockRef, stockActualizado);
+    console.log("Stock actualizado con éxito");
+    // invalidar caché de stock tras mutación
+    _stockCache = null;
+    _stockCacheTimestamp = 0;
   } catch (error) {
     console.error("Error al actualizar stock:", error);
+    throw error;
   }
 };
 
 // FUNCION PARA OBTENER STOCK POR ID
 export const obtenerStockPorId = async (id) => {
   try {
-    const servicioRef = doc(db, "Stock", id); // Referencia al documento con el id proporcionado
-    const servicioSnapshot = await getDoc(servicioRef);
-
-    if (servicioSnapshot.exists()) {
-      return { ...servicioSnapshot.data(), id: servicioSnapshot.id };
-    } else {
-      console.error("No se encontró item con el id proporcionado.");
-      return null;
-    }
+    const ref = doc(db, "Stock", id);
+    const snap = await getDoc(ref);
+    if (snap.exists()) return { ...snap.data(), id: snap.id };
+    console.warn("No se encontró item con el id proporcionado.");
+    return null;
   } catch (error) {
     console.error("Error al obtener el item por id:", error);
+    throw error;
   }
+};
+
+// Descuento transaccional de múltiples items de stock
+// items: [{id, cantidad}]
+export const descontarStockTransaccional = async (items) => {
+  if (!Array.isArray(items) || items.length === 0) return;
+  return runTransaction(db, async (transaction) => {
+    for (const item of items) {
+      const ref = doc(db, "Stock", item.id);
+      const snap = await transaction.get(ref);
+      if (!snap.exists()) throw new Error(`Stock item no existe: ${item.id}`);
+      const data = snap.data();
+      const actual = Number(data.cantidad) || 0;
+      const desc = Number(item.cantidad) || 0;
+      if (desc <= 0) continue; // ignorar
+      if (actual < desc) throw new Error(`Stock insuficiente para ${item.id} (${actual} < ${desc})`);
+      transaction.update(ref, { cantidad: actual - desc });
+    }
+    // invalidar caché de stock tras transacción
+    _stockCache = null;
+    _stockCacheTimestamp = 0;
+  });
 };
 
 // * FUNCIONES QUE TENGAN QUE VER CON LA BASE DE DATOS DE CLIENTES
@@ -220,6 +295,9 @@ export const registrarCliente = async (cliente) => {
   try {
     await addDoc(collection(db, "Clientes"), cliente);
     console.log("Cliente registrado con éxito");
+    // invalidar caché de clientes tras mutación
+    _clientesCache = null;
+    _clientesCacheTimestamp = 0;
   } catch (error) {
     console.error("Error al registrar cliente:", error);
   }
@@ -232,7 +310,24 @@ export const obtenerClientes = async () => {
     return querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error("Error al obtener clientes:", error);
+    return [];
   }
+};
+
+// Cache de clientes (evita lecturas en cada pulsación)
+let _clientesCache = null;
+let _clientesCacheTimestamp = 0;
+const CLIENTES_CACHE_TTL = 30 * 1000; // 30s
+
+export const obtenerClientesCached = async () => {
+  const ahora = Date.now();
+  if (_clientesCache && (ahora - _clientesCacheTimestamp) < CLIENTES_CACHE_TTL) {
+    return _clientesCache;
+  }
+  const data = await obtenerClientes();
+  _clientesCache = data;
+  _clientesCacheTimestamp = ahora;
+  return data;
 };
 
 // FUNCION PARA ELIMINAR CLIENTE
@@ -241,6 +336,9 @@ export const eliminarClientePorID = async (id) => {
     const clienteRef = doc(db, "Clientes", id);
     await deleteDoc(clienteRef);
     console.log("Cliente eliminado con éxito");
+    // invalidar caché de clientes tras mutación
+    _clientesCache = null;
+    _clientesCacheTimestamp = 0;
   } catch (error) {
     console.error("Error al eliminar cliente:", error);
   }
@@ -252,10 +350,17 @@ export const actualizarClienteporId = async (id, clienteActualizado) => {
     const clienteRef = doc(db, "Clientes", id);
     await updateDoc(clienteRef, clienteActualizado);
     console.log("Cliente actualizado conxito");
+    // invalidar caché de clientes tras mutación
+    _clientesCache = null;
+    _clientesCacheTimestamp = 0;
   } catch (error) {
     console.error("Error al actualizar cliente:", error);
   }
 };
+
+// Opcional: exportar funciones para invalidar caché manualmente si se requiere
+export const invalidateStockCache = () => { _stockCache = null; _stockCacheTimestamp = 0; };
+export const invalidateClientesCache = () => { _clientesCache = null; _clientesCacheTimestamp = 0; };
 
 // FUNCION PARA OBTENER CLIENTE POR ID
 export const obtenerClientePorId = async (id) => {
@@ -277,7 +382,7 @@ export const obtenerClientePorId = async (id) => {
 // *FUNCIONES QUE TENGAN QUE VER CON LA CAJA
 export const registrarCaja = async (caja) => {
   try {
-    await addDoc(collection(db, "Caja"), caja);
+    await addDoc(collection(db, "Caja"), { ...caja, fechaAperturaTS: serverTimestamp() });
     console.log("Caja registrada con éxito");
   } catch (error) {
     console.error("Error al registrar caja:", error);
