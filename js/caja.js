@@ -277,26 +277,26 @@ function imprimirCierre(caja) {
   }
   wrapper.innerHTML = "";
   const ticketHTML = `
-    <div style="width:280px;font-family:monospace;text-align:center;line-height:1.25;">
-      <div style="font-size:18px;font-weight:700;">Petro Chaco Criolla</div>
-      <div style="font-size:11px;">Sistema POS - Cierre de Caja</div>
-      <hr style="margin:4px 0;">
-      <div style="font-size:13px;font-weight:600;">CAJA: ${caja.usuario || '-'} (${caja.estado})</div>
-      <div style="font-size:11px;text-align:left;margin-top:4px;">Apertura: ${caja.fechaApertura}</div>
-      <div style="font-size:11px;text-align:left;">Cierre: ${fechaCierre}</div>
-      <hr style="margin:4px 0;">
-      <table style="width:100%;font-size:11px;border-collapse:collapse;">
-        <thead><tr><th style="text-align:left;">Cant</th><th style="text-align:left;">Producto</th><th style="text-align:right;">Subtotal</th></tr></thead>
+    <div style="width:280px;font-family:monospace;text-align:center;line-height:1.25;color:#000;">
+      <div style="font-size:18px;font-weight:900;letter-spacing:0.5px;color:#000;">PETRO CHACO CRIOLLA</div>
+      <div style="font-size:11px;font-weight:700;color:#000;">SISTEMA POS - CIERRE DE CAJA</div>
+      <hr style="margin:4px 0;border-top:2px solid #000;">
+      <div style="font-size:13px;font-weight:800;color:#000;">CAJA: ${caja.usuario || '-'} (${caja.estado})</div>
+      <div style="font-size:11px;text-align:left;margin-top:4px;color:#000;font-weight:600;">Apertura: ${caja.fechaApertura}</div>
+      <div style="font-size:11px;text-align:left;color:#000;font-weight:600;">Cierre: ${fechaCierre}</div>
+      <hr style="margin:4px 0;border-top:1px solid #000;">
+      <table style="width:100%;font-size:11px;border-collapse:collapse;color:#000;">
+        <thead><tr style="border-bottom:1px solid #000;"><th style="text-align:left;font-weight:800;">Cant</th><th style="text-align:left;font-weight:800;">Producto</th><th style="text-align:right;font-weight:800;">Subtotal</th></tr></thead>
         <tbody id="ticket-items-body"></tbody>
       </table>
-      <hr style="margin:4px 0;">
-      <div id="ticket-resumen" style="font-size:11px;text-align:left;"></div>
-      <div style="font-size:12px;font-weight:700;text-align:right;margin-top:4px;" id="ticket-total"></div>
-      <div style="font-size:11px;text-align:right;" id="ticket-pago"></div>
-      <div style="font-size:11px;text-align:right;" id="ticket-extra"></div>
-      <hr style="margin:4px 0;">
-      <div style="font-size:10px;">Generado: ${fechaCierre}</div>
-      <div style="font-size:10px;">Gracias por su trabajo ✔</div>
+      <hr style="margin:4px 0;border-top:1px dashed #000;">
+      <div id="ticket-resumen" style="font-size:11px;text-align:left;font-weight:700;color:#000;"></div>
+      <div style="font-size:12px;font-weight:900;text-align:right;margin-top:4px;color:#000;" id="ticket-total"></div>
+      <div style="font-size:11px;text-align:right;font-weight:700;color:#000;" id="ticket-pago"></div>
+      <div style="font-size:11px;text-align:right;font-weight:700;color:#000;" id="ticket-extra"></div>
+      <hr style="margin:4px 0;border-top:2px solid #000;">
+      <div style="font-size:10px;font-weight:700;color:#000;">Generado: ${fechaCierre}</div>
+      <div style="font-size:10px;font-weight:700;color:#000;">Gracias por su trabajo ✔</div>
     </div>`;
   wrapper.insertAdjacentHTML("beforeend", ticketHTML);
   let total = 0, efectivoEnCaja = 0, tarjeta = 0, transferencia = 0;
