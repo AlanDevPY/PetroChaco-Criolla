@@ -273,43 +273,59 @@ export const obtenerStockPorId = async (id) => {
 // items: [{id, cantidad}]
 export const descontarStockTransaccional = async (items) => {
   if (!Array.isArray(items) || items.length === 0) return;
-  return runTransaction(db, async (transaction) => {
+  await runTransaction(db, async (transaction) => {
+    // FASE 1: Todas las lecturas primero
+    const snapshots = [];
     for (const item of items) {
       const ref = doc(db, "Stock", item.id);
       const snap = await transaction.get(ref);
       if (!snap.exists()) throw new Error(`Stock item no existe: ${item.id}`);
+      snapshots.push({ ref, snap, cantidad: item.cantidad });
+    }
+
+    // FASE 2: Todas las escrituras después
+    for (const { ref, snap, cantidad } of snapshots) {
       const data = snap.data();
       const actual = Number(data.cantidad) || 0;
-      const desc = Number(item.cantidad) || 0;
+      const desc = Number(cantidad) || 0;
       if (desc <= 0) continue; // ignorar
-      if (actual < desc) throw new Error(`Stock insuficiente para ${item.id} (${actual} < ${desc})`);
+      if (actual < desc) throw new Error(`Stock insuficiente para ${ref.id} (${actual} < ${desc})`);
       transaction.update(ref, { cantidad: actual - desc });
     }
-    // invalidar caché de stock tras transacción
-    _stockCache = null;
-    _stockCacheTimestamp = 0;
   });
+
+  // Invalidar caché FUERA de la transacción
+  _stockCache = null;
+  _stockCacheTimestamp = 0;
 };
 
 // Incremento transaccional de stock (reposiciones)
 // items: [{id, cantidad}]
 export const sumarStockTransaccional = async (items) => {
   if (!Array.isArray(items) || items.length === 0) return;
-  return runTransaction(db, async (transaction) => {
+  await runTransaction(db, async (transaction) => {
+    // FASE 1: Todas las lecturas primero
+    const snapshots = [];
     for (const item of items) {
       const ref = doc(db, "Stock", item.id);
       const snap = await transaction.get(ref);
       if (!snap.exists()) throw new Error(`Stock item no existe: ${item.id}`);
+      snapshots.push({ ref, snap, cantidad: item.cantidad });
+    }
+
+    // FASE 2: Todas las escrituras después
+    for (const { ref, snap, cantidad } of snapshots) {
       const data = snap.data();
       const actual = Number(data.cantidad) || 0;
-      const inc = Number(item.cantidad) || 0;
+      const inc = Number(cantidad) || 0;
       if (inc <= 0) continue;
       transaction.update(ref, { cantidad: actual + inc });
     }
-    // invalidar caché de stock tras transacción
-    _stockCache = null;
-    _stockCacheTimestamp = 0;
   });
+
+  // Invalidar caché FUERA de la transacción
+  _stockCache = null;
+  _stockCacheTimestamp = 0;
 };
 
 // Reposiciones (historial de notas)

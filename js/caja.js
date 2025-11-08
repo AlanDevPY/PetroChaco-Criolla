@@ -1,4 +1,4 @@
-import { obtenerCajas, obtenerCajaPorId, actualizarCajaporId } from "./firebase.js";
+import { obtenerCajas, obtenerCajaPorId, actualizarCajaporId, sumarStockTransaccional } from "./firebase.js";
 
 let idCajaIndividual;
 // Extensión de formato custom (verificar disponibilidad global)
@@ -132,6 +132,8 @@ const mostrarDetalleCaja = async () => {
   const ventasAccordion = document.getElementById("ventasAccordion");
   ventasAccordion.innerHTML = "";
 
+  const rol = document.body?.dataset?.rol || 'cajero';
+
   caja.ventas.forEach((venta, index) => {
     let restante = venta.total;
 
@@ -186,12 +188,30 @@ const mostrarDetalleCaja = async () => {
               `).join("")}
             </tbody>
           </table>
+          
+          ${rol === 'admin' && caja.estado === 'abierta' ? `
+            <div class="text-end mt-2">
+              <button class="btn btn-sm btn-outline-danger btnRevertirVenta" data-index="${index}">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Revertir Venta
+              </button>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
 
     ventasAccordion.appendChild(item);
   });
+
+  // Agregar listeners a los botones de revertir
+  if (rol === 'admin' && caja.estado === 'abierta') {
+    document.querySelectorAll('.btnRevertirVenta').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ventaIndex = parseInt(btn.getAttribute('data-index'));
+        await revertirVenta(idCajaIndividual, ventaIndex);
+      });
+    });
+  }
 
 
 
@@ -346,4 +366,77 @@ function imprimirCierre(caja) {
   window.addEventListener('afterprint', hideTicket);
 }
 
+// Función para revertir una venta (solo admin)
+async function revertirVenta(cajaId, ventaIndex) {
+  const rol = document.body?.dataset?.rol || 'cajero';
+  if (rol !== 'admin') {
+    alert('Solo el administrador puede revertir ventas.');
+    return;
+  }
+
+  if (!confirm('¿Está seguro de revertir esta venta? Los items volverán al stock y se descontará el monto de la caja.')) {
+    return;
+  }
+
+  // Mostrar modal de procesamiento
+  const modalProcesando = new bootstrap.Modal(document.getElementById('modalProcesandoReversion'));
+  modalProcesando.show();
+
+  try {
+    // Obtener caja actual
+    const caja = await obtenerCajaPorId(cajaId);
+
+    if (caja.estado !== 'abierta') {
+      modalProcesando.hide();
+      alert('Solo se pueden revertir ventas de cajas abiertas.');
+      return;
+    }
+
+    if (!caja.ventas || ventaIndex >= caja.ventas.length) {
+      modalProcesando.hide();
+      alert('Venta no encontrada.');
+      return;
+    }
+
+    const venta = caja.ventas[ventaIndex];
+
+    // Preparar items para devolver al stock
+    const itemsParaDevolver = (venta.venta || []).map(item => ({
+      id: item.id,
+      cantidad: item.cantidad
+    }));
+
+    // Devolver stock transaccional
+    if (itemsParaDevolver.length > 0) {
+      await sumarStockTransaccional(itemsParaDevolver);
+    }
+
+    // Calcular monto a descontar de la caja
+    const montoDescontar = venta.total || 0;
+
+    // Actualizar caja: eliminar venta del array y ajustar totalRecaudado
+    const nuevasVentas = caja.ventas.filter((_, idx) => idx !== ventaIndex);
+    const nuevoTotal = Math.max(0, (caja.totalRecaudado || 0) - montoDescontar);
+
+    await actualizarCajaporId(cajaId, {
+      ventas: nuevasVentas,
+      totalRecaudado: nuevoTotal
+    });
+
+    // Ocultar modal de procesamiento
+    modalProcesando.hide();
+
+    alert('Venta revertida exitosamente. Stock y totales actualizados.');
+
+    // Refrescar vista
+    await mostrarDetalleCaja();
+    await mostrarCajas();
+
+  } catch (error) {
+    // Ocultar modal de procesamiento en caso de error
+    modalProcesando.hide();
+    console.error('Error al revertir venta:', error);
+    alert('Error al revertir la venta: ' + (error.message || 'Desconocido'));
+  }
+}
 

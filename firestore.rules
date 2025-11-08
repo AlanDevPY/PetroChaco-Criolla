@@ -114,8 +114,12 @@ service cloud.firestore {
       // Si se cierra en esta operación, exigir fechaCierre
       let closingOk = (prev.estado == 'abierta' && next.estado == 'cerrada') ? ('fechaCierre' in next && next.fechaCierre is string) : true;
 
-      // Siempre validar estructura base y que total no disminuya
-      return closingOk && validateCajaBase(next) && next.totalRecaudado >= prev.totalRecaudado;
+      // Permitir que el total disminuya si es admin (para revertir ventas)
+      // De lo contrario, solo puede aumentar o mantenerse
+      let totalOk = isAdmin() ? (next.totalRecaudado >= 0) : (next.totalRecaudado >= prev.totalRecaudado);
+
+      // Siempre validar estructura base
+      return closingOk && validateCajaBase(next) && totalOk;
     }
 
     // -------------------- REPOSICIONES --------------------
