@@ -337,6 +337,13 @@ function imprimirCierre(caja) {
     document.getElementById("ticket-extra").textContent = `Ajuste de exceso pagos: -${exceso.toLocaleString()} Gs`;
   }
   setTimeout(() => { window.print(); }, 300);
+  // Ocultar el ticket una vez que finaliza la impresión
+  const hideTicket = () => {
+    const w = document.getElementById('ticket-wrapper');
+    if (w) w.innerHTML = '';
+    window.removeEventListener('afterprint', hideTicket);
+  };
+  window.addEventListener('afterprint', hideTicket);
 }
 
 

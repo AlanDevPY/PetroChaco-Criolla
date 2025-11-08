@@ -23,6 +23,9 @@ import {
   updateDoc,
   runTransaction,
   serverTimestamp,
+  query,
+  orderBy,
+  limit
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
 // TODO: Add SDKs for Firebase products that you want to use
@@ -286,6 +289,49 @@ export const descontarStockTransaccional = async (items) => {
     _stockCache = null;
     _stockCacheTimestamp = 0;
   });
+};
+
+// Incremento transaccional de stock (reposiciones)
+// items: [{id, cantidad}]
+export const sumarStockTransaccional = async (items) => {
+  if (!Array.isArray(items) || items.length === 0) return;
+  return runTransaction(db, async (transaction) => {
+    for (const item of items) {
+      const ref = doc(db, "Stock", item.id);
+      const snap = await transaction.get(ref);
+      if (!snap.exists()) throw new Error(`Stock item no existe: ${item.id}`);
+      const data = snap.data();
+      const actual = Number(data.cantidad) || 0;
+      const inc = Number(item.cantidad) || 0;
+      if (inc <= 0) continue;
+      transaction.update(ref, { cantidad: actual + inc });
+    }
+    // invalidar caché de stock tras transacción
+    _stockCache = null;
+    _stockCacheTimestamp = 0;
+  });
+};
+
+// Reposiciones (historial de notas)
+export const registrarReposicion = async (nota) => {
+  // nota: {fecha, usuario, items:[{id, item, cantidad, costoCompra?, costo?}], totalCompra, totalItems}
+  try {
+    await addDoc(collection(db, "Reposiciones"), { ...nota, fechaTS: serverTimestamp() });
+  } catch (e) {
+    console.error('Error al registrar reposición', e);
+    throw e;
+  }
+};
+
+export const obtenerReposiciones = async (max = 50) => {
+  try {
+    const q = query(collection(db, "Reposiciones"), orderBy("fechaTS", "desc"), limit(max));
+    const s = await getDocs(q);
+    return s.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.error('Error al obtener reposiciones', e);
+    return [];
+  }
 };
 
 // * FUNCIONES QUE TENGAN QUE VER CON LA BASE DE DATOS DE CLIENTES

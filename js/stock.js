@@ -1,8 +1,10 @@
-import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId, obtenerStockPorId } from "./firebase.js";
+import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId, obtenerStockPorId, sumarStockTransaccional, registrarReposicion, obtenerReposiciones } from "./firebase.js";
 
 // variables globales
 
 let idStock
+let _cacheStock = [];
+let reposicionLista = [];
 
 
 
@@ -55,6 +57,17 @@ document.getElementById("btnAgregar").addEventListener("click", () => {
 const registrarStockForm = document.getElementById("registrarStockForm");
 const actualizarStockForm = document.getElementById("actualizarStockForm");
 const stockTable = document.getElementById("stockTable");
+// Reposición UI refs
+const formAgregarItemReposicion = document.getElementById('formAgregarItemReposicion');
+const reposicionProducto = document.getElementById('reposicionProducto');
+const reposicionCantidad = document.getElementById('reposicionCantidad');
+// (Ya no se permiten modificar costos en la nota)
+const reposicionCostoCompra = null;
+const reposicionCostoVenta = null;
+const reposicionTable = document.getElementById('reposicionTable');
+const reposicionTotalCompra = document.getElementById('reposicionTotalCompra');
+const btnConfirmarReposicion = document.getElementById('btnConfirmarReposicion');
+const btnCancelarReposicion = document.getElementById('btnCancelarReposicion');
 
 // Instancias de modales
 const modalAgregarProducto = bootstrap.Modal.getOrCreateInstance(
@@ -84,6 +97,7 @@ const modalObteniendoStock = bootstrap.Modal.getOrCreateInstance(
 // Función para mostrar stock en la tabla
 const mostrarStock = async () => {
   const stock = await obtenerStock();
+  _cacheStock = stock;
   stockTable.innerHTML = "";
   let contador = 0;
 
@@ -135,7 +149,6 @@ const mostrarStock = async () => {
         document.getElementById("actualizarItemStock").value = item.item;
         document.getElementById("actualizarCategoriaStock").value = item.categoria;
         document.getElementById("actualizarCodigoBarraStock").value = item.codigoBarra;
-        document.getElementById("actualizarCantidadStock").value = item.cantidad;
         document.getElementById("actualizarCostoStock").value = Number(item.costo).toLocaleString("es-PY");
         document.getElementById("actualizarPrecioCompraStock").value = Number(item.costoCompra).toLocaleString("es-PY");
       }
@@ -143,24 +156,15 @@ const mostrarStock = async () => {
   });
 };
 
-// evento de submit para actaualizar stock
+// evento de submit para actualizar PRECIO DE VENTA únicamente (Precio Compra deshabilitado)
 actualizarStockForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-
-  const item = document.getElementById("actualizarItemStock").value;
-  const categoria = document.getElementById("actualizarCategoriaStock").value;
-  const cantidad = Number(document.getElementById("actualizarCantidadStock").value);
-  const codigoBarra = Number(document.getElementById("actualizarCodigoBarraStock").value);
-
   // Convertir el costo de string a number
   let costo = document.getElementById("actualizarCostoStock").value;
-  let costoCompra = document.getElementById("actualizarPrecioCompraStock").value;
-
   // Quitar los puntos antes de guardar
   costo = Number(costo.replace(/\./g, ""));
-  costoCompra = Number(costoCompra.replace(/\./g, ""));
 
-  const stockData = { item, categoria, cantidad, costo, costoCompra, codigoBarra };
+  const stockData = { costo };
 
   await actualizarStockporId(idStock, stockData);
   modalActualizarProducto.hide();
@@ -235,5 +239,131 @@ window.addEventListener("DOMContentLoaded", async () => {
   modalObteniendoStock.show();
   await mostrarStock();
   modalObteniendoStock.hide();
+  // Poblar datalist para reposición
+  const dl = document.getElementById('listaProductosReposicion');
+  if (dl) {
+    dl.innerHTML = _cacheStock.map(s => `<option value="${s.item}"></option>`).join('');
+  }
 });
+
+// Helpers reposición
+const parseGs = (str) => {
+  if (!str) return 0;
+  return Number(String(str).replace(/\./g, '').replace(/\s/g, '')) || 0;
+};
+const formatGs = (n) => (Number(n) || 0).toLocaleString('es-PY') + ' Gs';
+
+const renderReposicionTabla = () => {
+  if (!reposicionTable) return;
+  reposicionTable.innerHTML = '';
+  reposicionLista.forEach((it, idx) => {
+    reposicionTable.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${it.item}</td>
+        <td class="text-center">${it.cantidad}</td>
+        <td class="text-end"><button class="btn btn-sm btn-outline-danger" data-idx="${idx}">Eliminar</button></td>
+      </tr>`);
+  });
+  const enabled = reposicionLista.length > 0;
+  if (btnConfirmarReposicion) btnConfirmarReposicion.disabled = !enabled;
+  if (btnCancelarReposicion) btnCancelarReposicion.disabled = !enabled;
+
+  // bind eliminar
+  reposicionTable.querySelectorAll('button[data-idx]')?.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = Number(btn.getAttribute('data-idx'));
+      reposicionLista.splice(i, 1);
+      renderReposicionTabla();
+    });
+  });
+};
+
+// Formateo de costos en inputs de reposición
+// Eliminado manejo de costos (solo cantidad)
+
+// Agregar item a la nota
+if (formAgregarItemReposicion) {
+  formAgregarItemReposicion.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const nombre = reposicionProducto.value.trim();
+    const base = _cacheStock.find(s => String(s.item).toUpperCase() === nombre.toUpperCase());
+    const cant = Number(reposicionCantidad.value);
+    if (!base) { alert('Producto no encontrado en stock'); return; }
+    if (!cant || cant <= 0) { alert('Cantidad inválida'); return; }
+    const cc = Number(base.costoCompra) || 0;
+    const cv = Number(base.costo) || 0;
+    const existente = reposicionLista.find(it => it.id === base.id);
+    if (existente) {
+      existente.cantidad += cant;
+      existente.costoCompra = cc;
+      existente.costo = cv;
+    } else {
+      reposicionLista.push({ id: base.id, item: base.item, cantidad: cant, costoCompra: cc, costo: cv });
+    }
+    reposicionProducto.value = '';
+    reposicionCantidad.value = '1';
+    // campos de costos retirados
+    renderReposicionTabla();
+  });
+}
+
+// Cancelar nota
+if (btnCancelarReposicion) {
+  btnCancelarReposicion.addEventListener('click', () => {
+    reposicionLista = [];
+    renderReposicionTabla();
+  });
+}
+
+// Confirmar reposición
+if (btnConfirmarReposicion) {
+  btnConfirmarReposicion.addEventListener('click', async () => {
+    if (reposicionLista.length === 0) return;
+    const itemsTx = reposicionLista.map(r => ({ id: r.id, cantidad: r.cantidad }));
+    // sumar stock en una transacción
+    await sumarStockTransaccional(itemsTx);
+    // registrar nota
+    const totalCompra = reposicionLista.reduce((acc, it) => acc + (Number(it.costoCompra) || 0) * Number(it.cantidad), 0);
+    const totalItems = reposicionLista.reduce((acc, it) => acc + Number(it.cantidad), 0);
+    const usuario = (document.getElementById('usuarioLogueado')?.textContent || '').trim();
+    const nota = {
+      fecha: dayjs().format('DD/MM/YYYY HH:mm:ss'),
+      usuario,
+      items: reposicionLista,
+      totalCompra,
+      totalItems
+    };
+    await registrarReposicion(nota);
+    // limpiar y refrescar
+    reposicionLista = [];
+    renderReposicionTabla();
+    await mostrarStock();
+  });
+}
+
+// Historial: cargar al abrir modal
+const modalHistorial = document.getElementById('modalHistorialReposiciones');
+if (modalHistorial) {
+  modalHistorial.addEventListener('show.bs.modal', async () => {
+    const tbody = document.getElementById('historialReposicionesTable');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>';
+    const notas = await obtenerReposiciones(50);
+    if (!notas.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Sin registros</td></tr>';
+      return;
+    }
+    tbody.innerHTML = '';
+    notas.forEach(n => {
+      tbody.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td>${n.fecha || '-'}</td>
+          <td>${n.usuario || '-'}</td>
+          <td>${n.totalItems || (n.items?.length || 0)}</td>
+          <td class="text-end">${formatGs(n.totalCompra || 0)}</td>
+          <td></td>
+        </tr>`);
+    });
+  });
+}
 

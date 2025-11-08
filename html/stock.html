@@ -16,19 +16,70 @@
     <div id="navbar-placeholder"></div>
 
     <!-- Contenido principal -->
-    <div class="py-4">
+    <main class="py-4">
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
             <h3 class="fw-bold">📦 Gestión de Stock</h3>
 
             <div class="d-flex gap-2">
                 <input type="text" class="form-control" placeholder="🔍 Buscar producto">
-                <button class="btn btn-primary" id="btnAgregar" data-bs-toggle="modal"
+                <button class="btn btn-primary solo-admin" id="btnAgregar" data-bs-toggle="modal"
                     data-bs-target="#modalAgregarProducto">
                     ➕ Agregar Producto
                 </button>
             </div>
         </div>
 
+        <!-- Reposición / Nota de Reposición (solo admin) -->
+        <div class="card mb-4 solo-admin">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">📝 Nota de Reposición</span>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" id="btnNuevaNota" data-bs-toggle="collapse"
+                        data-bs-target="#reposicionPanel">Armar Nota</button>
+                    <button class="btn btn-sm btn-outline-secondary" id="btnVerHistorial" data-bs-toggle="modal"
+                        data-bs-target="#modalHistorialReposiciones">Historial</button>
+                </div>
+            </div>
+            <div class="collapse" id="reposicionPanel">
+                <div class="card-body">
+                    <form id="formAgregarItemReposicion" class="row g-3 align-items-end">
+                        <div class="col-md-6">
+                            <label class="form-label">Producto</label>
+                            <input list="listaProductosReposicion" class="form-control" id="reposicionProducto"
+                                placeholder="Buscar / seleccionar" autocomplete="off" required>
+                            <datalist id="listaProductosReposicion"></datalist>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Cantidad</label>
+                            <input type="number" min="1" class="form-control" id="reposicionCantidad" value="1"
+                                required>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button type="submit" class="btn btn-success w-100">➕ Agregar</button>
+                        </div>
+                    </form>
+                    <hr>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reposicionTable"></tbody>
+
+                        </table>
+                    </div>
+                    <div class="text-end mt-2">
+                        <button class="btn btn-primary" id="btnConfirmarReposicion" disabled>✅ Confirmar
+                            Reposición</button>
+                        <button class="btn btn-outline-danger" id="btnCancelarReposicion" disabled>✖ Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Tabla de productos -->
         <div class="table-responsive shadow-sm">
@@ -38,16 +89,45 @@
                         <th>#</th>
                         <th>Producto</th>
                         <th>Categoría</th>
-                        <th>Codigo de Barra</th>
+                        <th>Código de Barra</th>
                         <th class="text-center">Stock</th>
-                        <th class="text-end">Costo Compra</th>
-                        <th class="text-end">Costo Venta</th>
+                        <th class="text-end">Precio Compra</th>
+                        <th class="text-end">Precio Venta</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="stockTable">
                 </tbody>
             </table>
+        </div>
+    </main>
+
+    <!-- Modal Historial Reposiciones -->
+    <div class="modal fade" id="modalHistorialReposiciones" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title">Historial de Notas de Reposición</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Usuario</th>
+                                    <th>Items</th>
+                                    <th>Total Compra</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historialReposicionesTable"></tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted">Se muestran las últimas 50 reposiciones.</small>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -101,7 +181,7 @@
                                 class="form-control text-end" placeholder="0">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Codigo de Barra</label>
+                            <label class="form-label">Código de Barra</label>
                             <input type="number" id="nuevoCodigoBarraStock" class="form-control"
                                 placeholder="Tickear codigo de barra aqui!!" required autocomplete="off">
                         </div>
@@ -115,12 +195,15 @@
             </div>
         </div>
     </div>
+
+
     <!-- Modal actualizar Producto -->
     <div class="modal fade" id="modalActualizarProducto" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Agregar Producto</h5>
+                    <h5 class="modal-title">Actualizar Producto <span
+                            class="badge rounded-pill bg-warning text-dark ms-2">Solo precio de venta</span></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -128,12 +211,12 @@
                         <div class="mb-3">
                             <label class="form-label">Nombre del Producto</label>
                             <input type="text" id="actualizarItemStock" class="form-control"
-                                placeholder="Ej: Lomito Completo" required autocomplete="off">
+                                placeholder="Ej: Lomito Completo" required autocomplete="off" readonly>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Categoría</label>
-                            <select class="form-select" required id="actualizarCategoriaStock">
+                            <select class="form-select" required id="actualizarCategoriaStock" disabled>
                                 <option>Comida</option>
                                 <option>Bebida</option>
                                 <option>Postres</option>
@@ -148,32 +231,29 @@
                             </select>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Stock</label>
-                            <input type="number" id="actualizarCantidadStock" required class="form-control text-center"
-                                placeholder="0">
-                        </div>
+                        <!-- Campo de Stock removido: la cantidad se gestiona desde reposición/otras acciones -->
 
                         <div class="mb-3">
                             <label class="form-label">Precio Compra</label>
                             <input type="text" value="0" autocomplete="off" required id="actualizarPrecioCompraStock"
-                                class="form-control text-end" placeholder="0">
+                                class="form-control text-end" placeholder="0" disabled>
+                            <small class="text-muted">Solo modifique precios en este modal.</small>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Precio</label>
+                            <label class="form-label">Precio Venta</label>
                             <input type="text" autocomplete="off" required id="actualizarCostoStock"
                                 class="form-control text-end" placeholder="0">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Codigo de Barra</label>
+                            <label class="form-label">Código de Barra</label>
                             <input type="number" id="actualizarCodigoBarraStock" class="form-control"
-                                placeholder="Tickear codigo de barra aqui!!" required autocomplete="off">
+                                placeholder="Tickear codigo de barra aqui!!" required autocomplete="off" readonly>
                         </div>
 
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-success" data-bs-dismiss="modal">Agregar</button>
+                            <button type="submit" class="btn btn-success" data-bs-dismiss="modal">Actualizar</button>
                         </div>
                     </form>
 
@@ -263,7 +343,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="../js/navbar.js"></script>
 
-    <!-- Dasy.js -->
+    <!-- Day.js -->
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 
     <!-- Custom JS -->
