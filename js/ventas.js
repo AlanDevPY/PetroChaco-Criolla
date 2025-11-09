@@ -672,26 +672,24 @@ function imprimirTicket(venta) {
   if (venta.venta && Array.isArray(venta.venta)) {
     venta.venta.forEach((item) => {
       const fila = document.createElement("tr");
-
       fila.innerHTML = `
         <td class="ticket-qty">${item.cantidad}</td>
         <td class="ticket-desc">${item.item}</td>
         <td class="ticket-price">${item.subTotal.toLocaleString("es-PY")}</td>
       `;
-
       cuerpo.appendChild(fila);
     });
   }
 
   // --- TOTALES ---
   const subtotal = venta.venta?.reduce((acc, v) => acc + v.subTotal, 0) || 0;
-  const impuestos = Math.round(subtotal * 0.1); // por ejemplo, 10%
   const total = venta.total || subtotal;
   const pago = venta.efectivo || 0;
   const vuelto = pago - total;
 
+  // Si el ticket es "simple" (no factura legal), NO mostrar impuestos
   document.getElementById("ticket-subtotal").textContent = subtotal.toLocaleString("es-PY");
-  document.getElementById("ticket-tax").textContent = impuestos.toLocaleString("es-PY");
+  document.getElementById("ticket-tax").textContent = "-";
   document.getElementById("ticket-total").textContent = total.toLocaleString("es-PY");
   document.getElementById("ticket-pago").textContent = pago.toLocaleString("es-PY");
   document.getElementById("ticket-vuelto").textContent = vuelto > 0 ? vuelto.toLocaleString("es-PY") : "0";
@@ -700,7 +698,11 @@ function imprimirTicket(venta) {
   const msg = document.getElementById("ticket-msg");
   msg.textContent = `¡Gracias ${cliente.nombre || "por tu compra"}! Vuelve pronto 🚗⛽`;
 
-  // --- IMPRIMIR CON WINDOW.PRINT() ---
+  // --- OCULTAR FACTURA, MOSTRAR SOLO TICKET ---
+  document.getElementById("ticket-container").style.display = "block";
+  document.getElementById("factura-fiscal-container").style.display = "none";
+
+  // --- IMPRIMIR SOLO EL TICKET ---
   setTimeout(() => {
     window.print();
   }, 3000);

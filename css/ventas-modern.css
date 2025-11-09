@@ -661,23 +661,39 @@ datalist {
         position: fixed;
         top: 0;
         left: 0;
-        width: 80mm;
+        width: 70mm;
+        margin: 0 auto !important;
+        box-sizing: border-box;
+        background: white;
+        page-break-after: avoid;
     }
 
     .ticket-container {
         background: white;
         color: black;
-        padding: 10px;
+        padding: 0 2mm 0 2mm;
         font-family: 'Courier New', monospace;
+        width: 66mm;
+        margin: 0 auto !important;
+        box-sizing: border-box;
+    }
+
+    @page {
+        size: 70mm auto;
+        margin: 0;
     }
 }
 
 .ticket-container {
-    width: 80mm;
-    padding: 10px;
+    width: 70mm;
+    max-width: 70mm;
+    min-width: 63mm;
+    padding: 8px 2mm 8px 2mm;
     font-family: 'Courier New', monospace;
     font-size: 12px;
     line-height: 1.4;
+    margin: 0 auto;
+    box-sizing: border-box;
 }
 
 .ticket-header {
