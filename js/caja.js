@@ -1,16 +1,69 @@
 import { obtenerCajas, obtenerCajaPorId, actualizarCajaporId, sumarStockTransaccional } from "./firebase.js";
 
 let idCajaIndividual;
+let tablaCajas; // Variable para DataTable
+
 // Extensión de formato custom (verificar disponibilidad global)
 try { dayjs.extend(dayjs_plugin_customParseFormat); } catch (e) { console.warn("CustomParseFormat no disponible", e); }
 
+// Control del spinner
+const ocultarSpinner = () => {
+  const spinner = document.getElementById('spinner');
+  const contenido = document.getElementById('contenidoPrincipal');
+
+  if (spinner) {
+    spinner.style.display = 'none';
+    spinner.style.opacity = '0';
+    spinner.style.pointerEvents = 'none';
+    spinner.style.zIndex = '-1';
+    spinner.classList.add('hidden');
+    spinner.classList.add('d-none');
+  }
+
+  if (contenido) {
+    contenido.style.display = 'block';
+  }
+};
+
+// Timeout de seguridad: ocultar spinner después de 3 segundos
+setTimeout(() => {
+  ocultarSpinner();
+}, 3000);
+
+// Inicializar DataTable
+const inicializarTabla = () => {
+  if ($.fn.DataTable.isDataTable('#tablaCajas')) {
+    tablaCajas = $('#tablaCajas').DataTable();
+  } else {
+    tablaCajas = $('#tablaCajas').DataTable({
+      language: {
+        url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+      },
+      order: [[1, 'desc']], // Ordenar por fecha de apertura descendente
+      pageLength: 10,
+      lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]],
+      responsive: true,
+      columnDefs: [
+        { orderable: false, targets: 5 } // Columna de acciones no ordenable
+      ]
+    });
+  }
+};
+
 window.addEventListener("DOMContentLoaded", async () => {
+  console.log('🏦 Módulo de Caja Cargado');
+
+  // Inicializar DataTable
+  inicializarTabla();
+
   if (document.body?.dataset?.rol) {
     await mostrarCajas();
+    ocultarSpinner();
   } else {
     // Esperar a que firebase.js propague el rol
     document.addEventListener('rol-ready', async () => {
       await mostrarCajas();
+      ocultarSpinner();
     }, { once: true });
   }
 });
@@ -19,8 +72,6 @@ window.addEventListener("DOMContentLoaded", async () => {
 const mostrarCajas = async () => {
   const cajas = await obtenerCajas();
   const rol = document.body?.dataset?.rol || 'cajero'; // default cajero si no llega
-  const tablaCajas = document.getElementById("cajasTable");
-  let contador = 1;
 
   // ordenar por fecha de apertura, hora, minuto y segundo
   const parseFecha = (s) => {
@@ -44,155 +95,253 @@ const mostrarCajas = async () => {
   // Filtrar según rol: admin ve todas, otros solo la abierta
   const visibles = rol === 'admin' ? cajas : cajas.filter(c => c.estado === 'abierta');
 
-  tablaCajas.innerHTML = "";
+  // Limpiar y recargar DataTable
+  tablaCajas.clear();
+
   if (visibles.length === 0) {
-    tablaCajas.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No hay caja abierta</td></tr>`;
+    tablaCajas.row.add([
+      '<td colspan="6" class="text-center text-white-50">No hay caja abierta</td>',
+      '', '', '', '', ''
+    ]).draw();
     return;
   }
 
-  visibles.forEach((caja) => {
-    const fila = document.createElement("tr");
-    fila.innerHTML = `
-          <tr>
-            <td>${contador++}</td>
-            <td>${caja.fechaApertura}</td>
-            <td>${caja.usuario || '-'}</td>
-            <td>${caja.fechaCierre || "--"}</td>
-            <td>
-              <span class="badge ${caja.estado === 'abierta' ? 'bg-success' : 'bg-danger'}">
-                ${caja.estado}
-              </span>
-            </td>
-            <td>
-              <button data-id="${caja.id}" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detalleCajaModal">
-                Ver detalle
-              </button>
-              ${rol === 'admin' && caja.estado === 'abierta' ? `<button data-id="${caja.id}" class="btn btn-sm btn-outline-danger ms-1" data-bs-toggle="modal" data-bs-target="#cierreCajaModal">Cerrar</button>` : ''}
-            </td>
-          </tr>
-        `;
+  visibles.forEach((caja, index) => {
+    const estadoBadge = caja.estado === 'abierta'
+      ? '<span class="badge bg-success"><i class="bi bi-unlock me-1"></i>Abierta</span>'
+      : '<span class="badge bg-danger"><i class="bi bi-lock me-1"></i>Cerrada</span>';
 
-    tablaCajas.innerHTML += fila.outerHTML;
+    const acciones = `
+      <button data-id="${caja.id}" class="btn btn-sm btn-primary btn-ver-detalle">
+        <i class="bi bi-eye me-1"></i>Ver detalle
+      </button>
+      ${rol === 'admin' && caja.estado === 'abierta' ? `
+        <button data-id="${caja.id}" class="btn btn-sm btn-outline-danger ms-1 btn-cerrar-caja">
+          <i class="bi bi-x-circle me-1"></i>Cerrar
+        </button>
+      ` : ''}
+    `;
+
+    tablaCajas.row.add([
+      index + 1,
+      caja.fechaApertura,
+      caja.usuario || '-',
+      caja.fechaCierre || '<span class="text-white-50">--</span>',
+      estadoBadge,
+      acciones
+    ]);
   });
 
-  // obtener dataId de la caja seleccionada
-  // Limitar seleccion a la tabla para evitar capturar otros .btn-primary
-  const botonesVerDetalle = document.querySelectorAll("#cajasTable .btn-primary");
-  botonesVerDetalle.forEach((boton) => {
-    boton.addEventListener("click", async () => {
-      idCajaIndividual = boton.getAttribute("data-id");
-      console.log(idCajaIndividual);
+  tablaCajas.draw();
+
+  // Agregar event listeners usando delegación de eventos
+  $('#tablaCajas tbody').off('click', '.btn-ver-detalle').on('click', '.btn-ver-detalle', async function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    idCajaIndividual = this.getAttribute('data-id');
+
+    try {
       await mostrarDetalleCaja();
-    });
+
+      const modalElement = document.getElementById('detalleCajaModal');
+      if (!modalElement) return;
+
+      // Forzar que el spinner esté oculto
+      const spinner = document.getElementById('spinner');
+      if (spinner) {
+        spinner.style.display = 'none';
+        spinner.style.pointerEvents = 'none';
+        spinner.classList.add('hidden');
+      }
+
+      // Abrir modal con Bootstrap API
+      const bootstrapModal = new bootstrap.Modal(modalElement, {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+      });
+
+      bootstrapModal.show();
+
+      // Verificar y forzar clases si es necesario
+      setTimeout(() => {
+        const $modal = $('#detalleCajaModal');
+        if (!$modal.hasClass('show')) {
+          $modal.addClass('show').css('display', 'block');
+          $('body').addClass('modal-open').css('overflow', 'hidden');
+          if (!$('.modal-backdrop').length) {
+            $('body').append('<div class="modal-backdrop fade show"></div>');
+          }
+        }
+
+        // Forzar que navbar baje su z-index
+        $('#navbar-placeholder, .navbar, .fixed-top').css('z-index', '1');
+      }, 100);
+
+    } catch (error) {
+      console.error('Error al mostrar detalle de caja:', error);
+    }
+  });
+
+  // Event listener para botón de cerrar caja (solo admin)
+  $('#tablaCajas tbody').off('click', '.btn-cerrar-caja').on('click', '.btn-cerrar-caja', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    $('#cierreCajaModal').modal('show');
   });
 }
 
 // FUNCION PARA MOSTRAR DETALLE DE CAJA
 const mostrarDetalleCaja = async () => {
-  const caja = await obtenerCajaPorId(idCajaIndividual);
-  document.getElementById("detalleAperturaCaja").textContent = caja.fechaApertura;
-  document.getElementById("detalleCierreCaja").textContent = caja.fechaCierre || "--";
+  try {
+    const caja = await obtenerCajaPorId(idCajaIndividual);
 
+    if (!caja) {
+      console.error('Error: Caja no encontrada');
+      return;
+    }
 
-  // recorres ventas y guardat total efectivo, total tarjeta y total transferencia
-  let totalEfectivo = 0;
-  let totalTarjeta = 0;
-  let totalTransferencia = 0;
+    document.getElementById("detalleAperturaCaja").textContent = caja.fechaApertura;
+    document.getElementById("detalleCierreCaja").textContent = caja.fechaCierre || "--";
 
-  caja.ventas.forEach((venta) => {
-    let restante = venta.total;
+    // Calcular totales por método de pago
+    let totalEfectivo = 0;
+    let totalTarjeta = 0;
+    let totalTransferencia = 0;
 
-    const efectivoAplicado = Math.min(venta.efectivo, restante);
-    restante -= efectivoAplicado;
+    caja.ventas.forEach((venta) => {
+      let restante = venta.total;
 
-    const tarjetaAplicado = Math.min(venta.tarjeta, restante);
-    restante -= tarjetaAplicado;
+      const efectivoAplicado = Math.min(venta.efectivo, restante);
+      restante -= efectivoAplicado;
 
-    const transferenciaAplicado = Math.min(venta.transferencia, restante);
-    restante -= transferenciaAplicado;
+      const tarjetaAplicado = Math.min(venta.tarjeta, restante);
+      restante -= tarjetaAplicado;
 
-    totalEfectivo += efectivoAplicado;
-    totalTarjeta += tarjetaAplicado;
-    totalTransferencia += transferenciaAplicado;
+      const transferenciaAplicado = Math.min(venta.transferencia, restante);
+      restante -= transferenciaAplicado;
 
-  });
+      totalEfectivo += efectivoAplicado;
+      totalTarjeta += tarjetaAplicado;
+      totalTransferencia += transferenciaAplicado;
+    });
 
-  // sumar todo
-  let totalVentas = totalEfectivo + totalTarjeta + totalTransferencia;
-  console.log("Total Ventas:", totalVentas);
-  document.getElementById("detalleTotalRecaudadoCaja").textContent = totalVentas.toLocaleString("es-PY") + " Gs";
+    let totalVentas = totalEfectivo + totalTarjeta + totalTransferencia;
 
+    document.getElementById("detalleTotalRecaudadoCaja").textContent = totalVentas.toLocaleString("es-PY") + " Gs";
+    document.getElementById("detalleTotalEfectivoCaja").textContent = totalEfectivo.toLocaleString("es-PY") + " Gs";
+    document.getElementById("detalleTotalTarjetaCaja").textContent = totalTarjeta.toLocaleString("es-PY") + " Gs";
+    document.getElementById("detalleTotalTransferenciaCaja").textContent = totalTransferencia.toLocaleString("es-PY") + " Gs";
 
+    // Generar acordeón de ventas
+    const ventasAccordion = document.getElementById("ventasAccordion");
+    ventasAccordion.innerHTML = "";
 
-  document.getElementById("detalleTotalEfectivoCaja").textContent = totalEfectivo.toLocaleString("es-PY") + " Gs";
-  document.getElementById("detalleTotalTarjetaCaja").textContent = totalTarjeta.toLocaleString("es-PY") + " Gs";
-  document.getElementById("detalleTotalTransferenciaCaja").textContent = totalTransferencia.toLocaleString("es-PY") + " Gs";
+    const rol = document.body?.dataset?.rol || 'cajero';
 
-  // mostrar detalle de venta en tabla
-  const ventasAccordion = document.getElementById("ventasAccordion");
-  ventasAccordion.innerHTML = "";
+    caja.ventas.forEach((venta, index) => {
+      let restante = venta.total;
 
-  const rol = document.body?.dataset?.rol || 'cajero';
+      const efectivoAplicado = Math.min(venta.efectivo, restante);
+      restante -= efectivoAplicado;
 
-  caja.ventas.forEach((venta, index) => {
-    let restante = venta.total;
+      const tarjetaAplicado = Math.min(venta.tarjeta, restante);
+      restante -= tarjetaAplicado;
 
-    const efectivoAplicado = Math.min(venta.efectivo, restante);
-    restante -= efectivoAplicado;
+      const transferenciaAplicado = Math.min(venta.transferencia, restante);
+      restante -= transferenciaAplicado;
 
-    const tarjetaAplicado = Math.min(venta.tarjeta, restante);
-    restante -= tarjetaAplicado;
+      const vuelto = (venta.efectivo + venta.tarjeta + venta.transferencia) - venta.total;
 
-    const transferenciaAplicado = Math.min(venta.transferencia, restante);
-    restante -= transferenciaAplicado;
+      // Generar acordeón-item con diseño BRILLANTE y LLAMATIVO - COLORES CORPORATIVOS AZUL
+      const item = document.createElement("div");
+      item.classList.add("accordion-item");
+      item.style.cssText = "background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(40, 193, 255, 0.4); margin-bottom: 0.75rem; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);";
 
-    const vuelto = (venta.efectivo + venta.tarjeta + venta.transferencia) - venta.total;
-
-    // Generar acordeón-item
-    const item = document.createElement("div");
-    item.classList.add("accordion-item");
-
-    item.innerHTML = `
+      item.innerHTML = `
       <h2 class="accordion-header" id="heading${index}">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-          data-bs-target="#collapse${index}" aria-expanded="false" aria-controls="collapse${index}">
-          📅 ${venta.fecha} - Cliente: ${venta.cliente.nombre} | Total: ${venta.total.toLocaleString("es-PY")} Gs
+          data-bs-target="#collapse${index}" aria-expanded="false" aria-controls="collapse${index}"
+          style="background: linear-gradient(135deg, rgba(31, 63, 161, 0.5) 0%, rgba(18, 43, 98, 0.5) 100%); 
+                 color: white; 
+                 border-radius: 12px; 
+                 font-weight: 700;
+                 font-size: 1.05rem;
+                 text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+                 border: 2px solid rgba(40, 193, 255, 0.5);
+                 box-shadow: 0 4px 12px rgba(31, 63, 161, 0.3), inset 0 0 30px rgba(40, 193, 255, 0.1);">
+          <i class="bi bi-calendar-event me-2" style="color: #6dd6ff; filter: drop-shadow(0 2px 4px rgba(109, 214, 255, 0.4));"></i>${venta.fecha} - 
+          <i class="bi bi-person ms-3 me-2" style="color: #6dd6ff; filter: drop-shadow(0 2px 4px rgba(109, 214, 255, 0.4));"></i>${venta.cliente.nombre} | 
+          <strong class="ms-3" style="color: #fff; font-size: 1.15rem; text-shadow: 0 0 15px rgba(40, 193, 255, 0.8), 0 2px 6px rgba(0,0,0,0.5);">${venta.total.toLocaleString("es-PY")} Gs</strong>
         </button>
       </h2>
       <div id="collapse${index}" class="accordion-collapse collapse" aria-labelledby="heading${index}"
         data-bs-parent="#ventasAccordion">
-        <div class="accordion-body">
-          <p><strong>Efectivo:</strong> ${efectivoAplicado.toLocaleString("es-PY")} Gs</p>
-          <p><strong>Tarjeta:</strong> ${tarjetaAplicado.toLocaleString("es-PY")} Gs</p>
-          <p><strong>Transferencia:</strong> ${transferenciaAplicado.toLocaleString("es-PY")} Gs</p>
-          <p><strong>Vuelto:</strong> ${vuelto > 0 ? vuelto.toLocaleString("es-PY") + " Gs" : "-"}</p>
+        <div class="accordion-body" style="background: linear-gradient(135deg, rgba(10, 26, 60, 0.95) 0%, rgba(18, 43, 98, 0.95) 100%); 
+                                           color: white; 
+                                           padding: 1.5rem; 
+                                           border-top: 2px solid rgba(40, 193, 255, 0.3);
+                                           box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.5);">
+          <div class="row mb-3">
+            <div class="col-md-3">
+              <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-cash me-1"></i>Efectivo</div>
+                <div class="stat-value" style="font-size: 1.5rem;">${efectivoAplicado.toLocaleString("es-PY")} Gs</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-credit-card me-1"></i>Pos/Qr</div>
+                <div class="stat-value" style="font-size: 1.5rem;">${tarjetaAplicado.toLocaleString("es-PY")} Gs</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-card">
+                <div class="stat-label"><i class="bi bi-bank me-1"></i>Transferencia</div>
+                <div class="stat-value" style="font-size: 1.5rem;">${transferenciaAplicado.toLocaleString("es-PY")} Gs</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="stat-card">
+                <div class="stat-label">💰 Vuelto</div>
+                <div class="stat-value" style="font-size: 1.5rem;">${vuelto > 0 ? vuelto.toLocaleString("es-PY") + " Gs" : "-"}</div>
+              </div>
+            </div>
+          </div>
 
           <!-- Detalle de items vendidos -->
-          <table class="table table-sm table-bordered mt-3">
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Precio</th>
-                <th>Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${venta.venta.map((item) => `
-                <tr>
-                  <td>${item.item}</td>
-                  <td>${item.cantidad}</td>
-                  <td>${item.costo.toLocaleString("es-PY")} Gs</td>
-                  <td>${item.subTotal.toLocaleString("es-PY")} Gs</td>
+          <div class="table-responsive mt-3" style="background: rgba(10, 15, 25, 0.95); padding: 1rem; border-radius: 12px; border: 2px solid rgba(40, 193, 255, 0.4); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 40px rgba(40, 193, 255, 0.15);">
+            <table class="table table-sm table-bordered" style="background: transparent !important; border: none; margin-bottom: 0;">
+              <thead>
+                <tr style="background: linear-gradient(135deg, rgba(31, 63, 161, 0.7) 0%, rgba(18, 43, 98, 0.7) 100%); border-bottom: 2px solid rgba(40, 193, 255, 0.6);">
+                  <th style="color: #fff; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none;">📦 Producto</th>
+                  <th style="color: #fff; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none;">🔢 Cantidad</th>
+                  <th style="color: #fff; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none;">💵 Precio</th>
+                  <th style="color: #fff; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none;">💰 Subtotal</th>
                 </tr>
-              `).join("")}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${venta.venta.map((item) => `
+                  <tr style="background: transparent; border-top: 1px solid rgba(40, 193, 255, 0.25);">
+                    <td style="color: #fff; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.05rem; padding: 10px; border: none;">${item.item}</td>
+                    <td style="color: #6dd6ff; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.1rem; padding: 10px; border: none;">${item.cantidad}</td>
+                    <td style="color: #90ee90; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.1rem; padding: 10px; border: none;">${item.costo.toLocaleString("es-PY")} Gs</td>
+                    <td style="color: #ffd966; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.15rem; padding: 10px; border: none;">${item.subTotal.toLocaleString("es-PY")} Gs</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
           
           ${rol === 'admin' && caja.estado === 'abierta' ? `
-            <div class="text-end mt-2">
-              <button class="btn btn-sm btn-outline-danger btnRevertirVenta" data-index="${index}">
-                <i class="bi bi-arrow-counterclockwise me-1"></i>Revertir Venta
+            <div class="text-end mt-3">
+              <button class="btn btn-outline-danger btnRevertirVenta" data-index="${index}" 
+                      style="font-weight: 600; 
+                             box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+                             border: 2px solid rgba(220, 53, 69, 0.6);
+                             text-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+                <i class="bi bi-arrow-counterclockwise me-2"></i>Revertir Venta
               </button>
             </div>
           ` : ''}
@@ -200,25 +349,24 @@ const mostrarDetalleCaja = async () => {
       </div>
     `;
 
-    ventasAccordion.appendChild(item);
-  });
-
-  // Agregar listeners a los botones de revertir
-  if (rol === 'admin' && caja.estado === 'abierta') {
-    document.querySelectorAll('.btnRevertirVenta').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const ventaIndex = parseInt(btn.getAttribute('data-index'));
-        await revertirVenta(idCajaIndividual, ventaIndex);
-      });
+      ventasAccordion.appendChild(item);
     });
+
+    // Agregar listeners a los botones de revertir
+    if (rol === 'admin' && caja.estado === 'abierta') {
+      document.querySelectorAll('.btnRevertirVenta').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const ventaIndex = parseInt(btn.getAttribute('data-index'));
+          await revertirVenta(idCajaIndividual, ventaIndex);
+        });
+      });
+    }
+
+  } catch (error) {
+    console.error('Error en mostrarDetalleCaja():', error);
+    throw error;
   }
-
-
-
-
-}
-
-//? FUNCION DE REALIZAR CIERRE DE CAJA
+}//? FUNCION DE REALIZAR CIERRE DE CAJA
 
 // Cierre de caja + impresión (fusionado desde cajaUnica.js)
 document.getElementById("formCierreCaja")?.addEventListener("submit", async (e) => {
