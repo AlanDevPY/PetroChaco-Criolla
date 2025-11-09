@@ -12,6 +12,23 @@ import {
   descontarStockTransaccional,
 } from "./firebase.js";
 import { formatGs, mostrarAviso, debounce } from "./utils.js";
+import {
+  confirmarEliminacion,
+  alertaExito,
+  alertaError,
+  alertaAdvertencia,
+  alertaInfo,
+  mostrarCargando,
+  ocultarCargando
+} from "./swal-utils.js";
+import {
+  initClientesDataTable,
+  poblarTablaClientes,
+  eliminarClienteDeTabla
+} from "./ventas-datatable.js";
+
+// Importar función de datalist mejorado (reutilizamos la misma de stock)
+import { mejorarDatalist } from "./datalist-mejorado.js";
 
 // VARIABLES GLOBALES
 let pedido = [];
@@ -82,7 +99,7 @@ document.getElementById("agregarProductoForm").addEventListener("submit", async 
 
   // Validar cantidad
   if (cantidad <= 0) {
-    alert("Ingrese una cantidad válida.");
+    alertaAdvertencia("Cantidad inválida", "Ingrese una cantidad válida.");
     return;
   }
 
@@ -98,7 +115,7 @@ document.getElementById("agregarProductoForm").addEventListener("submit", async 
 
   // Validar si seleccionó un item válido
   if (!selectedId) {
-    mostrarAviso("warning", "Producto no encontrado.");
+    alertaAdvertencia("Producto no encontrado", "El producto ingresado no existe en el sistema.");
     return;
   }
 
@@ -109,7 +126,7 @@ document.getElementById("agregarProductoForm").addEventListener("submit", async 
   const pedidoExistente = pedido.find((p) => p.id === stockItem.id);
 
   if (stockItem.cantidad < cantidad) {
-    mostrarAviso("warning", "No hay suficiente stock.");
+    alertaAdvertencia("Stock insuficiente", `Solo hay ${stockItem.cantidad} unidades disponibles.`);
     return;
   } else if (pedidoExistente) {
     // Si ya existe, aumentar la cantidad y actualizar subtotal
@@ -141,26 +158,26 @@ document.getElementById("agregarProductoForm").addEventListener("submit", async 
 
 // FUNCION PARA MOSTRAR PEDIDO CARGADO
 const mostrarPedidoCargado = () => {
-  const pedidoList = document.getElementById("carritoTable");
+  const pedidoList = document.getElementById("carritoTableBody");
   pedidoList.innerHTML = "";
 
   pedido.forEach((item) => {
     pedidoList.innerHTML += `
-        <tr>
+        <tr class="animate__animated animate__fadeIn">
             <td>${item.item}</td>
             <td class="text-center"> ${item.cantidad}</td>
             <td class="text-end">${item.costo.toLocaleString("es-PY")} Gs</td>
             <td class="text-end">${item.subTotal.toLocaleString(
       "es-PY"
     )} Gs</td>
-             <td><button class="btn btn-sm btn-danger">❌</button></td>
+             <td class="text-center"><button class="btn btn-sm btn-danger"><i class="bi bi-trash3"></i></button></td>
         </tr>
         `;
   });
 
   // eliminar pedido
   // Limitar al tbody del carrito para no capturar otros botones .btn-danger de la página
-  const botonesEliminar = document.querySelectorAll("#carritoTable .btn-danger");
+  const botonesEliminar = document.querySelectorAll("#carritoTableBody .btn-danger");
   botonesEliminar.forEach((boton) => {
     boton.addEventListener("click", async () => {
       const index = Array.from(botonesEliminar).indexOf(boton);
@@ -245,7 +262,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
   // Validar cliente
   if (!cliente || !cliente.ruc || cliente.ruc.trim() === "") {
-    mostrarAviso("error", "Ingrese un RUC válido antes de cobrar.");
+    alertaAdvertencia("Cliente requerido", "Ingrese un RUC válido antes de cobrar.");
     clienteRucCobro.focus();
     btnConfirmarVenta.disabled = false;
     return;
@@ -304,13 +321,17 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
     const diferencia = totalPedido - pagado;
 
     if (diferencia > 0) {
-      mostrarAviso("warning", "Falta pagar: " + formatGs(diferencia));
+      alertaAdvertencia("Pago insuficiente", "Falta pagar: " + formatGs(diferencia));
       btnConfirmarVenta.disabled = false;
       return;
     } else {
       await registrarCaja(nuevaCaja);
       const ok = await descontarStock(venta);
-      if (!ok) { btnConfirmarVenta.disabled = false; return; }
+      if (!ok) {
+        btnConfirmarVenta.disabled = false;
+        alertaError("Error al descontar stock", "No se pudo completar la venta.");
+        return;
+      }
       imprimirTicket(venta);
 
 
@@ -340,7 +361,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
     if (diferencia > 0) {
       console.log("no se puede realizar cobro, monto insuficiente");
-      mostrarAviso("warning", "Falta pagar: " + formatGs(diferencia));
+      alertaAdvertencia("Pago insuficiente", "Falta pagar: " + formatGs(diferencia));
       btnConfirmarVenta.disabled = false;
 
       return;
@@ -350,7 +371,11 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
       // Actualizo la caja en Firestore
       await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
       const ok = await descontarStock(venta);
-      if (!ok) { btnConfirmarVenta.disabled = false; return; }
+      if (!ok) {
+        btnConfirmarVenta.disabled = false;
+        alertaError("Error al descontar stock", "No se pudo completar la venta.");
+        return;
+      }
       imprimirTicket(venta);
 
       // obtenner instancia de modalcobro y cerrar
@@ -367,7 +392,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   // resetear tabla de pedido
 
   btnConfirmarVenta.disabled = true;
-  mostrarAviso("success", "Venta registrada con exito.");
+  alertaExito("Venta registrada", "La venta se ha registrado correctamente.");
   mostrarPedidoCargado();
   actualizarCobro();
   // Mostrar total en Guaraníes
@@ -406,11 +431,12 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
   const clientes = await obtenerClientesCached();
   const clienteExistente = clientes.find((c) => c.ruc === ruc);
   if (clienteExistente) {
-    mostrarAviso("warning", "Ya existe un cliente con ese RUC registrado.");
+    alertaAdvertencia("Cliente duplicado", "Ya existe un cliente con ese RUC registrado.");
     return;
   }
 
   await registrarCliente(cliente);
+  alertaExito("Cliente registrado", `${nombre} ha sido registrado correctamente.`);
 
   // Obtener la instancia existente y cerrarla
   bootstrap.Modal.getInstance(document.getElementById('modalCliente')).hide();
@@ -422,38 +448,40 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
 // funcion para mostrar los clientes registrados
 async function mostrarClientes() {
   const clientes = await obtenerClientesCached();
-  const tbody = document.getElementById("tablaClientes");
-  tbody.innerHTML = "";
 
-  // ordenar clientes por nombre
-  clientes.sort((a, b) => a.nombre.localeCompare(b.nombre));
+  // Si DataTables está inicializado, poblar tabla
+  if ($.fn.DataTable.isDataTable('#tablaClientes')) {
+    poblarTablaClientes(clientes);
+  } else {
+    // Inicializar DataTable por primera vez
+    initClientesDataTable();
+    poblarTablaClientes(clientes);
+  }
+}
 
-  clientes.forEach((cliente) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <tr>
-        <td>${cliente.nombre}</td>
-        <td>${cliente.ruc}</td>
-        <td>${cliente.telefono}</td>
-        <td>${cliente.direccion}</td>
-        <td>
-          <button class="btn btn-sm btn-danger" data-id="${cliente.id}">
-            Eliminar
-          </button>
-        </td>
-      </tr>
-    `;
-    tbody.appendChild(row);
-  });
+// Configurar eventos de DataTable para eliminar clientes
+function configurarEventosClientes() {
+  // Usar delegación de eventos para botones dinámicos
+  $(document).on('click', '.btn-eliminar-cliente', async function () {
+    const id = $(this).data('id');
 
-  // eliminar clientes por id
-  const botonesEliminar = document.querySelectorAll(".btn-danger");
-  botonesEliminar.forEach((boton) => {
-    boton.addEventListener("click", async () => {
-      const id = boton.getAttribute("data-id");
-      await eliminarClientePorID(id);
-      await mostrarClientes();
-    });
+    // Buscar el nombre del cliente
+    const clientes = await obtenerClientesCached();
+    const cliente = clientes.find(c => c.id === id);
+    const nombreCliente = cliente ? cliente.nombre : 'este cliente';
+
+    const confirmacion = await confirmarEliminacion(nombreCliente, 'cliente');
+
+    if (confirmacion.isConfirmed) {
+      try {
+        await eliminarClientePorID(id);
+        eliminarClienteDeTabla(id);
+        alertaExito("Cliente eliminado", `${nombreCliente} ha sido eliminado correctamente.`);
+      } catch (error) {
+        console.error('Error al eliminar cliente:', error);
+        alertaError("Error al eliminar", "No se pudo eliminar el cliente.");
+      }
+    }
   });
 }
 
@@ -463,6 +491,8 @@ async function mostrarClientes() {
 
 window.addEventListener("DOMContentLoaded", async () => {
   await mostrarClientes();
+  configurarEventosClientes();
+
   const spinner = document.getElementById("spinnerCarga");
   const contenido = document.getElementById("contenidoPrincipal");
 
@@ -474,12 +504,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Esperar a que se carguen los datos
   await mostrarStockDataList();
 
+  // Inicializar datalist mejorado
+  mejorarDatalist('inputProducto', 'listaProductos');
+
   const Cajas = await obtenerCajas();
   let cajaAbierta = Cajas.find((caja) => caja.estado === "abierta");
 
   if (cajaAbierta) {
     const badge = document.getElementById("estadoCajaBadge");
-    badge.textContent = "Caja Abierta";
+    badge.innerHTML = '<i class="bi bi-unlock"></i> Caja Abierta';
     badge.classList.remove("bg-danger");
     badge.classList.add("bg-success");
   }
