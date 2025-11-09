@@ -210,19 +210,25 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Agregar Producto</h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle me-2"></i>Agregar Producto
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="registrarStockForm">
                         <div class="mb-3">
-                            <label class="form-label">Nombre del Producto</label>
+                            <label class="form-label">
+                                <i class="bi bi-box-seam me-1"></i>Nombre del Producto
+                            </label>
                             <input type="text" id="nuevoItemStock" class="form-control"
                                 placeholder="Ej: Lomito Completo" required autocomplete="off">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Categoría</label>
+                            <label class="form-label">
+                                <i class="bi bi-tag me-1"></i>Categoría
+                            </label>
                             <select class="form-select" required id="nuevoCategoriaStock">
                                 <option>Comida</option>
                                 <option>Bebida</option>
@@ -240,28 +246,38 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Stock</label>
+                            <label class="form-label">
+                                <i class="bi bi-box me-1"></i>Stock
+                            </label>
                             <input type="number" id="nuevoCantidadStock" required class="form-control text-center"
                                 placeholder="0">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Precio Compra</label>
+                            <label class="form-label">
+                                <i class="bi bi-cart-dash me-1"></i>Precio Compra
+                            </label>
                             <input type="text" value="0" autocomplete="off" required id="nuevoPrecioCompraStock"
                                 class="form-control text-end" placeholder="0">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Precio Venta</label>
+                            <label class="form-label">
+                                <i class="bi bi-currency-exchange me-1"></i>Precio Venta
+                            </label>
                             <input type="text" value="0" autocomplete="off" required id="nuevoCostoStock"
                                 class="form-control text-end" placeholder="0">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Código de Barra</label>
+                            <label class="form-label">
+                                <i class="bi bi-upc-scan me-1"></i>Código de Barra
+                            </label>
                             <input type="number" id="nuevoCodigoBarraStock" class="form-control"
                                 placeholder="Tickear codigo de barra aqui!!" required autocomplete="off">
                         </div>
 
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-success" data-bs-dismiss="modal">Agregar</button>
+                            <button type="submit" class="btn btn-success" data-bs-dismiss="modal">
+                                <i class="bi bi-check-circle me-1"></i>Agregar
+                            </button>
                         </div>
                     </form>
 
@@ -276,20 +292,25 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Actualizar Producto <span
-                            class="badge rounded-pill bg-warning text-dark ms-2">Solo precio de venta</span></h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square me-2"></i>Actualizar Producto
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="actualizarStockForm">
                         <div class="mb-3">
-                            <label class="form-label">Nombre del Producto</label>
+                            <label class="form-label">
+                                <i class="bi bi-box-seam me-1"></i>Nombre del Producto
+                            </label>
                             <input type="text" id="actualizarItemStock" class="form-control"
                                 placeholder="Ej: Lomito Completo" required autocomplete="off" readonly>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Categoría</label>
+                            <label class="form-label">
+                                <i class="bi bi-tag me-1"></i>Categoría
+                            </label>
                             <select class="form-select" required id="actualizarCategoriaStock" disabled>
                                 <option>Comida</option>
                                 <option>Bebida</option>
@@ -308,26 +329,34 @@
                         <!-- Campo de Stock removido: la cantidad se gestiona desde reposición/otras acciones -->
 
                         <div class="mb-3">
-                            <label class="form-label">Precio Compra</label>
+                            <label class="form-label">
+                                <i class="bi bi-cart-dash me-1"></i>Precio Compra
+                            </label>
                             <input type="text" value="0" autocomplete="off" required id="actualizarPrecioCompraStock"
-                                class="form-control text-end" placeholder="0" disabled>
-                            <small class="text-muted">Solo modifique precios en este modal.</small>
+                                class="form-control text-end" placeholder="0">
+                            <small class="text-muted">Modifique el precio de compra y venta según necesite.</small>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Precio Venta</label>
+                            <label class="form-label">
+                                <i class="bi bi-currency-exchange me-1"></i>Precio Venta
+                            </label>
                             <input type="text" autocomplete="off" required id="actualizarCostoStock"
                                 class="form-control text-end" placeholder="0">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Código de Barra</label>
+                            <label class="form-label">
+                                <i class="bi bi-upc-scan me-1"></i>Código de Barra
+                            </label>
                             <input type="number" id="actualizarCodigoBarraStock" class="form-control"
                                 placeholder="Tickear codigo de barra aqui!!" required autocomplete="off" readonly>
                         </div>
 
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-success" data-bs-dismiss="modal">Actualizar</button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle me-1"></i>Actualizar
+                            </button>
                         </div>
                     </form>
 
