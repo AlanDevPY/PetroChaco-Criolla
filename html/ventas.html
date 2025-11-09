@@ -93,13 +93,7 @@
                     <i class="bi bi-person-badge"></i> Usuarios
                   </a></li>
                 <li><a class="dropdown-item" href="stock.html">
-                    <i class="bi bi-box-seam"></i> Cargar Stock
-                  </a></li>
-                <li>
-                  <hr class="dropdown-divider">
-                </li>
-                <li><a class="dropdown-item" href="stock.html">
-                    <i class="bi bi-boxes"></i> Stock
+                    <i class="bi bi-box-seam"></i> Stock
                   </a></li>
                 <li><a class="dropdown-item" href="facturacion.html">
                     <i class="bi bi-receipt"></i> Facturación
@@ -300,6 +294,17 @@
                     <input type="text" disabled class="form-control" id="clienteTelefonoCobro"
                       placeholder="Teléfono de contacto">
                   </div>
+
+                  <!-- Checkbox Factura Legal -->
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="emitirFacturaLegal">
+                    <label class="form-check-label fw-bold" for="emitirFacturaLegal">
+                      <i class="bi bi-receipt-cutoff"></i> Emitir Factura Legal
+                    </label>
+                  </div>
+                  <small class="text-muted">
+                    <i class="bi bi-info-circle"></i> Requiere timbrado SET activo
+                  </small>
                 </div>
               </div>
             </div>
@@ -493,6 +498,145 @@
     </div>
   </div>
 
+  <!-- FACTURA FISCAL LEGAL -->
+  <div class="ticket-wrapper">
+    <div class="ticket-container" id="factura-fiscal-container">
+      <!-- Encabezado Empresa -->
+      <div class="ticket-header ticket-center">
+        <div class="ticket-bold" id="factura-razon-social">GRUPO SANTA MARIA S.R.L.</div>
+        <div class="ticket-small" id="factura-ruc">RUC: 80094843-2</div>
+        <div class="ticket-small" id="factura-direccion">RUTA PY 20 KM 17 ENTRADA PRINCIPAL A SANTIAGO</div>
+        <div class="ticket-small">Tel: 0984 000 000</div>
+      </div>
+
+      <!-- Separador -->
+      <div class="ticket-center ticket-small" style="margin:8px 0;">
+        <div>=============================</div>
+        <div class="ticket-bold" style="font-size:14px;">FACTURA</div>
+        <div>=============================</div>
+      </div>
+
+      <!-- Datos Timbrado -->
+      <div style="font-size:11px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;">
+          <span class="ticket-small ticket-bold">Timbrado N°:</span>
+          <span class="ticket-small" id="factura-timbrado">18426298</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span class="ticket-small ticket-bold">Vigencia:</span>
+          <span class="ticket-small" id="factura-vigencia">05/11/2025 - 30/11/2026</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span class="ticket-small ticket-bold">Factura N°:</span>
+          <span class="ticket-small ticket-bold" id="factura-numero">002-002-0000001</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span class="ticket-small ticket-bold">Fecha:</span>
+          <span class="ticket-small" id="factura-fecha">--/--/---- --:--</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <span class="ticket-small ticket-bold">Condición:</span>
+          <span class="ticket-small">CONTADO</span>
+        </div>
+      </div>
+
+      <!-- Separador -->
+      <div class="ticket-center ticket-small">
+        <div>-----------------------------</div>
+      </div>
+
+      <!-- Datos Cliente -->
+      <div style="font-size:11px;margin:8px 0;">
+        <div><span class="ticket-small ticket-bold">Cliente:</span> <span id="factura-cliente-nombre">Consumidor
+            Final</span></div>
+        <div><span class="ticket-small ticket-bold">RUC/CI:</span> <span id="factura-cliente-ruc">0000000-0</span></div>
+        <div><span class="ticket-small ticket-bold">Dirección:</span> <span id="factura-cliente-direccion">-</span>
+        </div>
+      </div>
+
+      <!-- Separador -->
+      <div class="ticket-center ticket-small">
+        <div>-----------------------------</div>
+      </div>
+
+      <!-- Items -->
+      <table class="ticket-items">
+        <thead>
+          <tr>
+            <th class="ticket-qty">Cant</th>
+            <th class="ticket-desc">Descripción</th>
+            <th class="ticket-price">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody id="factura-items-body">
+          <!-- filas dinámicas -->
+        </tbody>
+      </table>
+
+      <!-- Separador -->
+      <div class="ticket-center ticket-small">
+        <div>-----------------------------</div>
+      </div>
+
+      <!-- Totales con IVA -->
+      <div class="ticket-total-row">
+        <div style="display:flex;justify-content:space-between;">
+          <div class="ticket-small">Gravadas 5%:</div>
+          <div id="factura-gravadas-5" class="ticket-small ticket-right">0 Gs</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <div class="ticket-small">Gravadas 10%:</div>
+          <div id="factura-gravadas-10" class="ticket-small ticket-right">0 Gs</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <div class="ticket-small">Exentas:</div>
+          <div id="factura-exentas" class="ticket-small ticket-right">0 Gs</div>
+        </div>
+
+        <!-- Separador IVA -->
+        <div class="ticket-center ticket-small" style="margin:4px 0;">
+          <div>- - - - - - - - - - - - - -</div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;">
+          <div class="ticket-small">IVA 5%:</div>
+          <div id="factura-iva-5" class="ticket-small ticket-right">0 Gs</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+          <div class="ticket-small">IVA 10%:</div>
+          <div id="factura-iva-10" class="ticket-small ticket-right">0 Gs</div>
+        </div>
+
+        <!-- Separador Total -->
+        <div class="ticket-center ticket-small" style="margin:6px 0;">
+          <div>=============================</div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;">
+          <div>TOTAL:</div>
+          <div id="factura-total" class="ticket-right">0 Gs</div>
+        </div>
+      </div>
+
+      <!-- Separador -->
+      <div class="ticket-center ticket-small" style="margin:8px 0;">
+        <div>-----------------------------</div>
+      </div>
+
+      <!-- Mensaje Final -->
+      <div class="ticket-msg">
+        Original: Cliente<br>
+        Copia: Archivo
+      </div>
+
+      <div class="ticket-center ticket-small" style="margin-top:6px;">
+        <div>¡Gracias por su compra!</div>
+        <div>-----------------------------</div>
+        <div>Sistema POS - Petro Chaco</div>
+      </div>
+    </div>
+  </div>
+
 
 
   <!-- Bootstrap JS -->
@@ -510,6 +654,10 @@
 
   <!-- Day.js -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+
+  <!-- Print.js - Impresión silenciosa -->
+  <link rel="stylesheet" href="https://printjs-4de6.kxcdn.com/print.min.css">
+  <script src="https://printjs-4de6.kxcdn.com/print.min.js"></script>
 
   <!-- Custom JS -->
   <script type="module" src="../js/ventas.js"></script>

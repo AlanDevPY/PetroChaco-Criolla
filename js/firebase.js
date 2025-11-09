@@ -50,6 +50,9 @@ const auth = getAuth(app);
 // 3. Obtén una referencia al servicio de Firestore
 const db = getFirestore(app);
 
+// Exportar db, auth y app para uso en otros módulos
+export { db, auth, app };
+
 // ? FUNCIONES QUE TENGAN QUE VER CON LA AUTENTICACIÓN--------------------------------------------
 // Para iniciar sesión con correo y contraseña
 export const iniciarSesion = async function (email, password) {

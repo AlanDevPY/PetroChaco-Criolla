@@ -30,6 +30,9 @@ import {
 // Importar función de datalist mejorado (reutilizamos la misma de stock)
 import { mejorarDatalist } from "./datalist-mejorado.js";
 
+// Importar funciones de facturación
+import { obtenerTimbradoActivo, incrementarNumeroFactura } from "./facturacion.js";
+
 // VARIABLES GLOBALES
 let pedido = [];
 let pedidoGenerado = {};
@@ -332,7 +335,20 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
         alertaError("Error al descontar stock", "No se pudo completar la venta.");
         return;
       }
-      imprimirTicket(venta);
+
+      // Verificar si se debe emitir factura legal
+      const emitirFactura = document.getElementById("emitirFacturaLegal").checked;
+      if (emitirFactura) {
+        const timbrado = await obtenerTimbradoActivo();
+        if (timbrado) {
+          await imprimirFacturaFiscal(venta, timbrado);
+        } else {
+          alertaError("Sin timbrado activo", "No hay timbrado activo para emitir factura legal");
+          imprimirTicket(venta);
+        }
+      } else {
+        imprimirTicket(venta);
+      }
 
 
       // obtenner instancia de modalcobro y cerrar
@@ -376,7 +392,20 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
         alertaError("Error al descontar stock", "No se pudo completar la venta.");
         return;
       }
-      imprimirTicket(venta);
+
+      // Verificar si se debe emitir factura legal
+      const emitirFactura = document.getElementById("emitirFacturaLegal").checked;
+      if (emitirFactura) {
+        const timbrado = await obtenerTimbradoActivo();
+        if (timbrado) {
+          await imprimirFacturaFiscal(venta, timbrado);
+        } else {
+          alertaError("Sin timbrado activo", "No hay timbrado activo para emitir factura legal");
+          imprimirTicket(venta);
+        }
+      } else {
+        imprimirTicket(venta);
+      }
 
       // obtenner instancia de modalcobro y cerrar
       const modalCobro = bootstrap.Modal.getInstance(
@@ -536,6 +565,96 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 
 
+// ========================================
+// FUNCIÓN PARA GENERAR FACTURA FISCAL
+// ========================================
+async function imprimirFacturaFiscal(venta, timbrado) {
+  // --- DATOS DEL TIMBRADO Y EMPRESA ---
+  document.getElementById("factura-razon-social").textContent = timbrado.razonSocial;
+  document.getElementById("factura-ruc").textContent = `RUC: ${timbrado.rucEmpresa}`;
+  document.getElementById("factura-direccion").textContent = timbrado.direccionFiscal;
+  document.getElementById("factura-timbrado").textContent = timbrado.numeroTimbrado;
+  document.getElementById("factura-vigencia").textContent =
+    `${timbrado.fechaInicio.split('-').reverse().join('/')} - ${timbrado.fechaVencimiento.split('-').reverse().join('/')}`;
+
+  // --- NÚMERO DE FACTURA ---
+  const numeroFactura = `${timbrado.establecimiento}-${timbrado.puntoExpedicion}-${String(timbrado.numeroActual).padStart(7, '0')}`;
+  document.getElementById("factura-numero").textContent = numeroFactura;
+
+  // --- FECHA ---
+  document.getElementById("factura-fecha").textContent = venta.fecha || new Date().toLocaleString("es-PY");
+
+  // --- DATOS DEL CLIENTE ---
+  const cliente = venta.cliente || {};
+  document.getElementById("factura-cliente-nombre").textContent = cliente.nombre || "Consumidor Final";
+  document.getElementById("factura-cliente-ruc").textContent = cliente.ruc || "0000000-0";
+  document.getElementById("factura-cliente-direccion").textContent = cliente.direccion || "-";
+
+  // --- LIMPIAR ITEMS ANTERIORES ---
+  const cuerpo = document.getElementById("factura-items-body");
+  cuerpo.innerHTML = "";
+
+  // --- CALCULAR TOTALES POR IVA ---
+  let totalGravadas5 = 0;
+  let totalGravadas10 = 0;
+  let totalExentas = 0;
+
+  // --- AGREGAR PRODUCTOS ---
+  if (venta.venta && Array.isArray(venta.venta)) {
+    venta.venta.forEach((item) => {
+      const fila = document.createElement("tr");
+
+      fila.innerHTML = `
+        <td class="ticket-qty">${item.cantidad}</td>
+        <td class="ticket-desc">${item.item}</td>
+        <td class="ticket-price">${item.subTotal.toLocaleString("es-PY")}</td>
+      `;
+
+      cuerpo.appendChild(fila);
+
+      // Por ahora asumimos todo gravado al 10%
+      // TODO: Agregar campo IVA a productos en stock
+      totalGravadas10 += item.subTotal;
+    });
+  }
+
+  // --- CALCULAR IVA ---
+  const iva5 = Math.round(totalGravadas5 / 21); // 5% incluido = total / 21
+  const iva10 = Math.round(totalGravadas10 / 11); // 10% incluido = total / 11
+
+  // --- MOSTRAR TOTALES ---
+  document.getElementById("factura-gravadas-5").textContent = totalGravadas5.toLocaleString("es-PY") + " Gs";
+  document.getElementById("factura-gravadas-10").textContent = totalGravadas10.toLocaleString("es-PY") + " Gs";
+  document.getElementById("factura-exentas").textContent = totalExentas.toLocaleString("es-PY") + " Gs";
+  document.getElementById("factura-iva-5").textContent = iva5.toLocaleString("es-PY") + " Gs";
+  document.getElementById("factura-iva-10").textContent = iva10.toLocaleString("es-PY") + " Gs";
+  document.getElementById("factura-total").textContent = venta.total.toLocaleString("es-PY") + " Gs";
+
+  // --- INCREMENTAR NÚMERO DE FACTURA EN FIREBASE ---
+  try {
+    await incrementarNumeroFactura(timbrado.id);
+    console.log("✅ Número de factura incrementado");
+  } catch (error) {
+    console.error("❌ Error al incrementar número de factura:", error);
+    alertaError("Error", "No se pudo incrementar el número de factura");
+  }
+
+  // --- IMPRIMIR ---
+  setTimeout(() => {
+    // Ocultar ticket normal, mostrar factura fiscal
+    document.getElementById("ticket-container").style.display = "none";
+    document.getElementById("factura-fiscal-container").style.display = "block";
+
+    window.print();
+
+    // Restaurar después de imprimir
+    setTimeout(() => {
+      document.getElementById("ticket-container").style.display = "block";
+      document.getElementById("factura-fiscal-container").style.display = "none";
+    }, 1000);
+  }, 500);
+}
+
 // FUNCION PARA GENERAR TICKTE DE VENTA
 function imprimirTicket(venta) {
   // --- DATOS DEL CLIENTE ---
@@ -581,6 +700,7 @@ function imprimirTicket(venta) {
   const msg = document.getElementById("ticket-msg");
   msg.textContent = `¡Gracias ${cliente.nombre || "por tu compra"}! Vuelve pronto 🚗⛽`;
 
+  // --- IMPRIMIR CON WINDOW.PRINT() ---
   setTimeout(() => {
     window.print();
   }, 3000);
