@@ -1,11 +1,16 @@
 import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId, obtenerStockPorId, sumarStockTransaccional, registrarReposicion, obtenerReposiciones } from "./firebase.js";
 import { showSuccess, showError, showInfo, showLoading, hideLoading, showConfirm } from "./toast-utils.js";
+import { mostrarStockConDataTable, configurarEventosDataTable, actualizarFilaDataTable } from "./stock-modern.js";
+import { confirmarEliminacion, alertaAdvertencia } from "./swal-utils.js";
 
 // variables globales
 
 let idStock
 let _cacheStock = [];
 let reposicionLista = [];
+
+// Variable para controlar si usar DataTables o sistema manual
+const USAR_DATATABLES = true; // Cambiar a false para volver al sistema anterior
 
 // Variables de paginación
 let paginaActual = 1;
@@ -84,17 +89,29 @@ const modalActualizarProducto = bootstrap.Modal.getOrCreateInstance(
 
 
 
-// Función para mostrar stock en la tabla con paginación
+// Función para mostrar stock en la tabla
 const mostrarStock = async (resetearPagina = true) => {
-  const stock = await obtenerStock();
-  _cacheStock = stock;
-  productosFiltrados = [...stock]; // Copiar todos los productos
+  if (USAR_DATATABLES) {
+    // Usar DataTables moderno
+    _cacheStock = await mostrarStockConDataTable(obtenerStock);
 
-  if (resetearPagina) {
-    paginaActual = 1; // Resetear a la primera página
+    // Poblar datalist para reposición
+    const dl = document.getElementById('listaProductosReposicion');
+    if (dl) {
+      dl.innerHTML = _cacheStock.map(s => `<option value="${s.item}"></option>`).join('');
+    }
+  } else {
+    // Sistema manual original
+    const stock = await obtenerStock();
+    _cacheStock = stock;
+    productosFiltrados = [...stock];
+
+    if (resetearPagina) {
+      paginaActual = 1;
+    }
+
+    renderizarPagina();
   }
-
-  renderizarPagina();
 };
 
 // Función para renderizar una página específica
@@ -294,7 +311,7 @@ registrarStockForm.addEventListener("submit", async (e) => {
 
   // Verificar si el codigo de barra ya existe en el stock
   if (obtenerStockTotal.some((item) => item.codigoBarra === codigoBarra)) {
-    showWarning("⚠️ El código de barra ya existe en el stock");
+    alertaAdvertencia("⚠️ Código duplicado", "El código de barra ya existe en el stock");
     return;
   }
 
@@ -322,10 +339,28 @@ window.addEventListener("DOMContentLoaded", async () => {
   const loadingToast = showLoading("Obteniendo stock...");
   await mostrarStock();
   hideLoading(loadingToast);
-  // Poblar datalist para reposición
-  const dl = document.getElementById('listaProductosReposicion');
-  if (dl) {
-    dl.innerHTML = _cacheStock.map(s => `<option value="${s.item}"></option>`).join('');
+
+  // Configurar eventos de DataTables si está activado
+  if (USAR_DATATABLES) {
+    configurarEventosDataTable({
+      onEditar: async (id) => {
+        idStock = id;
+        const stock = await obtenerStockPorId(id);
+
+        document.getElementById("actualizarItemStock").value = stock.item;
+        document.getElementById("actualizarCategoriaStock").value = stock.categoria;
+        document.getElementById("actualizarCodigoBarraStock").value = stock.codigoBarra;
+        document.getElementById("actualizarCostoStock").value = Number(stock.costo).toLocaleString("es-PY");
+        document.getElementById("actualizarPrecioCompraStock").value = Number(stock.costoCompra).toLocaleString("es-PY");
+
+        modalActualizarProducto.show();
+      },
+      onEliminar: async (id) => {
+        await eliminarStockPorID(id);
+        showSuccess("✅ Stock eliminado correctamente");
+        await mostrarStock();
+      }
+    });
   }
 });
 
