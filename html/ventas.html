@@ -122,16 +122,13 @@
       </div>
     </nav>
 
-
-
-
-    <div class="container-fluid d-flex flex-column vh-100">
-      <div class="row flex-grow-1">
+    <div class="container-fluid d-flex flex-column" style="height: calc(100vh - 56px - 32px); padding-bottom: 0;">
+      <div class="row flex-grow-1" style="margin: 0;">
 
         <!-- Columna izquierda: Cargar ticket -->
         <div
-          class="col-md-6 p-4 border-end d-flex flex-column justify-content-center animate__animated animate__fadeInLeft">
-          <h4 class="mb-4 text-center">
+          class="col-md-6 p-3 border-end d-flex flex-column justify-content-center animate__animated animate__fadeInLeft">
+          <h4 class="mb-2 text-center">
             <i class="bi bi-cart-plus"></i> Cargar Producto
           </h4>
 
@@ -139,7 +136,7 @@
 
 
 
-            <div class="mb-3">
+            <div class="mb-2">
               <label for="cantidad" class="form-label">
                 <i class="bi bi-hash"></i> Cantidad
               </label>
@@ -147,7 +144,7 @@
                 class="form-control form-control-lg text-center" placeholder="0">
             </div>
 
-            <div class="mb-3">
+            <div class="mb-2">
               <label for="producto" class="form-label">
                 <i class="bi bi-box-seam"></i> Producto
               </label>
@@ -169,7 +166,7 @@
         </div>
 
         <!-- Columna derecha: Carrito -->
-        <div class="col-md-6 p-4 d-flex flex-column animate__animated animate__fadeInRight">
+        <div class="col-md-6 p-3 d-flex flex-column animate__animated animate__fadeInRight">
 
           <div class="table-responsive flex-grow-1">
             <table id="carritoTable" class="table table-striped table-hover align-middle">
@@ -190,7 +187,7 @@
 
           <!-- Total y botón cobrar -->
           <div class="mt-auto">
-            <div class="alert alert-primary fs-5 text-end animate__animated animate__pulse">
+            <div class="alert alert-primary fs-6 text-end animate__animated animate__pulse">
               <i class="bi bi-cash-coin"></i> Total: <strong id="totalPedido">0 Gs</strong>
             </div>
             <!-- Botón que abre el modal -->
@@ -203,6 +200,25 @@
 
       </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="footer-ventas">
+      <div class="container-fluid">
+        <div class="row align-items-center">
+          <div class="col-md-6 text-center text-md-start">
+            <span class="footer-text">
+              <i class="bi bi-code-slash"></i> Desarrollado con <i class="bi bi-heart-fill text-danger"></i> por
+              <strong>AlanDevPy</strong>
+            </span>
+          </div>
+          <div class="col-md-6 text-center text-md-end">
+            <span class="footer-text">
+              © 2025 Petro Chaco Criolla - Sistema POS
+            </span>
+          </div>
+        </div>
+      </div>
+    </footer>
 
     <!-- Modal de Cobro -->
     <div class="modal fade" id="modalCobro" tabindex="-1" aria-labelledby="modalCobroLabel" aria-hidden="true">
