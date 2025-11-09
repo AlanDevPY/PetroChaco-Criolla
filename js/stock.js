@@ -1,10 +1,16 @@
 import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId, obtenerStockPorId, sumarStockTransaccional, registrarReposicion, obtenerReposiciones } from "./firebase.js";
+import { showSuccess, showError, showInfo, showLoading, hideLoading, showConfirm } from "./toast-utils.js";
 
 // variables globales
 
 let idStock
 let _cacheStock = [];
 let reposicionLista = [];
+
+// Variables de paginación
+let paginaActual = 1;
+const productosPorPagina = 20;
+let productosFiltrados = []; // Para mantener los productos filtrados o todos
 
 
 
@@ -68,44 +74,67 @@ const reposicionTotalCompra = document.getElementById('reposicionTotalCompra');
 const btnConfirmarReposicion = document.getElementById('btnConfirmarReposicion');
 const btnCancelarReposicion = document.getElementById('btnCancelarReposicion');
 
-// Instancias de modales
+// Instancias de modales (solo los necesarios para formularios)
 const modalAgregarProducto = bootstrap.Modal.getOrCreateInstance(
   document.getElementById("modalAgregarProducto")
-);
-const modalStockActualizado = bootstrap.Modal.getOrCreateInstance(
-  document.getElementById("modalStockActualizado")
 );
 const modalActualizarProducto = bootstrap.Modal.getOrCreateInstance(
   document.getElementById("modalActualizarProducto")
 );
-const modalStockEliminado = bootstrap.Modal.getOrCreateInstance(
-  document.getElementById("modalStockEliminado")
-);
-const modalAgregandoStock = bootstrap.Modal.getOrCreateInstance(
-  document.getElementById("modalAgregandoStock")
-);
-const modalStockAgregado = bootstrap.Modal.getOrCreateInstance(
-  document.getElementById("modalStockAgregado")
-);
-const modalObteniendoStock = bootstrap.Modal.getOrCreateInstance(
-  document.getElementById("modalObteniendoStock")
-);
 
 
 
-// Función para mostrar stock en la tabla
-const mostrarStock = async () => {
+// Función para mostrar stock en la tabla con paginación
+const mostrarStock = async (resetearPagina = true) => {
   const stock = await obtenerStock();
   _cacheStock = stock;
+  productosFiltrados = [...stock]; // Copiar todos los productos
+
+  if (resetearPagina) {
+    paginaActual = 1; // Resetear a la primera página
+  }
+
+  renderizarPagina();
+};
+
+// Función para renderizar una página específica
+function renderizarPagina() {
   stockTable.innerHTML = "";
-  let contador = 0;
 
-  stock.sort((a, b) => a.item.localeCompare(b.item));
+  // Ordenar productos
+  const productosOrdenados = [...productosFiltrados].sort((a, b) => a.item.localeCompare(b.item));
 
-  stock.forEach((item) => {
-    stockTable.innerHTML += `
+  // Calcular índices de paginación
+  const totalProductos = productosOrdenados.length;
+  const totalPaginas = Math.ceil(totalProductos / productosPorPagina);
+  const indiceInicio = (paginaActual - 1) * productosPorPagina;
+  const indiceFin = Math.min(indiceInicio + productosPorPagina, totalProductos);
+
+  // Obtener productos de la página actual
+  const productosPagina = productosOrdenados.slice(indiceInicio, indiceFin);
+
+  // Si no hay productos
+  if (productosPagina.length === 0) {
+    stockTable.innerHTML = `
       <tr>
-        <td>${++contador}</td>
+        <td colspan="8" class="text-center text-muted py-4">
+          No hay productos para mostrar
+        </td>
+      </tr>
+    `;
+    actualizarInfoPaginacion(0, 0, 0);
+    return;
+  }
+
+  // Construir HTML de la página
+  let htmlRows = '';
+  for (let i = 0; i < productosPagina.length; i++) {
+    const item = productosPagina[i];
+    const numeroGlobal = indiceInicio + i + 1; // Número global del producto
+
+    htmlRows += `
+      <tr>
+        <td>${numeroGlobal}</td>
         <td>${item.item}</td>
         <td>${item.categoria}</td>
         <td>${item.codigoBarra}</td>
@@ -113,47 +142,111 @@ const mostrarStock = async () => {
         <td class="text-end">${Number(item.costoCompra).toLocaleString("es-PY")} Gs</td>
         <td class="text-end">${Number(item.costo).toLocaleString("es-PY")} Gs</td>
         <td class="text-center">
-          <button data-id="${item.id}" class="btn btn-sm btn-warning">✏️</button>
-          <button data-id="${item.id}" class="btn btn-sm btn-danger">❌</button>
+          <button data-id="${item.id}" class="btn btn-sm btn-warning btn-editar-stock">✏️</button>
+          <button data-id="${item.id}" class="btn btn-sm btn-danger btn-eliminar-stock">❌</button>
         </td>
       </tr>
     `;
-  });
+  }
 
-  // Eliminar stock
-  const botonesEliminar = document.querySelectorAll("#stockTable .btn-danger");
-  botonesEliminar.forEach((boton) => {
-    boton.addEventListener("click", async () => {
-      const id = boton.getAttribute("data-id");
-      await eliminarStockPorID(id);
+  stockTable.innerHTML = htmlRows;
 
-      modalStockEliminado.show();
-      setTimeout(() => {
-        modalStockEliminado.hide();
-      }, 2000);
-      await mostrarStock();
-    });
-  });
+  // Asignar eventos a los botones
+  asignarEventosBotones();
 
-  //   actualizar stock
-  const botonesActualizar = document.querySelectorAll("#stockTable .btn-warning");
-  botonesActualizar.forEach((boton) => {
-    boton.addEventListener("click", async () => {
-      idStock = boton.getAttribute("data-id");
-      modalActualizarProducto.show();
+  // Actualizar controles de paginación
+  actualizarPaginacion(totalPaginas);
+  actualizarInfoPaginacion(indiceInicio + 1, indiceFin, totalProductos);
+}
 
-      // obtener stock por id (evita traer toda la colección)
-      const item = await obtenerStockPorId(idStock);
-      if (item) {
-        document.getElementById("actualizarItemStock").value = item.item;
-        document.getElementById("actualizarCategoriaStock").value = item.categoria;
-        document.getElementById("actualizarCodigoBarraStock").value = item.codigoBarra;
-        document.getElementById("actualizarCostoStock").value = Number(item.costo).toLocaleString("es-PY");
-        document.getElementById("actualizarPrecioCompraStock").value = Number(item.costoCompra).toLocaleString("es-PY");
+// Función para actualizar controles de paginación
+function actualizarPaginacion(totalPaginas) {
+  const paginacionControles = document.getElementById('paginacionControles');
+  if (!paginacionControles) return;
+
+  let htmlPaginacion = '';
+
+  // Botón Anterior
+  htmlPaginacion += `
+    <li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+      <a class="page-link" href="#" data-pagina="${paginaActual - 1}">Anterior</a>
+    </li>
+  `;
+
+  // Números de página (mostrar máximo 5 páginas)
+  const maxBotones = 5;
+  let paginaInicio = Math.max(1, paginaActual - Math.floor(maxBotones / 2));
+  let paginaFin = Math.min(totalPaginas, paginaInicio + maxBotones - 1);
+
+  // Ajustar si estamos cerca del final
+  if (paginaFin - paginaInicio < maxBotones - 1) {
+    paginaInicio = Math.max(1, paginaFin - maxBotones + 1);
+  }
+
+  // Primera página si no está visible
+  if (paginaInicio > 1) {
+    htmlPaginacion += `
+      <li class="page-item">
+        <a class="page-link" href="#" data-pagina="1">1</a>
+      </li>
+    `;
+    if (paginaInicio > 2) {
+      htmlPaginacion += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+  }
+
+  // Páginas numeradas
+  for (let i = paginaInicio; i <= paginaFin; i++) {
+    htmlPaginacion += `
+      <li class="page-item ${i === paginaActual ? 'active' : ''}">
+        <a class="page-link" href="#" data-pagina="${i}">${i}</a>
+      </li>
+    `;
+  }
+
+  // Última página si no está visible
+  if (paginaFin < totalPaginas) {
+    if (paginaFin < totalPaginas - 1) {
+      htmlPaginacion += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+    htmlPaginacion += `
+      <li class="page-item">
+        <a class="page-link" href="#" data-pagina="${totalPaginas}">${totalPaginas}</a>
+      </li>
+    `;
+  }
+
+  // Botón Siguiente
+  htmlPaginacion += `
+    <li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+      <a class="page-link" href="#" data-pagina="${paginaActual + 1}">Siguiente</a>
+    </li>
+  `;
+
+  paginacionControles.innerHTML = htmlPaginacion;
+
+  // Asignar eventos a los botones de paginación
+  paginacionControles.querySelectorAll('a.page-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const nuevaPagina = parseInt(link.getAttribute('data-pagina'));
+      if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas && nuevaPagina !== paginaActual) {
+        paginaActual = nuevaPagina;
+        renderizarPagina();
+        // Scroll suave hacia arriba
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     });
   });
-};
+}
+
+// Función para actualizar información de paginación
+function actualizarInfoPaginacion(inicio, fin, total) {
+  const infoPaginacion = document.getElementById('infoPaginacion');
+  if (!infoPaginacion) return;
+
+  infoPaginacion.textContent = `Mostrando ${inicio} - ${fin} de ${total} productos`;
+}
 
 // evento de submit para actualizar PRECIO DE VENTA únicamente (Precio Compra deshabilitado)
 actualizarStockForm.addEventListener("submit", async (e) => {
@@ -168,10 +261,7 @@ actualizarStockForm.addEventListener("submit", async (e) => {
   await actualizarStockporId(idStock, stockData);
   modalActualizarProducto.hide();
 
-  modalStockActualizado.show();
-  setTimeout(() => {
-    modalStockActualizado.hide();
-  }, 2000);
+  showSuccess("✅ Stock actualizado correctamente");
 
   await mostrarStock();
 });
@@ -204,7 +294,7 @@ registrarStockForm.addEventListener("submit", async (e) => {
 
   // Verificar si el codigo de barra ya existe en el stock
   if (obtenerStockTotal.some((item) => item.codigoBarra === codigoBarra)) {
-    alert("El codigo de barra ya existe en el stock.");
+    showWarning("⚠️ El código de barra ya existe en el stock");
     return;
   }
 
@@ -214,20 +304,14 @@ registrarStockForm.addEventListener("submit", async (e) => {
   // ⚡ Cerrar modal "Agregar Producto"
   modalAgregarProducto.hide();
 
-  // ⚡ Mostrar modal "Agregando stock"
-  modalAgregandoStock.show();
-  setTimeout(() => {
-    modalAgregandoStock.hide();
-    // ⚡ Mostrar modal "Stock agregado"
-    modalStockAgregado.show();
-    setTimeout(() => {
-      modalStockAgregado.hide();
-    }, 2000);
-  }, 2000);
+  // ⚡ Mostrar notificación de carga
+  const loadingToast = showLoading("Agregando stock...");
 
   await registrarStock(stockData);
 
   //   ⚡ Registrar stock en Firebase
+  hideLoading(loadingToast);
+  showSuccess("✅ Stock agregado correctamente");
 
   registrarStockForm.reset();
   await mostrarStock();
@@ -235,15 +319,142 @@ registrarStockForm.addEventListener("submit", async (e) => {
 
 // Cargar stock al iniciar
 window.addEventListener("DOMContentLoaded", async () => {
-  modalObteniendoStock.show();
+  const loadingToast = showLoading("Obteniendo stock...");
   await mostrarStock();
-  modalObteniendoStock.hide();
+  hideLoading(loadingToast);
   // Poblar datalist para reposición
   const dl = document.getElementById('listaProductosReposicion');
   if (dl) {
     dl.innerHTML = _cacheStock.map(s => `<option value="${s.item}"></option>`).join('');
   }
 });
+
+// 🔍 Funcionalidad de búsqueda de productos (optimizada con debouncing)
+const buscarProductoInput = document.getElementById('buscarProducto');
+let timeoutBusqueda = null; // Para debouncing
+let buscandoActivo = false; // Indicador de búsqueda activa
+
+if (buscarProductoInput) {
+  buscarProductoInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase().trim();
+
+    // Limpiar timeout anterior
+    if (timeoutBusqueda) {
+      clearTimeout(timeoutBusqueda);
+    }
+
+    // Si está vacío, mostrar todos inmediatamente
+    if (!searchTerm) {
+      buscandoActivo = false;
+      productosFiltrados = [..._cacheStock];
+      paginaActual = 1;
+      renderizarPagina();
+      return;
+    }
+
+    // Mostrar indicador de búsqueda si hay muchos productos
+    if (_cacheStock.length > 100 && !buscandoActivo) {
+      buscandoActivo = true;
+      stockTable.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center text-muted py-3">
+            <div class="spinner-border spinner-border-sm me-2" role="status">
+              <span class="visually-hidden">Buscando...</span>
+            </div>
+            Buscando...
+          </td>
+        </tr>
+      `;
+    }
+
+    // Esperar 300ms después de la última tecla antes de filtrar
+    timeoutBusqueda = setTimeout(() => {
+      filtrarProductos(searchTerm, e.target.value);
+      buscandoActivo = false;
+    }, 300);
+  });
+}
+
+// Función separada para filtrar productos (optimizada)
+function filtrarProductos(searchTerm, valorOriginal) {
+  const startTime = performance.now(); // Medir rendimiento
+
+  // Filtrar productos (optimizado para grandes conjuntos de datos)
+  const resultados = [];
+  const searchTermLower = searchTerm; // Ya viene en minúsculas
+
+  for (let i = 0; i < _cacheStock.length; i++) {
+    const producto = _cacheStock[i];
+    if (
+      producto.item.toLowerCase().includes(searchTermLower) ||
+      producto.categoria.toLowerCase().includes(searchTermLower) ||
+      producto.codigoBarra.toString().includes(searchTermLower)
+    ) {
+      resultados.push(producto);
+    }
+  }
+
+  // Actualizar productos filtrados
+  productosFiltrados = resultados;
+  paginaActual = 1; // Resetear a primera página
+
+  // Si no hay resultados
+  if (resultados.length === 0) {
+    stockTable.innerHTML = `
+      <tr>
+        <td colspan="8" class="text-center text-muted py-4">
+          🔍 No se encontraron productos con "${valorOriginal}"
+        </td>
+      </tr>
+    `;
+    actualizarInfoPaginacion(0, 0, 0);
+    document.getElementById('paginacionControles').innerHTML = '';
+    return;
+  }
+
+  // Renderizar página con resultados
+  renderizarPagina();
+
+  // Log de rendimiento (solo en desarrollo)
+  const endTime = performance.now();
+  console.log(`🔍 Búsqueda completada: ${resultados.length} resultados en ${Math.round(endTime - startTime)}ms`);
+}
+
+// Función para asignar eventos a los botones de editar/eliminar
+function asignarEventosBotones() {
+  // Eliminar stock
+  const botonesEliminar = document.querySelectorAll(".btn-eliminar-stock");
+  botonesEliminar.forEach((boton) => {
+    boton.addEventListener("click", async () => {
+      const id = boton.getAttribute("data-id");
+      await eliminarStockPorID(id);
+
+      showSuccess("✅ Stock eliminado correctamente");
+
+      await mostrarStock();
+      // Limpiar búsqueda
+      if (buscarProductoInput) buscarProductoInput.value = '';
+    });
+  });
+
+  // Actualizar stock
+  const botonesActualizar = document.querySelectorAll(".btn-editar-stock");
+  botonesActualizar.forEach((boton) => {
+    boton.addEventListener("click", async () => {
+      idStock = boton.getAttribute("data-id");
+      modalActualizarProducto.show();
+
+      const item = await obtenerStockPorId(idStock);
+      if (item) {
+        document.getElementById("actualizarItemStock").value = item.item;
+        document.getElementById("actualizarCategoriaStock").value = item.categoria;
+        document.getElementById("actualizarCodigoBarraStock").value = item.codigoBarra;
+        document.getElementById("actualizarCostoStock").value = Number(item.costo).toLocaleString("es-PY");
+        document.getElementById("actualizarPrecioCompraStock").value = Number(item.costoCompra).toLocaleString("es-PY");
+      }
+    });
+  });
+}
 
 // Helpers reposición
 const parseGs = (str) => {
@@ -317,8 +528,8 @@ if (formAgregarItemReposicion) {
     const nombre = reposicionProducto.value.trim();
     const base = _cacheStock.find(s => String(s.item).toUpperCase() === nombre.toUpperCase());
     const cant = Number(reposicionCantidad.value);
-    if (!base) { alert('Producto no encontrado en stock'); return; }
-    if (!cant || cant <= 0) { alert('Cantidad inválida'); return; }
+    if (!base) { showWarning('⚠️ Producto no encontrado en stock'); return; }
+    if (!cant || cant <= 0) { showWarning('⚠️ Cantidad inválida'); return; }
 
     // Si el usuario ingresó precios, usarlos; sino, usar los del producto
     let cc = base.costoCompra || 0;
