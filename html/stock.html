@@ -43,18 +43,30 @@
             <div class="collapse" id="reposicionPanel">
                 <div class="card-body">
                     <form id="formAgregarItemReposicion" class="row g-3 align-items-end">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label">Producto</label>
                             <input list="listaProductosReposicion" class="form-control" id="reposicionProducto"
                                 placeholder="Buscar / seleccionar" autocomplete="off" required>
                             <datalist id="listaProductosReposicion"></datalist>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">Cantidad</label>
                             <input type="number" min="1" class="form-control" id="reposicionCantidad" value="1"
                                 required>
                         </div>
-                        <div class="col-md-3 text-end">
+                        <div class="col-md-2">
+                            <label class="form-label">Precio Compra</label>
+                            <input type="text" class="form-control text-end" id="reposicionPrecioCompra" placeholder="0"
+                                autocomplete="off">
+                            <small class="text-muted">Opcional</small>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Precio Venta</label>
+                            <input type="text" class="form-control text-end" id="reposicionPrecioVenta" placeholder="0"
+                                autocomplete="off">
+                            <small class="text-muted">Opcional</small>
+                        </div>
+                        <div class="col-md-2 text-end">
                             <button type="submit" class="btn btn-success w-100">➕ Agregar</button>
                         </div>
                     </form>
@@ -65,6 +77,8 @@
                                 <tr>
                                     <th>Producto</th>
                                     <th class="text-center">Cant.</th>
+                                    <th class="text-end">Precio Compra</th>
+                                    <th class="text-end">Precio Venta</th>
                                     <th class="text-end">Acciones</th>
                                 </tr>
                             </thead>

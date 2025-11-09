@@ -61,9 +61,8 @@ const stockTable = document.getElementById("stockTable");
 const formAgregarItemReposicion = document.getElementById('formAgregarItemReposicion');
 const reposicionProducto = document.getElementById('reposicionProducto');
 const reposicionCantidad = document.getElementById('reposicionCantidad');
-// (Ya no se permiten modificar costos en la nota)
-const reposicionCostoCompra = null;
-const reposicionCostoVenta = null;
+const reposicionPrecioCompra = document.getElementById('reposicionPrecioCompra');
+const reposicionPrecioVenta = document.getElementById('reposicionPrecioVenta');
 const reposicionTable = document.getElementById('reposicionTable');
 const reposicionTotalCompra = document.getElementById('reposicionTotalCompra');
 const btnConfirmarReposicion = document.getElementById('btnConfirmarReposicion');
@@ -261,6 +260,8 @@ const renderReposicionTabla = () => {
       <tr>
         <td>${it.item}</td>
         <td class="text-center">${it.cantidad}</td>
+        <td class="text-end">${formatGs(it.costoCompra)}</td>
+        <td class="text-end">${formatGs(it.costo)}</td>
         <td class="text-end"><button class="btn btn-sm btn-outline-danger" data-idx="${idx}">Eliminar</button></td>
       </tr>`);
   });
@@ -278,8 +279,36 @@ const renderReposicionTabla = () => {
   });
 };
 
-// Formateo de costos en inputs de reposición
-// Eliminado manejo de costos (solo cantidad)
+// Formateo de precios en inputs de reposición
+if (reposicionPrecioCompra) {
+  reposicionPrecioCompra.addEventListener("input", () => {
+    let valor = reposicionPrecioCompra.value.replace(/\D/g, "");
+    reposicionPrecioCompra.value = valor ? Number(valor).toLocaleString("es-PY") : "";
+  });
+}
+
+if (reposicionPrecioVenta) {
+  reposicionPrecioVenta.addEventListener("input", () => {
+    let valor = reposicionPrecioVenta.value.replace(/\D/g, "");
+    reposicionPrecioVenta.value = valor ? Number(valor).toLocaleString("es-PY") : "";
+  });
+}
+
+// Auto-completar precios al seleccionar producto
+if (reposicionProducto) {
+  reposicionProducto.addEventListener('change', () => {
+    const nombre = reposicionProducto.value.trim();
+    const base = _cacheStock.find(s => String(s.item).toUpperCase() === nombre.toUpperCase());
+    if (base) {
+      if (reposicionPrecioCompra) {
+        reposicionPrecioCompra.value = Number(base.costoCompra || 0).toLocaleString("es-PY");
+      }
+      if (reposicionPrecioVenta) {
+        reposicionPrecioVenta.value = Number(base.costo || 0).toLocaleString("es-PY");
+      }
+    }
+  });
+}
 
 // Agregar item a la nota
 if (formAgregarItemReposicion) {
@@ -290,8 +319,18 @@ if (formAgregarItemReposicion) {
     const cant = Number(reposicionCantidad.value);
     if (!base) { alert('Producto no encontrado en stock'); return; }
     if (!cant || cant <= 0) { alert('Cantidad inválida'); return; }
-    const cc = Number(base.costoCompra) || 0;
-    const cv = Number(base.costo) || 0;
+
+    // Si el usuario ingresó precios, usarlos; sino, usar los del producto
+    let cc = base.costoCompra || 0;
+    let cv = base.costo || 0;
+
+    if (reposicionPrecioCompra && reposicionPrecioCompra.value.trim()) {
+      cc = parseGs(reposicionPrecioCompra.value);
+    }
+    if (reposicionPrecioVenta && reposicionPrecioVenta.value.trim()) {
+      cv = parseGs(reposicionPrecioVenta.value);
+    }
+
     const existente = reposicionLista.find(it => it.id === base.id);
     if (existente) {
       existente.cantidad += cant;
@@ -302,7 +341,8 @@ if (formAgregarItemReposicion) {
     }
     reposicionProducto.value = '';
     reposicionCantidad.value = '1';
-    // campos de costos retirados
+    if (reposicionPrecioCompra) reposicionPrecioCompra.value = '';
+    if (reposicionPrecioVenta) reposicionPrecioVenta.value = '';
     renderReposicionTabla();
   });
 }
@@ -319,8 +359,13 @@ if (btnCancelarReposicion) {
 if (btnConfirmarReposicion) {
   btnConfirmarReposicion.addEventListener('click', async () => {
     if (reposicionLista.length === 0) return;
-    const itemsTx = reposicionLista.map(r => ({ id: r.id, cantidad: r.cantidad }));
-    // sumar stock en una transacción
+    const itemsTx = reposicionLista.map(r => ({
+      id: r.id,
+      cantidad: r.cantidad,
+      costoCompra: r.costoCompra,
+      costo: r.costo
+    }));
+    // sumar stock en una transacción y actualizar precios
     await sumarStockTransaccional(itemsTx);
     // registrar nota
     const totalCompra = reposicionLista.reduce((acc, it) => acc + (Number(it.costoCompra) || 0) * Number(it.cantidad), 0);

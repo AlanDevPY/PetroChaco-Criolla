@@ -300,7 +300,7 @@ export const descontarStockTransaccional = async (items) => {
 };
 
 // Incremento transaccional de stock (reposiciones)
-// items: [{id, cantidad}]
+// items: [{id, cantidad, costoCompra?, costo?}]
 export const sumarStockTransaccional = async (items) => {
   if (!Array.isArray(items) || items.length === 0) return;
   await runTransaction(db, async (transaction) => {
@@ -310,16 +310,34 @@ export const sumarStockTransaccional = async (items) => {
       const ref = doc(db, "Stock", item.id);
       const snap = await transaction.get(ref);
       if (!snap.exists()) throw new Error(`Stock item no existe: ${item.id}`);
-      snapshots.push({ ref, snap, cantidad: item.cantidad });
+      snapshots.push({
+        ref,
+        snap,
+        cantidad: item.cantidad,
+        costoCompra: item.costoCompra,
+        costo: item.costo
+      });
     }
 
     // FASE 2: Todas las escrituras después
-    for (const { ref, snap, cantidad } of snapshots) {
+    for (const { ref, snap, cantidad, costoCompra, costo } of snapshots) {
       const data = snap.data();
       const actual = Number(data.cantidad) || 0;
       const inc = Number(cantidad) || 0;
       if (inc <= 0) continue;
-      transaction.update(ref, { cantidad: actual + inc });
+
+      // Preparar objeto de actualización
+      const updateData = { cantidad: actual + inc };
+
+      // Si se proporcionan precios, actualizarlos también
+      if (costoCompra !== undefined && costoCompra !== null) {
+        updateData.costoCompra = Number(costoCompra);
+      }
+      if (costo !== undefined && costo !== null) {
+        updateData.costo = Number(costo);
+      }
+
+      transaction.update(ref, updateData);
     }
   });
 
