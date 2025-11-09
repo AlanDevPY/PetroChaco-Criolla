@@ -2,6 +2,7 @@ import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId,
 import { showSuccess, showError, showInfo, showLoading, hideLoading, showConfirm } from "./toast-utils.js";
 import { mostrarStockConDataTable, configurarEventosDataTable, actualizarFilaDataTable } from "./stock-modern.js";
 import { confirmarEliminacion, alertaAdvertencia } from "./swal-utils.js";
+import { mejorarDatalist } from "./datalist-mejorado.js";
 
 // variables globales
 
@@ -339,6 +340,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   const loadingToast = showLoading("Obteniendo stock...");
   await mostrarStock();
   hideLoading(loadingToast);
+
+  // Mejorar el datalist de reposición
+  mejorarDatalist('reposicionProducto', 'listaProductosReposicion');
 
   // Configurar eventos de DataTables si está activado
   if (USAR_DATATABLES) {

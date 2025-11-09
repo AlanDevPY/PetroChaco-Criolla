@@ -83,9 +83,14 @@
                     <form id="formAgregarItemReposicion" class="row g-3 align-items-end">
                         <div class="col-md-4">
                             <label class="form-label">Producto</label>
-                            <input list="listaProductosReposicion" class="form-control" id="reposicionProducto"
-                                placeholder="Buscar / seleccionar" autocomplete="off" required>
-                            <datalist id="listaProductosReposicion"></datalist>
+                            <div class="position-relative">
+                                <input type="text" class="form-control autocomplete-input" id="reposicionProducto"
+                                    placeholder="Buscar producto..." autocomplete="off" required>
+                                <i class="bi bi-search position-absolute"
+                                    style="right: 1rem; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.5); pointer-events: none;"></i>
+                            </div>
+                            <!-- Datalist oculto para datos -->
+                            <datalist id="listaProductosReposicion" style="display: none;"></datalist>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">Cantidad</label>
