@@ -311,23 +311,23 @@ const mostrarDetalleCaja = async () => {
           </div>
 
           <!-- Detalle de items vendidos -->
-          <div class="table-responsive mt-3" style="background: rgba(10, 15, 25, 0.95); padding: 1rem; border-radius: 12px; border: 2px solid rgba(40, 193, 255, 0.4); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 40px rgba(40, 193, 255, 0.15);">
-            <table class="table table-sm table-bordered" style="background: transparent !important; border: none; margin-bottom: 0;">
+          <div class="table-responsive mt-3" style="background: rgba(10, 15, 25, 0.95) !important; padding: 1rem; border-radius: 12px; border: 2px solid rgba(40, 193, 255, 0.4); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 40px rgba(40, 193, 255, 0.15);">
+            <table class="table table-sm table-bordered" style="background: rgba(10, 26, 60, 0.8) !important; border: none !important; margin-bottom: 0;">
               <thead>
-                <tr style="background: linear-gradient(135deg, rgba(31, 63, 161, 0.7) 0%, rgba(18, 43, 98, 0.7) 100%); border-bottom: 2px solid rgba(40, 193, 255, 0.6);">
-                  <th style="color: #fff; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none;">📦 Producto</th>
-                  <th style="color: #fff; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none;">🔢 Cantidad</th>
-                  <th style="color: #fff; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none;">💵 Precio</th>
-                  <th style="color: #fff; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none;">💰 Subtotal</th>
+                <tr style="background: linear-gradient(135deg, rgba(31, 63, 161, 0.9) 0%, rgba(18, 43, 98, 0.9) 100%) !important; border-bottom: 2px solid rgba(40, 193, 255, 0.6) !important;">
+                  <th style="color: #fff !important; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none !important; background: transparent !important;">📦 Producto</th>
+                  <th style="color: #fff !important; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none !important; background: transparent !important;">🔢 Cantidad</th>
+                  <th style="color: #fff !important; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none !important; background: transparent !important;">💵 Precio</th>
+                  <th style="color: #fff !important; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none !important; background: transparent !important;">💰 Subtotal</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody style="background: rgba(10, 26, 60, 0.6) !important;">
                 ${venta.venta.map((item) => `
-                  <tr style="background: transparent; border-top: 1px solid rgba(40, 193, 255, 0.25);">
-                    <td style="color: #fff; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.05rem; padding: 10px; border: none;">${item.item}</td>
-                    <td style="color: #6dd6ff; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.1rem; padding: 10px; border: none;">${item.cantidad}</td>
-                    <td style="color: #90ee90; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.1rem; padding: 10px; border: none;">${item.costo.toLocaleString("es-PY")} Gs</td>
-                    <td style="color: #ffd966; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.15rem; padding: 10px; border: none;">${item.subTotal.toLocaleString("es-PY")} Gs</td>
+                  <tr style="background: rgba(10, 26, 60, 0.8) !important; border-top: 1px solid rgba(40, 193, 255, 0.25) !important;">
+                    <td style="color: #fff !important; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.05rem; padding: 10px; border: none !important; background: rgba(10, 26, 60, 0.8) !important;">${item.item}</td>
+                    <td style="color: #6dd6ff !important; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.1rem; padding: 10px; border: none !important; background: rgba(10, 26, 60, 0.8) !important;">${item.cantidad}</td>
+                    <td style="color: #90ee90 !important; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.1rem; padding: 10px; border: none !important; background: rgba(10, 26, 60, 0.8) !important;">${item.costo.toLocaleString("es-PY")} Gs</td>
+                    <td style="color: #ffd966 !important; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.15rem; padding: 10px; border: none !important; background: rgba(10, 26, 60, 0.8) !important;">${item.subTotal.toLocaleString("es-PY")} Gs</td>
                   </tr>
                 `).join("")}
               </tbody>
