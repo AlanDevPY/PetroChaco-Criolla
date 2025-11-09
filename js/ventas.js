@@ -438,9 +438,14 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
   await registrarCliente(cliente);
   alertaExito("Cliente registrado", `${nombre} ha sido registrado correctamente.`);
 
-  // Obtener la instancia existente y cerrarla
-  bootstrap.Modal.getInstance(document.getElementById('modalCliente')).hide();
+  // Cerrar el modal de registro
+  const modalRegistrar = bootstrap.Modal.getInstance(document.getElementById('modalRegistrarCliente'));
+  if (modalRegistrar) {
+    modalRegistrar.hide();
+  }
 
+  // Limpiar formulario
+  formCliente.reset();
 
   await mostrarClientes();
 });
@@ -490,8 +495,15 @@ function configurarEventosClientes() {
 
 
 window.addEventListener("DOMContentLoaded", async () => {
-  await mostrarClientes();
   configurarEventosClientes();
+
+  // Cargar clientes cuando se abra el modal de Ver Clientes
+  const modalVerClientes = document.getElementById('modalVerClientes');
+  if (modalVerClientes) {
+    modalVerClientes.addEventListener('shown.bs.modal', async () => {
+      await mostrarClientes();
+    });
+  }
 
   const spinner = document.getElementById("spinnerCarga");
   const contenido = document.getElementById("contenidoPrincipal");

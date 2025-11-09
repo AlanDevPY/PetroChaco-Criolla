@@ -48,10 +48,10 @@ export function initClientesDataTable() {
         responsive: true,
         scrollX: false,
 
-        // Estilo Bootstrap 5
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
-            '<"row"<"col-sm-12"tr>>' +
-            '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        // Estilo Bootstrap 5 - Layout simplificado sin márgenes extra
+        dom: '<"d-flex justify-content-between align-items-center mb-3"lf>' +
+            't' +
+            '<"d-flex justify-content-between align-items-center mt-3"ip>',
 
         // Configuración de columnas
         columnDefs: [

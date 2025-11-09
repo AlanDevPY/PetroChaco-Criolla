@@ -221,8 +221,8 @@ body {
     margin: 0;
 }
 
-/* Columnas con glassmorphism */
-.col-md-6 {
+/* Columnas con glassmorphism - SOLO para contenido principal */
+.container-fluid>.row>.col-md-6 {
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(16px);
     border: 1px solid var(--glass-border);
@@ -548,6 +548,20 @@ datalist {
     color: var(--text);
 }
 
+.modal-dialog-centered {
+    display: flex;
+    align-items: center;
+    min-height: calc(100% - 3.5rem);
+}
+
+.modal-dialog-scrollable .modal-body {
+    overflow-y: auto;
+}
+
+.modal-xl {
+    max-width: 1200px;
+}
+
 .modal-header {
     border-bottom: 1px solid var(--glass-border);
     background: rgba(255, 255, 255, 0.03);
@@ -563,8 +577,9 @@ datalist {
     gap: 0.75rem;
 }
 
+/* Modal body - padding por defecto */
 .modal-body {
-    padding: 2rem;
+    padding: 1.5rem;
 }
 
 .modal-footer {
@@ -581,35 +596,6 @@ datalist {
 
 .btn-close:hover {
     opacity: 1;
-}
-
-/* ============================================
-   TABS (PESTAÑAS)
-   ============================================ */
-.nav-tabs {
-    border-bottom: 2px solid var(--glass-border);
-    margin-bottom: 1.5rem;
-}
-
-.nav-tabs .nav-link {
-    color: rgba(232, 241, 245, 0.6);
-    border: none;
-    border-bottom: 3px solid transparent;
-    padding: 1rem 1.5rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    background: transparent;
-}
-
-.nav-tabs .nav-link:hover {
-    color: var(--primary-light);
-    border-bottom-color: var(--primary-light);
-}
-
-.nav-tabs .nav-link.active {
-    color: var(--text);
-    background: rgba(40, 193, 255, 0.1);
-    border-bottom-color: var(--primary-light);
 }
 
 /* ============================================
@@ -760,6 +746,173 @@ datalist {
 
 ::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(135deg, #1e3a8a 0%, #28c1ff 100%);
+}
+
+/* ============================================
+   MODAL REGISTRAR CLIENTE
+   ============================================ */
+
+#modalRegistrarCliente .modal-header {
+    padding: 1rem 1.25rem;
+}
+
+#modalRegistrarCliente .modal-body {
+    padding: 1rem;
+}
+
+#modalRegistrarCliente .row {
+    margin: 0;
+    gap: 0;
+}
+
+#modalRegistrarCliente .col-md-6 {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+#modalRegistrarCliente .mb-3 {
+    margin-bottom: 0.75rem !important;
+}
+
+#modalRegistrarCliente .form-label {
+    margin-bottom: 0.35rem !important;
+    font-weight: 500;
+    font-size: 0.9rem !important;
+}
+
+#modalRegistrarCliente .form-control {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.9rem !important;
+    border-radius: 8px !important;
+}
+
+#modalRegistrarCliente textarea.form-control {
+    resize: vertical;
+    min-height: 75px !important;
+    max-height: 110px !important;
+    padding: 0.5rem 0.75rem !important;
+}
+
+#modalRegistrarCliente .modal-footer {
+    padding: 0.75rem 1rem;
+}
+
+#modalRegistrarCliente .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.95rem;
+}
+
+/* ============================================
+   MODAL VER CLIENTES
+   ============================================ */
+
+#modalVerClientes .dataTables_wrapper {
+    padding: 0;
+    margin: 0;
+}
+
+#modalVerClientes table.dataTable {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* ============================================
+   DATATABLES ESTILOS PERSONALIZADOS
+   ============================================ */
+
+/* Controles de DataTables */
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 0.5rem;
+    margin: 0 0.5rem;
+}
+
+.dataTables_wrapper .dataTables_length select:focus,
+.dataTables_wrapper .dataTables_filter input:focus {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--primary-light);
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(40, 193, 255, 0.25);
+}
+
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    color: var(--text);
+}
+
+/* Paginación de DataTables */
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text) !important;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    margin: 0 0.25rem;
+    transition: all 0.3s ease;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: var(--gradient-primary);
+    border-color: var(--primary-light);
+    color: #fff !important;
+    transform: translateY(-2px);
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: var(--gradient-primary);
+    border-color: var(--primary-light);
+    color: #fff !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Header de DataTables */
+.dataTables_wrapper table.dataTable thead th {
+    border-bottom: 2px solid var(--glass-border);
+}
+
+.dataTables_wrapper table.dataTable.no-footer {
+    border-bottom: 1px solid var(--glass-border);
+}
+
+/* Mensaje cuando no hay datos */
+.dataTables_wrapper .dataTables_empty {
+    color: rgba(232, 241, 245, 0.5);
+    text-align: center;
+    padding: 1.5rem !important;
+    font-style: italic;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Ajustes para tabla dentro de modal */
+.modal-body .dataTables_wrapper {
+    padding: 0;
+}
+
+.modal-body .table-wrapper {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+/* Ocultar controles de DataTables cuando está vacío */
+.dataTables_wrapper .dataTables_paginate,
+.dataTables_wrapper .dataTables_info {
+    min-height: auto;
+}
+
+/* Tabla dentro del modal con altura automática */
+#tablaClientes_wrapper {
+    min-height: auto !important;
 }
 
 /* ============================================
