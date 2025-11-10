@@ -1,3 +1,31 @@
+/* Alertas personalizadas: verde claro y rojo claro, estilo suave */
+.alert-success {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    border: 2px solid #10b981 !important;
+    color: #10b981 !important;
+}
+
+.alert-danger {
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    border: 2px solid #ef4444 !important;
+    color: #ef4444 !important;
+}
+/* Forzar colores Bootstrap para alertas */
+.alert-success {
+    background-color: #d1e7dd !important;
+    color: #0f5132 !important;
+}
+
+.alert-danger {
+    background-color: #f8d7da !important;
+    color: #842029 !important;
+}
+
+.alert-warning {
+    background-color: #fff3cd !important;
+    color: #664d03 !important;
+}
+
 /**
  * VENTAS-MODERN.CSS
  * Diseño Glassmorphism para módulo de Ventas
@@ -530,29 +558,7 @@ datalist {
     margin-bottom: 0.5rem;
 }
 
-.alert-primary {
-    background: rgba(31, 63, 161, 0.2);
-    color: var(--primary-light);
-    border-color: var(--primary-light);
-}
 
-.alert-success {
-    background: rgba(16, 185, 129, 0.2);
-    color: #34d399;
-    border-color: #10b981;
-}
-
-.alert-warning {
-    background: rgba(245, 158, 11, 0.2);
-    color: #fbbf24;
-    border-color: #f59e0b;
-}
-
-.alert-danger {
-    background: rgba(239, 68, 68, 0.2);
-    color: #f87171;
-    border-color: #ef4444;
-}
 
 /* ============================================
    MODALES
@@ -864,14 +870,7 @@ datalist {
 }
 
 /* Alert del total con borde dorado */
-#modalTotalCobro {
-    background: rgba(245, 158, 11, 0.15) !important;
-    border: 2px solid #f59e0b !important;
-    color: #fbbf24 !important;
-    font-size: 1.1rem;
-    padding: 0.75rem;
-    margin-bottom: 1rem;
-}
+
 
 /* Campos deshabilitados más visibles */
 #modalCobro .form-control:disabled {

@@ -197,6 +197,8 @@ btnCobrar?.addEventListener("click", async () => {
 
   // reset form
   document.getElementById("modalCobrarForm").reset();
+  // Forzar actualización de color
+  actualizarCobro();
 });
 
 const efectivoInput = document.getElementById("efectivo");
