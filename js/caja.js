@@ -610,3 +610,51 @@ async function revertirVenta(cajaId, ventaIndex) {
   }
 }
 
+// Función para descontar stock al confirmar una venta
+async function descontarStock(itemsVendidos) {
+  try {
+    // Preparar los ítems para actualizar el stock
+    const itemsParaDescontar = itemsVendidos.map(item => ({
+      id: item.id,
+      cantidad: -item.cantidad // Cantidad negativa para descontar
+    }));
+
+    // Actualizar el stock en la base de datos
+    await sumarStockTransaccional(itemsParaDescontar);
+    console.log("Stock actualizado correctamente.");
+  } catch (error) {
+    console.error("Error al descontar stock:", error);
+    throw error;
+  }
+}
+
+// Modificar el evento de confirmación de venta para incluir el descuento de stock
+document.getElementById("modalCobrarForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  try {
+    // Obtener los ítems vendidos del carrito
+    const itemsVendidos = JSON.parse(localStorage.getItem("carrito")) || [];
+
+    if (itemsVendidos.length === 0) {
+      alert("No hay productos en el carrito para procesar la venta.");
+      return;
+    }
+
+    // Descontar stock
+    await descontarStock(itemsVendidos);
+
+    // Procesar la venta (lógica existente)
+    alert("Venta confirmada y stock actualizado.");
+
+    // Limpiar el carrito y cerrar el modal
+    localStorage.removeItem("carrito");
+    document.getElementById("carritoTableBody").innerHTML = "";
+    document.getElementById("totalPedido").textContent = "0 Gs";
+    bootstrap.Modal.getInstance(document.getElementById("modalCobro"))?.hide();
+  } catch (error) {
+    console.error("Error al confirmar la venta:", error);
+    alert("Ocurrió un error al procesar la venta. Por favor, inténtelo de nuevo.");
+  }
+});
+

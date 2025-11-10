@@ -430,6 +430,59 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   document.getElementById("totalPedido").textContent = formatGs(calcularTotalPedido());
 });
 
+// Invalidar caché de stock después de una venta
+const invalidarCacheStock = () => {
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem("stockCache");
+    console.log("Caché de stock invalidada.");
+  }
+};
+
+// Actualizar solo los productos modificados en la caché después de una venta
+const actualizarCacheStock = async (productosVendidos) => {
+  try {
+    // Obtener la caché actual
+    const stockCache = JSON.parse(localStorage.getItem("stockCache")) || [];
+
+    // Actualizar los productos vendidos en la caché
+    productosVendidos.forEach((productoVendido) => {
+      const productoEnCache = stockCache.find((item) => item.id === productoVendido.id);
+      if (productoEnCache) {
+        productoEnCache.cantidad -= productoVendido.cantidad;
+      }
+    });
+
+    // Guardar la caché actualizada
+    localStorage.setItem("stockCache", JSON.stringify(stockCache));
+    console.log("Caché de stock actualizada.");
+  } catch (error) {
+    console.error("Error al actualizar la caché de stock:", error);
+  }
+};
+
+// Modificar la lógica de registro de venta para actualizar la caché
+const registrarVenta = async (venta, cajaAbierta) => {
+  try {
+    // Actualizar la caja en Firebase
+    await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
+
+    // Descontar stock en Firebase
+    const ok = await descontarStockTransaccional(venta.venta.map(i => ({ id: i.id, cantidad: Number(i.cantidad) })));
+    if (!ok) {
+      throw new Error("Error al descontar stock");
+    }
+
+    // Actualizar la caché de stock
+    await actualizarCacheStock(venta.venta);
+
+    // Mostrar mensaje de éxito
+    alertaExito("Venta registrada", "La venta se ha registrado correctamente.");
+  } catch (error) {
+    console.error("Error al registrar la venta:", error);
+    alertaError("Error al registrar la venta", error.message || "Ocurrió un error desconocido.");
+  }
+};
+
 // ?FUNCIONES CON MODAL GESTION DE CLIENTES
 
 
