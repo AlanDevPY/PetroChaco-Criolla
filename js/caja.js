@@ -409,34 +409,81 @@ function imprimirCierre(caja) {
   const fechaCierre = dayjs().format("DD/MM/YYYY HH:mm:ss");
   let wrapper = document.getElementById("ticket-wrapper");
   if (!wrapper) {
-    // crear contenedor mínimo si no existe
     wrapper = document.createElement('div');
     wrapper.id = 'ticket-wrapper';
+    wrapper.className = 'ticket-wrapper';
     document.body.appendChild(wrapper);
+  } else {
+    wrapper.className = 'ticket-wrapper';
   }
   wrapper.innerHTML = "";
+  // Diseño visual mejorado tipo comprobante de cierre
   const ticketHTML = `
-    <div style="width:280px;font-family:monospace;text-align:center;line-height:1.25;color:#000;">
-      <div style="font-size:18px;font-weight:900;letter-spacing:0.5px;color:#000;">PETRO CHACO CRIOLLA</div>
-      <div style="font-size:11px;font-weight:700;color:#000;">SISTEMA POS - CIERRE DE CAJA</div>
-      <hr style="margin:4px 0;border-top:2px solid #000;">
-      <div style="font-size:13px;font-weight:800;color:#000;">CAJA: ${caja.usuario || '-'} (${caja.estado})</div>
-      <div style="font-size:11px;text-align:left;margin-top:4px;color:#000;font-weight:600;">Apertura: ${caja.fechaApertura}</div>
-      <div style="font-size:11px;text-align:left;color:#000;font-weight:600;">Cierre: ${fechaCierre}</div>
-      <hr style="margin:4px 0;border-top:1px solid #000;">
-      <table style="width:100%;font-size:11px;border-collapse:collapse;color:#000;">
-        <thead><tr style="border-bottom:1px solid #000;"><th style="text-align:left;font-weight:800;">Cant</th><th style="text-align:left;font-weight:800;">Producto</th><th style="text-align:right;font-weight:800;">Subtotal</th></tr></thead>
+    <div class="ticket-container" style="padding:2mm 0 2mm 0;">
+      <div class="ticket-header ticket-center" style="border-bottom:2px solid #000;padding-bottom:1.5mm;margin-bottom:1.5mm;">
+        <div class="ticket-bold" style="font-size:15px;letter-spacing:1px;">Petro Chaco Criolla</div>
+        <div class="ticket-small">Ruta N20° - Santiago, Misiones</div>
+        <div class="ticket-small">Tel: 0984 000 000</div>
+      </div>
+      <div style="font-size:11px;text-align:left;margin-bottom:1.5mm;line-height:1.3;">
+        <span class="ticket-bold">Usuario:</span> <span id="ticket-usuario">${caja.usuario || '-'}</span><br>
+        <span class="ticket-bold">Fecha cierre:</span> <span id="ticket-fecha">${fechaCierre}</span><br>
+        <span class="ticket-bold">Apertura:</span> ${caja.fechaApertura}<br>
+        <span class="ticket-bold">Estado:</span> ${caja.estado}
+      </div>
+      <div style="border-bottom:1px dashed #000;margin-bottom:1.5mm;"></div>
+      <table class="ticket-items" style="margin-bottom:1.5mm;width:100%;border-collapse:collapse;font-size:9px;">
+        <thead>
+          <tr style="border-bottom:1.2px solid #000;background:#f0f0f0;">
+            <th class="ticket-qty" style="text-align:center;padding:0.5mm 0.2mm;width:12%;">Cant</th>
+            <th class="ticket-desc" style="text-align:left;padding:0.5mm 0.2mm;width:58%;">Producto</th>
+            <th class="ticket-price" style="text-align:right;padding:0.5mm 0.2mm;width:30%;">Costo</th>
+          </tr>
+        </thead>
         <tbody id="ticket-items-body"></tbody>
       </table>
-      <hr style="margin:4px 0;border-top:1px dashed #000;">
-      <div id="ticket-resumen" style="font-size:11px;text-align:left;font-weight:700;color:#000;"></div>
-      <div style="font-size:12px;font-weight:900;text-align:right;margin-top:4px;color:#000;" id="ticket-total"></div>
-      <div style="font-size:11px;text-align:right;font-weight:700;color:#000;" id="ticket-pago"></div>
-      <div style="font-size:11px;text-align:right;font-weight:700;color:#000;" id="ticket-extra"></div>
-      <hr style="margin:4px 0;border-top:2px solid #000;">
-      <div style="font-size:10px;font-weight:700;color:#000;">Generado: ${fechaCierre}</div>
-      <div style="font-size:10px;font-weight:700;color:#000;">Gracias por su trabajo ✔</div>
-    </div>`;
+      <div style="border-bottom:1px dashed #000;margin-bottom:1.5mm;"></div>
+      <div class="ticket-total-row" style="background:#f5f5f5;border-radius:1.5mm;padding:1.2mm 0 1.2mm 0;margin-bottom:1.5mm;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:0.5mm;">
+          <span class="ticket-bold">Ventas</span>
+          <span id="ticket-ventas" class="ticket-right"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:0.5mm;">
+          <span class="ticket-bold">Items</span>
+          <span id="ticket-items" class="ticket-right"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:1mm;">
+          <span class="ticket-bold">TOTAL</span>
+          <span id="ticket-total" class="ticket-right" style="font-size:13px;"></span>
+        </div>
+      </div>
+      <div style="border:1px solid #000;border-radius:1mm;padding:1mm 1mm 0.5mm 1mm;margin-bottom:1.5mm;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:0.5mm;">
+          <span class="ticket-bold">Efectivo</span>
+          <span id="ticket-pago-efec" class="ticket-right"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:0.5mm;">
+          <span class="ticket-bold">Pos/Qr</span>
+          <span id="ticket-pago-tarj" class="ticket-right"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:0.5mm;">
+          <span class="ticket-bold">Transferencia</span>
+          <span id="ticket-pago-transf" class="ticket-right"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;">
+          <span class="ticket-bold">Ajuste</span>
+          <span id="ticket-extra" class="ticket-right"></span>
+        </div>
+      </div>
+      <div class="ticket-msg" id="ticket-msg" style="margin-top:2mm;">
+        ¡Gracias por su trabajo! ✔
+      </div>
+      <div class="ticket-center ticket-small" style="margin-top:2mm;">
+        <div>-----------------------------</div>
+        <div class="ticket-bold">CIERRE DE CAJA</div>
+      </div>
+    </div>
+  `;
   wrapper.insertAdjacentHTML("beforeend", ticketHTML);
   let total = 0, efectivoEnCaja = 0, tarjeta = 0, transferencia = 0;
   const resumenProductos = {};
@@ -455,8 +502,9 @@ function imprimirCierre(caja) {
     transferencia += v.transferencia || 0;
   });
   const sumaPagos = efectivoEnCaja + tarjeta + transferencia;
+  let exceso = 0;
   if (sumaPagos > total) {
-    let exceso = sumaPagos - total;
+    exceso = sumaPagos - total;
     if (efectivoEnCaja >= exceso) efectivoEnCaja -= exceso; else {
       exceso -= efectivoEnCaja; efectivoEnCaja = 0;
       if (tarjeta >= exceso) tarjeta -= exceso; else {
@@ -465,16 +513,24 @@ function imprimirCierre(caja) {
     }
   }
   const cuerpo = document.getElementById("ticket-items-body");
-  for (const [item, info] of Object.entries(resumenProductos)) {
-    cuerpo.insertAdjacentHTML("beforeend", `<tr><td style="text-align:left;">${info.cantidad}</td><td style="text-align:left;">${item}</td><td style="text-align:right;">${info.total.toLocaleString()} Gs</td></tr>`);
-  }
-  document.getElementById("ticket-total").textContent = `TOTAL VENTAS: ${total.toLocaleString()} Gs`;
-  document.getElementById("ticket-pago").textContent = `Efec: ${efectivoEnCaja.toLocaleString()} | Pos/Qr: ${tarjeta.toLocaleString()} | Transf: ${transferencia.toLocaleString()} Gs`;
-  document.getElementById("ticket-resumen").innerHTML = `Ventas: <strong>${ventasCount}</strong> | Items: <strong>${itemsCount}</strong>`;
-  const exceso = (efectivoEnCaja + tarjeta + transferencia) - total;
-  if (exceso > 0) {
-    document.getElementById("ticket-extra").textContent = `Ajuste de exceso pagos: -${exceso.toLocaleString()} Gs`;
-  }
+  const productos = Object.entries(resumenProductos);
+  productos.forEach(([item, info], idx) => {
+    const border = idx < productos.length - 1 ? 'border-bottom:0.7px dashed #bbb;' : '';
+    cuerpo.insertAdjacentHTML("beforeend", `
+      <tr class='ticket-item-row' style="${border}">
+        <td class='ticket-qty ticket-item-peq' style="text-align:center;padding:0.4mm 0.2mm;width:12%;vertical-align:middle;">${info.cantidad}</td>
+        <td class='ticket-desc ticket-item-peq' style="text-align:left;padding:0.4mm 0.2mm;width:58%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;">${item}</td>
+        <td class='ticket-price ticket-item-peq' style="text-align:right;padding:0.4mm 0.2mm;width:30%;vertical-align:middle;">${info.total.toLocaleString()} Gs</td>
+      </tr>
+    `);
+  });
+  document.getElementById("ticket-ventas").textContent = ventasCount;
+  document.getElementById("ticket-items").textContent = itemsCount;
+  document.getElementById("ticket-total").textContent = `${total.toLocaleString()} Gs`;
+  document.getElementById("ticket-pago-efec").textContent = efectivoEnCaja.toLocaleString();
+  document.getElementById("ticket-pago-tarj").textContent = tarjeta.toLocaleString();
+  document.getElementById("ticket-pago-transf").textContent = transferencia.toLocaleString();
+  document.getElementById("ticket-extra").textContent = exceso > 0 ? `-${exceso.toLocaleString()} Gs` : "-";
   setTimeout(() => { window.print(); }, 300);
   // Ocultar el ticket una vez que finaliza la impresión
   const hideTicket = () => {

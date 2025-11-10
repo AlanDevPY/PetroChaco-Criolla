@@ -1,0 +1,127 @@
+/* Tamaño pequeño para filas de ítems del ticket */
+.ticket-item-peq {
+    font-size: 9px !important;
+}
+
+/* ===== TICKET 70mm - SOLO UNIDADES EN MM ===== */
+.ticket-wrapper {
+    width: 70mm;
+    margin: 0 auto;
+    background: #fff;
+    color: #000;
+    font-family: 'Courier New', monospace;
+    box-sizing: border-box;
+}
+
+.ticket-container {
+    width: 66mm;
+    margin: 0 auto;
+    padding: 2mm 0;
+    background: #fff;
+    color: #000;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    box-sizing: border-box;
+}
+
+.ticket-header {
+    margin-bottom: 2mm;
+}
+
+.ticket-center {
+    text-align: center;
+}
+
+.ticket-bold {
+    font-weight: 700;
+}
+
+.ticket-small {
+    font-size: 10px;
+}
+
+.ticket-items {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2mm 0;
+}
+
+.ticket-items th,
+.ticket-items td {
+    padding: 1mm 0.5mm;
+    text-align: left;
+}
+
+.ticket-items th {
+    border-bottom: 0.3mm dashed #000;
+}
+
+.ticket-qty {
+    width: 15%;
+    text-align: center;
+}
+
+.ticket-desc {
+    width: 55%;
+}
+
+.ticket-price {
+    width: 30%;
+    text-align: right;
+}
+
+.ticket-right {
+    text-align: right;
+}
+
+.ticket-total-row {
+    border-top: 0.3mm dashed #000;
+    padding-top: 2mm;
+    margin-top: 2mm;
+}
+
+.ticket-msg {
+    text-align: center;
+    font-style: italic;
+    margin-top: 2mm;
+    font-size: 10px;
+}
+
+@media print {
+
+    html,
+    body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        overflow: visible !important;
+    }
+
+    body * {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    .ticket-wrapper,
+    .ticket-wrapper * {
+        display: block !important;
+        visibility: visible !important;
+        color: #000 !important;
+        background: #fff !important;
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        /* font-size: inherit !important; */
+        margin: 0 auto !important;
+        padding: 0 !important;
+        z-index: 99999 !important;
+    }
+
+    @page {
+        size: 70mm auto;
+        margin: 0;
+    }
+}
