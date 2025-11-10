@@ -10,6 +10,7 @@
     border: 2px solid #ef4444 !important;
     color: #ef4444 !important;
 }
+
 /* Forzar colores Bootstrap para alertas */
 .alert-success {
     background-color: #d1e7dd !important;
