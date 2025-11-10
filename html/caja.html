@@ -17,450 +17,45 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
   <!-- DataTables Bootstrap 5 -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
-  <!-- Estilos propios -->
-  <link rel="stylesheet" href="../css/main.css">
-  <link rel="stylesheet" href="../css/roles.css">
-
-  <style>
-    /* Modo impresión: ocultar todo excepto el ticket */
-    @media print {
-      body * {
-        visibility: hidden !important;
-      }
-
-      #ticket-wrapper,
-      #ticket-wrapper * {
-        visibility: visible !important;
-      }
-
-      #ticket-wrapper {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-      }
-
-      #ticket-wrapper {
-        color: #000 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-    }
-
-    @page {
-      margin: 4mm;
-    }
-
-    /* Tarjetas de estadísticas con efecto glass - COLORES CORPORATIVOS AZUL */
-    .stat-card {
-      background: linear-gradient(135deg, rgba(31, 63, 161, 0.25) 0%, rgba(18, 43, 98, 0.25) 100%);
-      backdrop-filter: blur(15px);
-      border: 2px solid rgba(40, 193, 255, 0.5);
-      border-radius: 15px;
-      padding: 1.5rem;
-      transition: all 0.3s ease;
-      box-shadow: 0 8px 32px rgba(31, 63, 161, 0.5),
-        0 0 40px rgba(40, 193, 255, 0.3),
-        inset 0 0 60px rgba(40, 193, 255, 0.15);
-    }
-
-    .stat-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 12px 48px rgba(31, 63, 161, 0.8),
-        0 0 60px rgba(40, 193, 255, 0.6),
-        inset 0 0 80px rgba(40, 193, 255, 0.25);
-      background: linear-gradient(135deg, rgba(31, 63, 161, 0.35) 0%, rgba(18, 43, 98, 0.35) 100%);
-      border-color: rgba(40, 193, 255, 0.8);
-    }
-
-    .stat-card .stat-value {
-      font-size: 2.2rem;
-      font-weight: 900;
-      color: #ffffff;
-      text-shadow: 0 0 20px rgba(40, 193, 255, 0.8), 0 4px 12px rgba(0, 0, 0, 0.6);
-      margin-top: 0.5rem;
-      letter-spacing: 0.5px;
-    }
-
-    .stat-card .stat-label {
-      font-size: 1rem;
-      color: #ffffff;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      font-weight: 700;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-      opacity: 0.95;
-    }
-
-    /* Tabla con diseño glass - COLORES CORPORATIVOS AZUL */
-    .table-glass {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-      border-radius: 15px;
-      overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-    }
-
-    .table-glass thead {
-      background: rgba(31, 63, 161, 0.3);
-      box-shadow: 0 2px 8px rgba(31, 63, 161, 0.2);
-    }
-
-    .table-glass thead th {
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-      font-weight: 600;
-    }
-
-    .table-glass tbody tr {
-      background: rgba(255, 255, 255, 0.05);
-      transition: all 0.3s ease;
-    }
-
-    .table-glass tbody tr:hover {
-      background: rgba(31, 63, 161, 0.15);
-      box-shadow: 0 2px 8px rgba(31, 63, 161, 0.3);
-      transform: scale(1.005);
-    }
-
-    /* DataTables Customization */
-    .dataTables_wrapper .dataTables_length select,
-    .dataTables_wrapper .dataTables_filter input {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: white;
-      border-radius: 8px;
-      padding: 0.375rem 0.75rem;
-    }
-
-    .dataTables_wrapper .dataTables_length select:focus,
-    .dataTables_wrapper .dataTables_filter input:focus {
-      background: rgba(255, 255, 255, 0.15);
-      border-color: #28c1ff;
-      outline: none;
-    }
-
-    .dataTables_wrapper .dataTables_length,
-    .dataTables_wrapper .dataTables_filter,
-    .dataTables_wrapper .dataTables_info,
-    .dataTables_wrapper .dataTables_paginate {
-      color: rgba(255, 255, 255, 0.8);
-    }
-
-    .dataTables_wrapper .dataTables_paginate .paginate_button {
-      color: white !important;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
-      margin: 0 2px;
-    }
-
-    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-      background: rgba(31, 63, 161, 0.3) !important;
-      border-color: #28c1ff !important;
-      color: white !important;
-    }
-
-    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
-      background: linear-gradient(135deg, #1f3fa1 0%, #122b62 100%) !important;
-      border-color: #28c1ff !important;
-      color: white !important;
-    }
-
-    .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    /* Quitar fondos blancos de DataTables */
-    table.dataTable {
-      background-color: transparent !important;
-      color: white !important;
-    }
-
-    table.dataTable thead th,
-    table.dataTable thead td {
-      background-color: transparent !important;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-      color: white !important;
-    }
-
-    table.dataTable tbody td {
-      background-color: transparent !important;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-      color: rgba(255, 255, 255, 0.9) !important;
-    }
-
-    table.dataTable.table-striped tbody tr.odd {
-      background-color: rgba(255, 255, 255, 0.02) !important;
-    }
-
-    table.dataTable.table-striped tbody tr.even {
-      background-color: transparent !important;
-    }
-
-    table.dataTable tbody tr:hover td {
-      color: white !important;
-    }
-
-    /* Wrapper de DataTables transparente */
-    .dataTables_wrapper {
-      background-color: transparent !important;
-    }
-
-    .dataTables_wrapper .row {
-      background-color: transparent !important;
-    }
-
-    /* Mejorar botones con brillo - COLORES CORPORATIVOS */
-    .btn-primary {
-      box-shadow: 0 4px 12px rgba(31, 63, 161, 0.4);
-      transition: all 0.3s ease;
-    }
-
-    .btn-primary:hover {
-      box-shadow: 0 6px 20px rgba(40, 193, 255, 0.6);
-      transform: translateY(-2px);
-    }
-
-    .btn-outline-danger {
-      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
-      transition: all 0.3s ease;
-    }
-
-    .btn-outline-danger:hover {
-      box-shadow: 0 6px 20px rgba(220, 53, 69, 0.5);
-      transform: translateY(-2px);
-    }
-
-    .glass-card {
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    }
-
-    /* Fix para z-index de modales - CONFIGURACIÓN EXTREMA */
-    .modal-backdrop {
-      z-index: 1040 !important;
-      pointer-events: none !important;
-      background-color: rgba(0, 0, 0, 0.3) !important;
-      /* Más transparente - antes era 0.5 por defecto */
-    }
-
-    /* Alternativa: hacer el backdrop casi invisible para que el modal brille más */
-    .modal-backdrop.show {
-      opacity: 0.4 !important;
-      /* Reducir opacidad del backdrop - por defecto es 0.5 */
-    }
-
-    .modal {
-      z-index: 1050 !important;
-    }
-
-    .modal.show {
-      z-index: 1050 !important;
-      display: block !important;
-    }
-
-    .modal-dialog {
-      z-index: 1055 !important;
-      position: relative !important;
-    }
-
-    .modal-content {
-      z-index: 1056 !important;
-      position: relative !important;
-      pointer-events: auto !important;
-    }
-
-    /* Asegurar que el fondo animado no bloquee */
-    .bg-animated,
-    .bg-animated * {
-      pointer-events: none !important;
-      z-index: -2 !important;
-    }
-
-    /* NUEVO: Forzar interactividad en todo el modal */
-    .modal-content,
-    .modal-content *,
-    .modal-header,
-    .modal-header *,
-    .modal-body,
-    .modal-body *,
-    .accordion,
-    .accordion *,
-    .accordion-button,
-    .accordion-collapse,
-    .btn-close {
-      pointer-events: auto !important;
-      cursor: pointer !important;
-    }
-
-    /* Asegurar que el spinner no bloquee cuando está oculto */
-    .loading-spinner,
-    #spinner {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(7, 18, 31, 0.95);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 9998;
-      transition: opacity 0.3s ease;
-    }
-
-    .loading-spinner.hidden,
-    #spinner.hidden,
-    #spinner.d-none {
-      opacity: 0 !important;
-      pointer-events: none !important;
-      display: none !important;
-      z-index: -9999 !important;
-    }
-
-    /* Forzar que el spinner NUNCA esté sobre el modal */
-    body.modal-open #spinner,
-    body.modal-open .loading-spinner {
-      display: none !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-      z-index: -9999 !important;
-    }
-
-    /* CRÍTICO: El navbar NO debe estar encima del modal */
-    #navbar-placeholder,
-    .navbar,
-    .fixed-top:not(.modal):not(.modal-backdrop) {
-      z-index: 1030 !important;
-    }
-
-    /* Cuando el modal está abierto, OCULTAR el navbar completamente */
-    body.modal-open #navbar-placeholder,
-    body.modal-open .navbar,
-    body.modal-open .fixed-top:not(.modal):not(.modal-backdrop) {
-      display: none !important;
-      visibility: hidden !important;
-      opacity: 0 !important;
-    }
-
-    /* Forzar que SOLO el modal y backdrop estén arriba cuando está abierto */
-    body.modal-open .modal-backdrop {
-      z-index: 1040 !important;
-    }
-
-    body.modal-open .modal {
-      z-index: 9999 !important;
-    }
-
-    body.modal-open .modal-dialog {
-      z-index: 10000 !important;
-    }
-
-    body.modal-open .modal-content {
-      z-index: 10001 !important;
-    }
-
-    /* Fondos más brillantes y luminosos - COLORES CORPORATIVOS AZUL */
-    .glass-card {
-      background: linear-gradient(135deg, rgba(31, 63, 161, 0.15) 0%, rgba(18, 43, 98, 0.15) 100%);
-      backdrop-filter: blur(15px);
-      border: 2px solid rgba(40, 193, 255, 0.3);
-      box-shadow: 0 8px 32px rgba(31, 63, 161, 0.4),
-        0 0 60px rgba(40, 193, 255, 0.2),
-        inset 0 0 40px rgba(40, 193, 255, 0.1);
-    }
-
-    /* NAVBAR GLASSMORPHISM - Igual que ventas.html */
-    .navbar {
-      background: linear-gradient(135deg, rgba(26, 66, 138, 0.85) 0%, rgba(13, 40, 87, 0.9) 100%) !important;
-      backdrop-filter: blur(16px);
-      border-bottom: 2px solid rgba(40, 193, 255, 0.4);
-      box-shadow: 0 8px 32px rgba(31, 63, 161, 0.3), 0 0 40px rgba(40, 193, 255, 0.2);
-      margin: 0;
-      padding-top: 0.5rem;
-      padding-bottom: 0.5rem;
-    }
-
-    .navbar-brand {
-      color: #ffffff !important;
-      font-weight: 700;
-      font-size: 1.3rem;
-      text-shadow: 0 2px 8px rgba(40, 193, 255, 0.6), 0 0 20px rgba(31, 63, 161, 0.4);
-    }
-
-    .nav-link {
-      color: rgba(232, 241, 245, 0.85) !important;
-      transition: all 0.3s ease;
-      font-weight: 500;
-    }
-
-    .nav-link:hover {
-      color: #6dd6ff !important;
-      transform: translateY(-2px);
-      text-shadow: 0 2px 8px rgba(40, 193, 255, 0.5);
-    }
-
-    .navbar-toggler {
-      border-color: rgba(40, 193, 255, 0.3);
-    }
-
-    .navbar-toggler:focus {
-      box-shadow: 0 0 0 0.25rem rgba(31, 63, 161, 0.5);
-    }
-  </style>
+  <!-- ...existing code... -->
 </head>
 
-<!-- Fondo animado -->
-<div class="bg-animated" aria-hidden="true">
-  <span class="blob blob-1"></span>
-  <span class="blob blob-2"></span>
-  <span class="blob blob-3"></span>
-</div>
-
-<!-- Spinner de carga - OCULTO POR DEFECTO -->
-<div id="spinner" class="loading-spinner"
-  style="display: none !important; opacity: 0 !important; pointer-events: none !important; z-index: -9999 !important;">
-  <div class="spinner-border text-light" role="status">
-    <span class="visually-hidden">Cargando...</span>
-  </div>
-  <p class="mt-3 text-white">Cargando Control de Caja...</p>
-</div>
+<!-- ...existing code... -->
 
 <!-- Navbar parcial -->
 <div id="navbar-placeholder"></div>
 
 <!-- Contenido Principal -->
-<div id="contenidoPrincipal" class="container py-4 animate__animated animate__fadeIn">
+<div id="contenidoPrincipal" class="container py-4">
 
   <!-- Encabezado -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h2 class="mb-1 text-white fw-bold">
+      <h2 class="mb-1 fw-bold">
         <i class="bi bi-cash-stack me-2"></i>Control de Caja
       </h2>
-      <p class="text-white-50 mb-0">Gestión y seguimiento de cajas de ventas</p>
+      <p class="mb-0">Gestión y seguimiento de cajas de ventas</p>
     </div>
-    <button type="button" class="btn btn-brand" data-bs-toggle="modal" data-bs-target="#cierreCajaModal">
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#cierreCajaModal">
       <i class="bi bi-calendar2-x me-2"></i>Realizar Cierre de Caja
     </button>
   </div>
 
-  <!-- Tabla de cajas con diseño glass -->
-  <div class="glass-card p-4 animate__animated animate__fadeInUp">
+  <!-- Tabla de cajas Bootstrap -->
+  <div class="card p-4">
     <div class="table-responsive">
-      <table class="table table-glass align-middle mb-0" id="tablaCajas">
+      <table class="table align-middle mb-0" id="tablaCajas">
         <thead>
           <tr>
-            <th class="text-white">#</th>
-            <th class="text-white"><i class="bi bi-calendar-event me-2"></i>Apertura</th>
-            <th class="text-white"><i class="bi bi-person me-2"></i>Usuario</th>
-            <th class="text-white"><i class="bi bi-calendar-check me-2"></i>Cierre</th>
-            <th class="text-white"><i class="bi bi-toggle-on me-2"></i>Estado</th>
-            <th class="text-white text-center"><i class="bi bi-gear me-2"></i>Acciones</th>
+            <th>#</th>
+            <th><i class="bi bi-calendar-event me-2"></i>Apertura</th>
+            <th><i class="bi bi-person me-2"></i>Usuario</th>
+            <th><i class="bi bi-calendar-check me-2"></i>Cierre</th>
+            <th><i class="bi bi-toggle-on me-2"></i>Estado</th>
+            <th class="text-center"><i class="bi bi-gear me-2"></i>Acciones</th>
           </tr>
         </thead>
-        <tbody id="cajasTable" class="text-white">
+        <tbody id="cajasTable">
           <!-- Aquí se insertarán las filas dinámicamente -->
         </tbody>
       </table>
@@ -470,51 +65,32 @@
   <!-- Modal detalle de caja -->
   <div class="modal fade" id="detalleCajaModal" tabindex="-1" aria-labelledby="detalleCajaLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
-      <div class="modal-content" style="background: linear-gradient(135deg, #0a1a3c 0%, #122b62 50%, #0b4c7a 100%); 
-                                          box-shadow: 0 0 80px rgba(31, 63, 161, 0.5),
-                                                      inset 0 0 100px rgba(40, 193, 255, 0.1);">
-        <div class="modal-header" style="background: rgba(10, 26, 60, 0.8); 
-                 backdrop-filter: blur(10px);
-                 border-bottom: 2px solid rgba(40, 193, 255, 0.3);
-                 padding: 0.75rem 1.5rem;
-                 box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);">
-          <h5 class="modal-title text-white fw-bold" id="detalleCajaLabel"
-            style="font-size: 1.25rem; text-shadow: 0 2px 6px rgba(0,0,0,0.5); letter-spacing: 0.3px;">
-            <i class="bi bi-cash-stack me-2"
-              style="color: #6dd6ff; filter: drop-shadow(0 2px 4px rgba(40,193,255,0.4));"></i>Detalle de Caja
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold" id="detalleCajaLabel">
+            <i class="bi bi-cash-stack me-2"></i>Detalle de Caja
           </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"
-            style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
-        <div class="modal-body p-4" style="overflow-y: auto; 
-                 max-height: calc(100vh - 120px); 
-                 background: linear-gradient(180deg, rgba(31, 63, 161, 0.15) 0%, rgba(10, 26, 60, 0.3) 100%);
-                 box-shadow: inset 0 0 80px rgba(40, 193, 255, 0.15);">
-          <!-- Resumen general con tarjetas glass -->
+        <div class="modal-body p-4">
+          <!-- Resumen general -->
           <div class="row g-3 mb-4">
             <div class="col-md-3">
-              <div class="stat-card">
-                <div class="stat-label">
-                  <i class="bi bi-door-open me-2"></i>Apertura
-                </div>
-                <div class="stat-value" style="font-size: 1rem;" id="detalleAperturaCaja">--</div>
+              <div class="card p-3 bg-light border-primary">
+                <div class="fw-bold text-primary"><i class="bi bi-door-open me-2"></i>Apertura</div>
+                <div id="detalleAperturaCaja">--</div>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="stat-card">
-                <div class="stat-label">
-                  <i class="bi bi-door-closed me-2"></i>Cierre
-                </div>
-                <div class="stat-value" style="font-size: 1rem;" id="detalleCierreCaja">--</div>
+              <div class="card p-3 bg-light border-secondary">
+                <div class="fw-bold text-secondary"><i class="bi bi-door-closed me-2"></i>Cierre</div>
+                <div id="detalleCierreCaja">--</div>
               </div>
             </div>
             <div class="col-md-6">
-              <div class="stat-card"
-                style="background: linear-gradient(135deg, rgba(31, 63, 161, 0.2) 0%, rgba(40, 193, 255, 0.2) 100%);">
-                <div class="stat-label">
-                  <i class="bi bi-currency-dollar me-2"></i>Total Recaudado
-                </div>
-                <div class="stat-value" id="detalleTotalRecaudadoCaja">--</div>
+              <div class="card p-3 bg-light border-success">
+                <div class="fw-bold text-success"><i class="bi bi-currency-dollar me-2"></i>Total Recaudado</div>
+                <div id="detalleTotalRecaudadoCaja">--</div>
               </div>
             </div>
           </div>
@@ -522,210 +98,238 @@
           <!-- Desglose por método de pago -->
           <div class="row g-3 mb-4">
             <div class="col-md-4">
-              <div class="stat-card" style="border-left: 4px solid #28a745;">
-                <div class="stat-label">
-                  <i class="bi bi-cash me-2"></i>Efectivo
-                </div>
-                <div class="stat-value" style="font-size: 1.5rem;" id="detalleTotalEfectivoCaja">--</div>
+              <div class="card p-3 bg-success bg-opacity-10 border-success">
+                <div class="fw-bold text-success"><i class="bi bi-cash me-2"></i>Efectivo</div>
+                <div id="detalleTotalEfectivoCaja">--</div>
               </div>
             </div>
             <div class="col-md-4">
-              <div class="stat-card" style="border-left: 4px solid #007bff;">
-                <div class="stat-label">
-                  <i class="bi bi-credit-card me-2"></i>Pos/Qr
-                </div>
-                <div class="stat-value" style="font-size: 1.5rem;" id="detalleTotalTarjetaCaja">--</div>
+              <div class="card p-3 bg-primary bg-opacity-10 border-primary">
+                <div class="fw-bold text-primary"><i class="bi bi-credit-card me-2"></i>Pos/Qr</div>
+                <div id="detalleTotalTarjetaCaja">--</div>
               </div>
             </div>
             <div class="col-md-4">
-              <div class="stat-card" style="border-left: 4px solid #ffc107;">
-                <div class="stat-label">
-                  <i class="bi bi-bank me-2"></i>Transferencia
-                </div>
-                <div class="stat-value" style="font-size: 1.5rem;" id="detalleTotalTransferenciaCaja">--</div>
+              <div class="card p-3 bg-info bg-opacity-10 border-info">
+                <div class="fw-bold text-info"><i class="bi bi-bank me-2"></i>Transferencia</div>
+                <div id="detalleTotalTransferenciaCaja">--</div>
               </div>
             </div>
           </div>
 
-          <!-- Tabla de ventas con acordeón -->
-          <div class="glass-card p-3">
-            <h6 class="mb-3 text-white fw-bold">
+          <!-- Tabla de ventas con acordeón Bootstrap puro -->
+          <div class="card p-3">
+            <h6 class="mb-3 fw-bold">
               <i class="bi bi-list-ul me-2"></i>Detalle de Ventas
             </h6>
-            <div class="accordion accordion-flush" id="ventasAccordion">
-              <!-- Ventas se cargan dinámicamente -->
+            <!-- Acordeón Bootstrap puro, sin estilos personalizados -->
+            <div class="accordion" id="ventasAccordion">
+              <!-- Ejemplo de item acordeón Bootstrap puro (el JS debe generar acordeón así):
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                    09/11/2025 15:55:36 - MIGUEL ALEJANDRO CABALLERO | 5.000 Gs
+                  </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#ventasAccordion">
+                  <div class="accordion-body">
+                    <!-- Aquí el detalle de la venta, solo usando tablas y clases Bootstrap -->
+              <div class="row mb-2">
+                <div class="col">Efectivo: <span>5.000 Gs</span></div>
+                <div class="col">Pos/Qr: <span>0 Gs</span></div>
+                <div class="col">Transferencia: <span>0 Gs</span></div>
+                <div class="col">Vuelto: <span>15.000 Gs</span></div>
+              </div>
+              <table class="table table-bordered table-sm">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>TOPLINE SEVEN SANDIA 14GR</td>
+                    <td>1</td>
+                    <td>5.000 Gs</td>
+                    <td>5.000 Gs</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
-        <div class="modal-footer bg-dark">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-            <i class="bi bi-x-circle me-1"></i>Cerrar
-          </button>
-        </div>
+        -->
+        <!-- Ventas se cargan dinámicamente -->
       </div>
     </div>
   </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+      <i class="bi bi-x-circle me-1"></i>Cerrar
+    </button>
+  </div>
+</div>
+</div>
+</div>
 
-  <!-- Modal Procesando Reversión -->
-  <div class="modal fade" id="modalProcesandoReversion" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-body text-center py-4">
-          <div class="spinner-border text-warning mb-3" role="status" style="width: 3rem; height: 3rem;">
-            <span class="visually-hidden">Procesando...</span>
-          </div>
-          <h5 class="mb-2">Revirtiendo venta...</h5>
-          <p class="text-muted mb-0">Por favor, no cierre esta ventana ni recargue la página.</p>
+<!-- Modal Procesando Reversión -->
+<div class="modal fade" id="modalProcesandoReversion" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+  aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body text-center py-4">
+        <div class="spinner-border text-warning mb-3" role="status" style="width: 3rem; height: 3rem;">
+          <span class="visually-hidden">Procesando...</span>
         </div>
+        <h5 class="mb-2">Revirtiendo venta...</h5>
+        <p class="text-muted mb-0">Por favor, no cierre esta ventana ni recargue la página.</p>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Modal cierre de caja -->
-  <div class="modal fade" id="cierreCajaModal" tabindex="-1" aria-labelledby="cierreCajaLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content bg-dark">
+<!-- Modal cierre de caja -->
+<div class="modal fade" id="cierreCajaModal" tabindex="-1" aria-labelledby="cierreCajaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="cierreCajaLabel">
+          <i class="bi bi-box-seam me-2"></i>Cierre de Caja
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Nav tabs Bootstrap -->
+        <ul class="nav nav-pills mb-4 justify-content-center" id="cierreTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active px-4" id="resumen-tab" data-bs-toggle="tab" data-bs-target="#resumen"
+              type="button" role="tab">
+              <i class="bi bi-bar-chart me-2"></i>Resumen Caja
+            </button>
+          </li>
+          <li class="nav-item ms-2" role="presentation">
+            <button class="nav-link px-4" id="ventas-tab" data-bs-toggle="tab" data-bs-target="#ventas" type="button"
+              role="tab">
+              <i class="bi bi-receipt me-2"></i>Ventas
+            </button>
+          </li>
+        </ul>
 
-        <div class="modal-header" style="background: linear-gradient(135deg, #1f3fa1 0%, #0b4c7a 100%);">
-          <h5 class="modal-title text-white fw-bold" id="cierreCajaLabel">
-            <i class="bi bi-box-seam me-2"></i>Cierre de Caja
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
+        <!-- Tab content -->
+        <div class="tab-content">
 
-        <div class="modal-body p-4">
-
-          <!-- Nav tabs con diseño mejorado -->
-          <ul class="nav nav-pills mb-4 justify-content-center" id="cierreTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-              <button class="nav-link active px-4" id="resumen-tab" data-bs-toggle="tab" data-bs-target="#resumen"
-                type="button" role="tab">
-                <i class="bi bi-bar-chart me-2"></i>Resumen Caja
-              </button>
-            </li>
-            <li class="nav-item ms-2" role="presentation">
-              <button class="nav-link px-4" id="ventas-tab" data-bs-toggle="tab" data-bs-target="#ventas" type="button"
-                role="tab">
-                <i class="bi bi-receipt me-2"></i>Ventas
-              </button>
-            </li>
-          </ul>
-
-          <!-- Tab content -->
-          <div class="tab-content">
-
-            <!-- Resumen Caja -->
-            <div class="tab-pane fade show active" id="resumen" role="tabpanel">
-
-              <div class="glass-card p-4 mb-3 text-center">
-                <div class="alert alert-warning border-0 mb-3" style="background: rgba(255, 193, 7, 0.2);">
-                  <i class="bi bi-exclamation-triangle me-2"></i>
-                  <strong class="text-white">¿Estás seguro que deseas realizar el cierre de caja?</strong>
-                </div>
-                <p class="text-white-50 mb-0">
-                  Verifica que todas tus ventas y datos estén correctos antes de confirmar.
-                </p>
+          <!-- Resumen Caja -->
+          <div class="tab-pane fade show active" id="resumen" role="tabpanel">
+            <div class="card p-4 mb-3 text-center">
+              <div class="alert alert-warning border-0 mb-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>¿Estás seguro que deseas realizar el cierre de caja?</strong>
               </div>
-
-              <!-- Estadísticas de cierre -->
-              <div class="row g-3 mb-3">
-                <div class="col-md-3">
-                  <div class="stat-card"
-                    style="background: linear-gradient(135deg, rgba(40, 167, 69, 0.2) 0%, rgba(40, 167, 69, 0.1) 100%);">
-                    <div class="stat-label">Total Recaudado</div>
-                    <div class="stat-value" id="cierreTotalRecaudado">--</div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="stat-card">
-                    <div class="stat-label"><i class="bi bi-cash me-1"></i>Efectivo</div>
-                    <div class="stat-value" style="font-size: 1.5rem;" id="cierreTotalEfectivo">--</div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="stat-card">
-                    <div class="stat-label"><i class="bi bi-credit-card me-1"></i>Pos/Qr</div>
-                    <div class="stat-value" style="font-size: 1.5rem;" id="cierreTotalTarjeta">--</div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="stat-card">
-                    <div class="stat-label"><i class="bi bi-bank me-1"></i>Transferencia</div>
-                    <div class="stat-value" style="font-size: 1.5rem;" id="cierreTotalTransferencia">--</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="row g-3">
-                <div class="col-md-3">
-                  <div class="stat-card">
-                    <div class="stat-label">Ventas Realizadas</div>
-                    <div class="stat-value" style="font-size: 1.5rem;" id="cierreCantVentas">--</div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="stat-card">
-                    <div class="stat-label">Items Vendidos</div>
-                    <div class="stat-value" style="font-size: 1.5rem;" id="cierreItemsVendidos">--</div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="stat-card">
-                    <div class="stat-label">Apertura</div>
-                    <div class="text-white fw-semibold" style="font-size: 0.9rem;" id="cierreApertura">--</div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="stat-card">
-                    <div class="stat-label">Cierre (ahora)</div>
-                    <div class="text-white fw-semibold" style="font-size: 0.9rem;" id="cierreAhoraTime">--</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Formulario de cierre -->
-              <form id="formCierreCaja" class="mt-4">
-                <!-- Inputs adicionales si se requieren -->
-              </form>
+              <p class="mb-0">
+                Verifica que todas tus ventas y datos estén correctos antes de confirmar.
+              </p>
             </div>
 
-            <!-- Tabla de Ventas -->
-            <div class="tab-pane fade" id="ventas" role="tabpanel">
-              <div class="glass-card p-3">
-                <div class="table-responsive">
-                  <table class="table table-glass align-middle mb-0">
-                    <thead>
-                      <tr>
-                        <th class="text-white"><i class="bi bi-clock me-2"></i>Hora</th>
-                        <th class="text-white"><i class="bi bi-person me-2"></i>Cliente</th>
-                        <th class="text-white"><i class="bi bi-currency-dollar me-2"></i>Total</th>
-                        <th class="text-white"><i class="bi bi-wallet2 me-2"></i>Método de Pago</th>
-                      </tr>
-                    </thead>
-                    <tbody id="cajaVentasTableModal" class="text-white">
-                      <!-- Se carga dinámicamente -->
-                    </tbody>
-                  </table>
+            <!-- Estadísticas de cierre -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-3">
+                <div class="card p-3">
+                  <div>Total Recaudado</div>
+                  <div id="cierreTotalRecaudado">--</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card p-3">
+                  <div><i class="bi bi-cash me-1"></i>Efectivo</div>
+                  <div id="cierreTotalEfectivo">--</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card p-3">
+                  <div><i class="bi bi-credit-card me-1"></i>Pos/Qr</div>
+                  <div id="cierreTotalTarjeta">--</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card p-3">
+                  <div><i class="bi bi-bank me-1"></i>Transferencia</div>
+                  <div id="cierreTotalTransferencia">--</div>
                 </div>
               </div>
             </div>
 
+            <div class="row g-3">
+              <div class="col-md-3">
+                <div class="card p-3">
+                  <div>Ventas Realizadas</div>
+                  <div id="cierreCantVentas">--</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card p-3">
+                  <div>Items Vendidos</div>
+                  <div id="cierreItemsVendidos">--</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card p-3">
+                  <div>Apertura</div>
+                  <div id="cierreApertura">--</div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card p-3">
+                  <div>Cierre (ahora)</div>
+                  <div id="cierreAhoraTime">--</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Formulario de cierre -->
+            <form id="formCierreCaja" class="mt-4">
+              <!-- Inputs adicionales si se requieren -->
+            </form>
           </div>
-        </div>
 
-        <div class="modal-footer bg-dark">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-            <i class="bi bi-x-circle me-1"></i>Cancelar
-          </button>
-          <button type="submit" form="formCierreCaja" class="btn btn-success">
-            <i class="bi bi-check2-circle me-1"></i>Confirmar Cierre
-          </button>
-        </div>
+          <!-- Tabla de Ventas -->
+          <div class="tab-pane fade" id="ventas" role="tabpanel">
+            <div class="card p-3">
+              <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th><i class="bi bi-clock me-2"></i>Hora</th>
+                      <th><i class="bi bi-person me-2"></i>Cliente</th>
+                      <th><i class="bi bi-currency-dollar me-2"></i>Total</th>
+                      <th><i class="bi bi-wallet2 me-2"></i>Método de Pago</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cajaVentasTableModal">
+                    <!-- Se carga dinámicamente -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
+        </div>
       </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>Cancelar
+        </button>
+        <button type="submit" form="formCierreCaja" class="btn btn-success">
+          <i class="bi bi-check2-circle me-1"></i>Confirmar Cierre
+        </button>
+      </div>
+
     </div>
   </div>
+</div>
 
 </div>
 

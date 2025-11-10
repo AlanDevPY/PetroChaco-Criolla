@@ -254,80 +254,55 @@ const mostrarDetalleCaja = async () => {
 
       const vuelto = (venta.efectivo + venta.tarjeta + venta.transferencia) - venta.total;
 
-      // Generar acordeón-item con diseño BRILLANTE y LLAMATIVO - COLORES CORPORATIVOS AZUL
+      // Generar acordeón-item SOLO con Bootstrap 5 puro
       const item = document.createElement("div");
       item.classList.add("accordion-item");
-      item.style.cssText = "background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(40, 193, 255, 0.4); margin-bottom: 0.75rem; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);";
 
       item.innerHTML = `
       <h2 class="accordion-header" id="heading${index}">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-          data-bs-target="#collapse${index}" aria-expanded="false" aria-controls="collapse${index}"
-          style="background: linear-gradient(135deg, rgba(31, 63, 161, 0.5) 0%, rgba(18, 43, 98, 0.5) 100%); 
-                 color: white; 
-                 border-radius: 12px; 
-                 font-weight: 700;
-                 font-size: 1.05rem;
-                 text-shadow: 0 2px 6px rgba(0,0,0,0.5);
-                 border: 2px solid rgba(40, 193, 255, 0.5);
-                 box-shadow: 0 4px 12px rgba(31, 63, 161, 0.3), inset 0 0 30px rgba(40, 193, 255, 0.1);">
-          <i class="bi bi-calendar-event me-2" style="color: #6dd6ff; filter: drop-shadow(0 2px 4px rgba(109, 214, 255, 0.4));"></i>${venta.fecha} - 
-          <i class="bi bi-person ms-3 me-2" style="color: #6dd6ff; filter: drop-shadow(0 2px 4px rgba(109, 214, 255, 0.4));"></i>${venta.cliente.nombre} | 
-          <strong class="ms-3" style="color: #fff; font-size: 1.15rem; text-shadow: 0 0 15px rgba(40, 193, 255, 0.8), 0 2px 6px rgba(0,0,0,0.5);">${venta.total.toLocaleString("es-PY")} Gs</strong>
+        <button class="accordion-button collapsed bg-white" type="button" data-bs-toggle="collapse"
+          data-bs-target="#collapse${index}" aria-expanded="false" aria-controls="collapse${index}">
+          <i class="bi bi-calendar-event me-2"></i>${venta.fecha} - 
+          <i class="bi bi-person ms-3 me-2"></i>${venta.cliente.nombre} | 
+          <strong class="ms-3">${venta.total.toLocaleString("es-PY")} Gs</strong>
         </button>
       </h2>
       <div id="collapse${index}" class="accordion-collapse collapse" aria-labelledby="heading${index}"
         data-bs-parent="#ventasAccordion">
-        <div class="accordion-body" style="background: linear-gradient(135deg, rgba(10, 26, 60, 0.95) 0%, rgba(18, 43, 98, 0.95) 100%); 
-                                           color: white; 
-                                           padding: 1.5rem; 
-                                           border-top: 2px solid rgba(40, 193, 255, 0.3);
-                                           box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.5);">
+        <div class="accordion-body bg-light">
           <div class="row mb-3">
             <div class="col-md-3">
-              <div class="stat-card">
-                <div class="stat-label"><i class="bi bi-cash me-1"></i>Efectivo</div>
-                <div class="stat-value" style="font-size: 1.5rem;">${efectivoAplicado.toLocaleString("es-PY")} Gs</div>
-              </div>
+              <div class="p-2 rounded bg-success text-white"><i class="bi bi-cash me-1"></i> Efectivo: <span>${efectivoAplicado.toLocaleString("es-PY")} Gs</span></div>
             </div>
             <div class="col-md-3">
-              <div class="stat-card">
-                <div class="stat-label"><i class="bi bi-credit-card me-1"></i>Pos/Qr</div>
-                <div class="stat-value" style="font-size: 1.5rem;">${tarjetaAplicado.toLocaleString("es-PY")} Gs</div>
-              </div>
+              <div class="p-2 rounded bg-primary text-white"><i class="bi bi-credit-card me-1"></i> Pos/Qr: <span>${tarjetaAplicado.toLocaleString("es-PY")} Gs</span></div>
             </div>
             <div class="col-md-3">
-              <div class="stat-card">
-                <div class="stat-label"><i class="bi bi-bank me-1"></i>Transferencia</div>
-                <div class="stat-value" style="font-size: 1.5rem;">${transferenciaAplicado.toLocaleString("es-PY")} Gs</div>
-              </div>
+              <div class="p-2 rounded bg-info text-dark"><i class="bi bi-bank me-1"></i> Transferencia: <span>${transferenciaAplicado.toLocaleString("es-PY")} Gs</span></div>
             </div>
             <div class="col-md-3">
-              <div class="stat-card">
-                <div class="stat-label">💰 Vuelto</div>
-                <div class="stat-value" style="font-size: 1.5rem;">${vuelto > 0 ? vuelto.toLocaleString("es-PY") + " Gs" : "-"}</div>
-              </div>
+              <div class="p-2 rounded bg-warning text-dark">💰 Vuelto: <span>${vuelto > 0 ? vuelto.toLocaleString("es-PY") + " Gs" : "-"}</span></div>
             </div>
           </div>
 
           <!-- Detalle de items vendidos -->
-          <div class="table-responsive mt-3" style="background: rgba(10, 15, 25, 0.95) !important; padding: 1rem; border-radius: 12px; border: 2px solid rgba(40, 193, 255, 0.4); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 40px rgba(40, 193, 255, 0.15);">
-            <table class="table table-sm table-bordered" style="background: rgba(10, 26, 60, 0.8) !important; border: none !important; margin-bottom: 0;">
-              <thead>
-                <tr style="background: linear-gradient(135deg, rgba(31, 63, 161, 0.9) 0%, rgba(18, 43, 98, 0.9) 100%) !important; border-bottom: 2px solid rgba(40, 193, 255, 0.6) !important;">
-                  <th style="color: #fff !important; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none !important; background: transparent !important;">📦 Producto</th>
-                  <th style="color: #fff !important; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none !important; background: transparent !important;">🔢 Cantidad</th>
-                  <th style="color: #fff !important; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none !important; background: transparent !important;">💵 Precio</th>
-                  <th style="color: #fff !important; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.05rem; padding: 12px; border: none !important; background: transparent !important;">💰 Subtotal</th>
+          <div class="table-responsive mt-3">
+            <table class="table table-sm table-bordered">
+              <thead class="table-primary">
+                <tr>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                  <th>Precio</th>
+                  <th>Subtotal</th>
                 </tr>
               </thead>
-              <tbody style="background: rgba(10, 26, 60, 0.6) !important;">
+              <tbody>
                 ${venta.venta.map((item) => `
-                  <tr style="background: rgba(10, 26, 60, 0.8) !important; border-top: 1px solid rgba(40, 193, 255, 0.25) !important;">
-                    <td style="color: #fff !important; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.05rem; padding: 10px; border: none !important; background: rgba(10, 26, 60, 0.8) !important;">${item.item}</td>
-                    <td style="color: #6dd6ff !important; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.1rem; padding: 10px; border: none !important; background: rgba(10, 26, 60, 0.8) !important;">${item.cantidad}</td>
-                    <td style="color: #90ee90 !important; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.1rem; padding: 10px; border: none !important; background: rgba(10, 26, 60, 0.8) !important;">${item.costo.toLocaleString("es-PY")} Gs</td>
-                    <td style="color: #ffd966 !important; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-size: 1.15rem; padding: 10px; border: none !important; background: rgba(10, 26, 60, 0.8) !important;">${item.subTotal.toLocaleString("es-PY")} Gs</td>
+                  <tr>
+                    <td>${item.item}</td>
+                    <td>${item.cantidad}</td>
+                    <td>${item.costo.toLocaleString("es-PY")} Gs</td>
+                    <td>${item.subTotal.toLocaleString("es-PY")} Gs</td>
                   </tr>
                 `).join("")}
               </tbody>
@@ -336,11 +311,7 @@ const mostrarDetalleCaja = async () => {
           
           ${rol === 'admin' && caja.estado === 'abierta' ? `
             <div class="text-end mt-3">
-              <button class="btn btn-outline-danger btnRevertirVenta" data-index="${index}" 
-                      style="font-weight: 600; 
-                             box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
-                             border: 2px solid rgba(220, 53, 69, 0.6);
-                             text-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+              <button class="btn btn-outline-danger btnRevertirVenta" data-index="${index}">
                 <i class="bi bi-arrow-counterclockwise me-2"></i>Revertir Venta
               </button>
             </div>
