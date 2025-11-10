@@ -1,127 +1,143 @@
-/* Tamaño pequeño para filas de ítems del ticket */
-.ticket-item-peq {
-    font-size: 9px !important;
+:root {
+    --ticket-width: 260px;
+    /* ancho ideal para 58mm */
+    --ticket-font: "Courier New", Courier, monospace;
 }
 
-/* ===== TICKET 70mm - SOLO UNIDADES EN MM ===== */
 .ticket-wrapper {
-    width: 70mm;
-    margin: 0 auto;
-    background: #fff;
-    color: #000;
-    font-family: 'Courier New', monospace;
-    box-sizing: border-box;
+    display: none !important;
+    /* oculto en pantalla */
+}
+
+.ticket-wrapper.show {
+    display: flex !important;
+    justify-content: center;
+    background: #f4f4f4;
+    padding: 20px;
+    font-family: var(--ticket-font);
 }
 
 .ticket-container {
-    width: 66mm;
-    margin: 0 auto;
-    padding: 2mm 0;
+    width: var(--ticket-width);
     background: #fff;
+    padding: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     color: #000;
-    font-family: 'Courier New', monospace;
     font-size: 12px;
-    line-height: 1.4;
-    box-sizing: border-box;
-}
-
-.ticket-header {
-    margin-bottom: 2mm;
+    line-height: 1.2;
 }
 
 .ticket-center {
     text-align: center;
 }
 
+.ticket-right {
+    text-align: right;
+}
+
 .ticket-bold {
     font-weight: 700;
 }
 
-.ticket-small {
-    font-size: 10px;
+.ticket-header {
+    border-bottom: 1px dashed #000;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
 }
 
 .ticket-items {
     width: 100%;
     border-collapse: collapse;
-    margin: 2mm 0;
+    margin-bottom: 8px;
 }
 
 .ticket-items th,
 .ticket-items td {
-    padding: 1mm 0.5mm;
-    text-align: left;
+    padding: 2px 0;
+    font-size: 12px;
 }
 
 .ticket-items th {
-    border-bottom: 0.3mm dashed #000;
+    font-weight: 700;
 }
 
 .ticket-qty {
-    width: 15%;
-    text-align: center;
+    width: 36px;
+    text-align: left;
 }
 
 .ticket-desc {
-    width: 55%;
+    text-align: left;
 }
 
 .ticket-price {
-    width: 30%;
-    text-align: right;
-}
-
-.ticket-right {
+    width: 70px;
     text-align: right;
 }
 
 .ticket-total-row {
-    border-top: 0.3mm dashed #000;
-    padding-top: 2mm;
-    margin-top: 2mm;
+    border-top: 1px dashed #000;
+    padding-top: 6px;
+    margin-top: 6px;
+}
+
+.ticket-small {
+    font-size: 11px;
+    color: #333;
 }
 
 .ticket-msg {
+    margin-top: 10px;
+    border-top: 1px dashed #000;
+    padding-top: 8px;
+    font-size: 12px;
     text-align: center;
-    font-style: italic;
-    margin-top: 2mm;
-    font-size: 10px;
 }
 
 @media print {
-
-    html,
-    body {
-        background: #fff !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        overflow: visible !important;
-    }
-
-    body * {
-        display: none !important;
-        visibility: hidden !important;
-    }
-
-    .ticket-wrapper,
-    .ticket-wrapper * {
-        display: block !important;
-        visibility: visible !important;
-        color: #000 !important;
-        background: #fff !important;
-        position: static !important;
-        width: auto !important;
-        height: auto !important;
-        /* font-size: inherit !important; */
-        margin: 0 auto !important;
-        padding: 0 !important;
-        z-index: 99999 !important;
-    }
-
     @page {
-        size: 70mm auto;
         margin: 0;
     }
+
+    body {
+        margin: 0;
+    }
+
+
+
+    .ticket-wrapper {
+        display: flex !important;
+        justify-content: center;
+        background: none;
+        padding: 0;
+    }
+
+    .ticket-container {
+        box-shadow: none;
+        margin: 0 auto;
+        width: var(--ticket-width);
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    /* si querés ocultar otras secciones */
+
+    @page {
+        margin: 0;
+        /* elimina márgenes del navegador */
+        size: auto;
+        /* deja que el ancho se ajuste al contenido */
+    }
+
+    body {
+        margin: 0;
+    }
+
+    .ticket-container {
+        margin: 0 auto;
+    }
+
+
 }

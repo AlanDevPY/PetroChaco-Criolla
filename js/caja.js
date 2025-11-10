@@ -419,25 +419,25 @@ function imprimirCierre(caja) {
   wrapper.innerHTML = "";
   // Diseño visual mejorado tipo comprobante de cierre
   const ticketHTML = `
-    <div class="ticket-container" style="padding:2mm 0 2mm 0;">
+    <div class="ticket-container">
       <div class="ticket-header ticket-center" style="border-bottom:2px solid #000;padding-bottom:1.5mm;margin-bottom:1.5mm;">
         <div class="ticket-bold" style="font-size:15px;letter-spacing:1px;">Petro Chaco Criolla</div>
         <div class="ticket-small">Ruta N20° - Santiago, Misiones</div>
         <div class="ticket-small">Tel: 0984 000 000</div>
       </div>
       <div style="font-size:11px;text-align:left;margin-bottom:1.5mm;line-height:1.3;">
-        <span class="ticket-bold">Usuario:</span> <span id="ticket-usuario">${caja.usuario || '-'}</span><br>
-        <span class="ticket-bold">Fecha cierre:</span> <span id="ticket-fecha">${fechaCierre}</span><br>
+        <span class="ticket-bold">Usuario:</span> <span id="ticket-usuario">${caja.usuario || '-'}<\/span><br>
+        <span class="ticket-bold">Fecha cierre:</span> <span id="ticket-fecha">${fechaCierre}<\/span><br>
         <span class="ticket-bold">Apertura:</span> ${caja.fechaApertura}<br>
         <span class="ticket-bold">Estado:</span> ${caja.estado}
       </div>
       <div style="border-bottom:1px dashed #000;margin-bottom:1.5mm;"></div>
-      <table class="ticket-items" style="margin-bottom:1.5mm;width:100%;border-collapse:collapse;font-size:9px;">
+      <table class="ticket-items">
         <thead>
           <tr style="border-bottom:1.2px solid #000;background:#f0f0f0;">
-            <th class="ticket-qty" style="text-align:center;padding:0.5mm 0.2mm;width:12%;">Cant</th>
-            <th class="ticket-desc" style="text-align:left;padding:0.5mm 0.2mm;width:58%;">Producto</th>
-            <th class="ticket-price" style="text-align:right;padding:0.5mm 0.2mm;width:30%;">Costo</th>
+            <th class="ticket-qty">Cant</th>
+            <th class="ticket-desc">Producto</th>
+            <th class="ticket-price">Costo</th>
           </tr>
         </thead>
         <tbody id="ticket-items-body"></tbody>
@@ -469,10 +469,6 @@ function imprimirCierre(caja) {
         <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:0.5mm;">
           <span class="ticket-bold">Transferencia</span>
           <span id="ticket-pago-transf" class="ticket-right"></span>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;">
-          <span class="ticket-bold">Ajuste</span>
-          <span id="ticket-extra" class="ticket-right"></span>
         </div>
       </div>
       <div class="ticket-msg" id="ticket-msg" style="margin-top:2mm;">
@@ -517,10 +513,10 @@ function imprimirCierre(caja) {
   productos.forEach(([item, info], idx) => {
     const border = idx < productos.length - 1 ? 'border-bottom:0.7px dashed #bbb;' : '';
     cuerpo.insertAdjacentHTML("beforeend", `
-      <tr class='ticket-item-row' style="${border}">
-        <td class='ticket-qty ticket-item-peq' style="text-align:center;padding:0.4mm 0.2mm;width:12%;vertical-align:middle;">${info.cantidad}</td>
-        <td class='ticket-desc ticket-item-peq' style="text-align:left;padding:0.4mm 0.2mm;width:58%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;">${item}</td>
-        <td class='ticket-price ticket-item-peq' style="text-align:right;padding:0.4mm 0.2mm;width:30%;vertical-align:middle;">${info.total.toLocaleString()} Gs</td>
+      <tr style="${border}">
+        <td class="ticket-qty">${info.cantidad}</td>
+        <td class="ticket-desc">${item}</td>
+        <td class="ticket-price">${info.total.toLocaleString()} Gs</td>
       </tr>
     `);
   });
@@ -530,7 +526,6 @@ function imprimirCierre(caja) {
   document.getElementById("ticket-pago-efec").textContent = efectivoEnCaja.toLocaleString();
   document.getElementById("ticket-pago-tarj").textContent = tarjeta.toLocaleString();
   document.getElementById("ticket-pago-transf").textContent = transferencia.toLocaleString();
-  document.getElementById("ticket-extra").textContent = exceso > 0 ? `-${exceso.toLocaleString()} Gs` : "-";
   setTimeout(() => { window.print(); }, 300);
   // Ocultar el ticket una vez que finaliza la impresión
   const hideTicket = () => {
