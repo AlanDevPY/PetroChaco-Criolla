@@ -298,7 +298,6 @@ export const descontarStockTransaccional = async (items) => {
       if (!snap.exists()) throw new Error(`Stock item no existe: ${item.id}`);
       snapshots.push({ ref, snap, cantidad: item.cantidad });
     }
-
     // FASE 2: Todas las escrituras después
     for (const { ref, snap, cantidad } of snapshots) {
       const data = snap.data();
@@ -306,13 +305,20 @@ export const descontarStockTransaccional = async (items) => {
       const desc = Number(cantidad) || 0;
       if (desc <= 0) continue; // ignorar
       if (actual < desc) throw new Error(`Stock insuficiente para ${ref.id} (${actual} < ${desc})`);
-      transaction.update(ref, { cantidad: actual - desc });
+      const nuevo = actual - desc;
+      console.log(`🔁 Descontando stock para ${ref.id}: ${actual} -> ${nuevo} (desc ${desc})`);
+      transaction.update(ref, { cantidad: nuevo });
     }
   });
 
-  // Invalidar caché FUERA de la transacción
+  // Invalidar caché FUERA de la transacción (asegurarse que la UI pida datos nuevos)
   _stockCache = null;
   _stockCacheTimestamp = 0;
+  try {
+    invalidateCache('stock');
+  } catch (e) {
+    console.warn('No se pudo invalidar el cache externo de stock:', e);
+  }
 };
 
 // Incremento transaccional de stock (reposiciones)

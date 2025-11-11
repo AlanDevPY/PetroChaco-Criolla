@@ -28,8 +28,8 @@
 
     <!-- Estilos propios -->
     <link rel="stylesheet" href="../css/roles.css">
-    <!-- <link rel="stylesheet" href="../css/ventas-modern.css"> -->
-    <!-- <link rel="stylesheet" href="../css/stock-modern.css -->
+    <link rel="stylesheet" href="../css/stock-modern.css">
+
 </head>
 
 <body class="d-flex flex-column min-vh-100">
@@ -81,7 +81,7 @@
             <div class="collapse" id="salidaPanel">
                 <div class="card-body">
                     <form id="formAgregarItemSalida" class="row g-3 align-items-end">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label">Producto</label>
                             <div class="position-relative">
                                 <input type="text" class="form-control autocomplete-input" id="salidaProducto"
@@ -89,6 +89,12 @@
                             </div>
                             <!-- Datalist oculto para datos -->
                             <datalist id="listaProductosSalida" style="display: none;"></datalist>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Descripción / Motivo</label>
+                            <input type="text" id="salidaDescripcion" class="form-control"
+                                placeholder="Ej: Nota de salida para local X, pedido de la jefa (opcional)">
+                            <small class="text-muted">Agrega una descripción para identificar la nota.</small>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">Cantidad</label>
@@ -270,6 +276,35 @@
         </div>
     </div>
 
+    <!-- Modal Historial Salidas -->
+    <div class="modal fade" id="modalHistorialSalidas" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title">Historial de Notas de Salida</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Usuario</th>
+                                    <th>Descripción</th>
+                                    <th>Items</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historialSalidasTable"></tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted">Se muestran las últimas 50 notas de salida.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Agregar Producto -->
     <div class="modal fade" id="modalAgregarProducto" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -425,6 +460,40 @@
                         </div>
                     </form>
 
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalle de Nota (reposición / salida) -->
+    <div class="modal fade" id="modalDetalleNota" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="detalleNotaTitle">Detalle de Nota</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2"><strong>Fecha:</strong> <span id="detalleNotaFecha">-</span></div>
+                    <div class="mb-2"><strong>Usuario:</strong> <span id="detalleNotaUsuario">-</span></div>
+                    <div class="mb-2"><strong>Descripción:</strong>
+                        <div id="detalleNotaDescripcion">-</div>
+                    </div>
+                    <hr>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detalleNotaItemsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
         </div>

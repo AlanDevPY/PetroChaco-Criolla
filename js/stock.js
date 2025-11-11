@@ -638,6 +638,7 @@ if (formAgregarItemReposicion) {
 const formAgregarItemSalida = document.getElementById('formAgregarItemSalida');
 const salidaProducto = document.getElementById('salidaProducto');
 const salidaCantidad = document.getElementById('salidaCantidad');
+const salidaDescripcion = document.getElementById('salidaDescripcion');
 
 if (formAgregarItemSalida) {
   formAgregarItemSalida.addEventListener('submit', (e) => {
@@ -682,9 +683,11 @@ if (btnConfirmarSalida) {
       // registrar nota de salida
       const totalItems = salidaLista.reduce((acc, it) => acc + Number(it.cantidad), 0);
       const usuario = (document.getElementById('usuarioLogueado')?.textContent || '').trim();
+      const descripcion = (salidaDescripcion?.value || '').trim();
       const nota = {
         fecha: dayjs().format('DD/MM/YYYY HH:mm:ss'),
         usuario,
+        descripcion,
         items: salidaLista,
         totalItems
       };
@@ -761,8 +764,13 @@ if (modalHistorial) {
           <td>${n.usuario || '-'}</td>
           <td>${n.totalItems || (n.items?.length || 0)}</td>
           <td class="text-end">${formatGs(n.totalCompra || 0)}</td>
-          <td></td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-primary" data-note-id="${n.id}" data-note-type="reposicion">Ver</button>
+          </td>
         </tr>`);
+      // Attach click handler for the just-added button
+      const btn = tbody.querySelector(`button[data-note-id="${n.id}"][data-note-type="reposicion"]`);
+      if (btn) btn.addEventListener('click', () => mostrarDetalleNotaModal(n, 'reposicion'));
     });
   });
 }
@@ -776,7 +784,7 @@ if (modalHistorialSalidas) {
     tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>';
     const notas = await obtenerSalidas(50);
     if (!notas.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sin registros</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Sin registros</td></tr>';
       return;
     }
     tbody.innerHTML = '';
@@ -785,10 +793,38 @@ if (modalHistorialSalidas) {
         <tr>
           <td>${n.fecha || '-'}</td>
           <td>${n.usuario || '-'}</td>
+          <td>${(n.descripcion && n.descripcion.length > 80) ? n.descripcion.slice(0, 80) + '...' : (n.descripcion || '-')}</td>
           <td>${n.totalItems || (n.items?.length || 0)}</td>
-          <td></td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-primary" data-note-id="${n.id}" data-note-type="salida">Ver</button>
+          </td>
         </tr>`);
+      // Attach click handler
+      const btnS = tbody.querySelector(`button[data-note-id="${n.id}"][data-note-type="salida"]`);
+      if (btnS) btnS.addEventListener('click', () => mostrarDetalleNotaModal(n, 'salida'));
     });
   });
+}
+
+// Mostrar detalle de nota en modal reutilizable
+function mostrarDetalleNotaModal(nota, tipo) {
+  try {
+    const modalEl = document.getElementById('modalDetalleNota');
+    if (!modalEl) return;
+    document.getElementById('detalleNotaTitle').textContent = tipo === 'reposicion' ? 'Detalle Nota de Reposición' : 'Detalle Nota de Salida';
+    document.getElementById('detalleNotaFecha').textContent = nota.fecha || '-';
+    document.getElementById('detalleNotaUsuario').textContent = nota.usuario || '-';
+    document.getElementById('detalleNotaDescripcion').textContent = nota.descripcion || (nota.totalCompra ? `Total Compra: ${formatGs(nota.totalCompra)}` : '-');
+    const tbody = document.getElementById('detalleNotaItemsBody');
+    tbody.innerHTML = '';
+    (nota.items || []).forEach(it => {
+      const cantidad = it.cantidad || it.cant || 0;
+      tbody.insertAdjacentHTML('beforeend', `<tr><td>${it.item || it.nombre || '-'}</td><td class="text-center">${cantidad}</td></tr>`);
+    });
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+  } catch (e) {
+    console.error('Error mostrando detalle de nota:', e);
+  }
 }
 
