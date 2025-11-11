@@ -240,6 +240,65 @@ body {
     opacity: 0.6;
 }
 
+/* Selects específicos del formulario de stock: mejorar visibilidad y reemplazar flecha nativa */
+select.form-select#nuevoCategoriaStock,
+select.form-select#actualizarCategoriaStock {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: var(--text) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    padding-right: 2.25rem !important;
+    /* espacio para el icono */
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: linear-gradient(45deg, transparent 50%, rgba(232, 241, 245, 0.9) 50%), linear-gradient(135deg, rgba(232, 241, 245, 0.9) 50%, transparent 50%), linear-gradient(to right, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.02));
+    background-position: calc(100% - 1rem) calc(50% - 3px), calc(100% - 0.6rem) calc(50% - 3px), 100% 0;
+    background-size: 6px 6px, 6px 6px, 1.5rem 100%;
+    background-repeat: no-repeat;
+}
+
+select.form-select#nuevoCategoriaStock:focus,
+select.form-select#actualizarCategoriaStock:focus {
+    background: rgba(255, 255, 255, 0.09) !important;
+    border-color: rgba(40, 193, 255, .65) !important;
+    box-shadow: 0 0 0 .2rem rgba(40, 193, 255, .22) !important;
+}
+
+/* Disabled select styling (legible) */
+select.form-select:disabled {
+    background: rgba(255, 255, 255, 0.03) !important;
+    color: rgba(232, 241, 245, 0.65) !important;
+    opacity: 1 !important;
+}
+
+/* Opciones del select: mejora visual (nota: el estilado de <option> es limitado en algunos navegadores) */
+select.form-select option {
+    background: rgba(17, 23, 28, 0.98) !important;
+    /* fondo oscuro para cada option */
+    color: var(--text) !important;
+    /* texto claro */
+    padding: 8px 12px;
+    /* más espacio en cada opción (en navegadores que respeten padding) */
+    font-size: 0.95rem;
+    /* tamaño legible */
+}
+
+/* WebKit: asegurar contraste en la lista desplegable en Chrome/Edge/Safari */
+select.form-select::-webkit-dropdown-button {
+    filter: invert(1) brightness(1.2);
+}
+
+/* Firefox: forzar fondo/foreground en la lista (mejor soporte en FF) */
+@-moz-document url-prefix() {
+    select.form-select option {
+        background: rgba(17, 23, 28, 0.98) !important;
+        color: var(--text) !important;
+    }
+}
+
+/* Si se requiere control total del diseño de opciones (colores, iconos, icono seleccionado, thumbnails)
+   se puede reemplazar el <select> por un componente personalizado (lista absoluta) que permite
+   estilado completo. Dime si quieres que implemente ese reemplazo. */
 .form-label {
     color: rgba(232, 241, 245, .9);
     font-weight: 600;
