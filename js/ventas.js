@@ -338,19 +338,8 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
         return;
       }
 
-      // Verificar si se debe emitir factura legal
-      const emitirFactura = document.getElementById("emitirFacturaLegal").checked;
-      if (emitirFactura) {
-        const timbrado = await obtenerTimbradoActivo();
-        if (timbrado) {
-          await imprimirFacturaFiscal(venta, timbrado);
-        } else {
-          alertaError("Sin timbrado activo", "No hay timbrado activo para emitir factura legal");
-          imprimirTicket(venta);
-        }
-      } else {
-        imprimirTicket(venta);
-      }
+      // Por ahora: siempre imprimir solo el ticket comprobante (no emitir factura)
+      imprimirTicket(venta);
 
 
       // obtenner instancia de modalcobro y cerrar
@@ -395,19 +384,8 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
         return;
       }
 
-      // Verificar si se debe emitir factura legal
-      const emitirFactura = document.getElementById("emitirFacturaLegal").checked;
-      if (emitirFactura) {
-        const timbrado = await obtenerTimbradoActivo();
-        if (timbrado) {
-          await imprimirFacturaFiscal(venta, timbrado);
-        } else {
-          alertaError("Sin timbrado activo", "No hay timbrado activo para emitir factura legal");
-          imprimirTicket(venta);
-        }
-      } else {
-        imprimirTicket(venta);
-      }
+      // Por ahora: siempre imprimir solo el ticket comprobante (no emitir factura)
+      imprimirTicket(venta);
 
       // obtenner instancia de modalcobro y cerrar
       const modalCobro = bootstrap.Modal.getInstance(
@@ -759,7 +737,17 @@ function imprimirTicket(venta) {
 
   // --- IMPRIMIR SOLO EL TICKET ---
   setTimeout(() => {
+    // Marcar únicamente el wrapper del ticket para impresión (compatibiliza con css .show-print)
+    document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
+    const ticketWrapper = document.getElementById('ticket-container')?.closest('.ticket-wrapper');
+    if (ticketWrapper) ticketWrapper.classList.add('show-print');
+
     window.print();
+
+    // Limpiar la marca de impresión después de un breve retardo
+    setTimeout(() => {
+      if (ticketWrapper) ticketWrapper.classList.remove('show-print');
+    }, 500);
   }, 3000);
 
 }
