@@ -844,7 +844,7 @@ export function generarTicketDesdeNota(nota, tipo) {
 
     const totalItems = nota.totalItems || (nota.items || []).reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
 
-    const ticketHTML = `
+    const ticketBody = `
       <div class="ticket-container">
         <div class="ticket-header ticket-center" style="border-bottom:2px solid #000;padding-bottom:1.5mm;margin-bottom:1.5mm;">
           <div class="ticket-bold" style="font-size:15px;letter-spacing:1px;">Petro Chaco Criolla</div>
@@ -878,26 +878,56 @@ export function generarTicketDesdeNota(nota, tipo) {
       </div>
     `;
 
-    // Crear wrapper clonable y marcar para impresión
-    const wrapper = document.createElement('div');
-    wrapper.className = 'ticket-wrapper show-print';
-    wrapper.innerHTML = ticketHTML;
-    document.body.appendChild(wrapper);
+    // Construir un documento HTML mínimo y abrirlo en una nueva ventana para imprimir.
+    const fullHtml = `<!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Ticket</title>
+          <style>
+            @media print { @page { size: 70mm auto; margin: 0; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+            body{ margin:0; padding:0; background:#fff; color:#000; }
+            .ticket-container{ width:70mm; box-sizing:border-box; padding:4px 4px; font-family: 'Courier New', monospace; font-size:12px; line-height:1.3; }
+            .ticket-header{ margin-bottom:6px; }
+            .ticket-center{ text-align:center; }
+            .ticket-bold{ font-weight:700; }
+            .ticket-items{ width:100%; border-collapse:collapse; margin:6px 0; }
+            .ticket-items th, .ticket-items td{ padding:4px 2px; text-align:left; }
+            .ticket-qty{ width:15%; text-align:center; }
+            .ticket-desc{ width:85%; }
+          </style>
+        </head>
+        <body>
+          ${ticketBody}
+        </body>
+      </html>`;
 
-    // Esperar a que el navegador renderice el contenido imprimible
+    const printWin = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=400,height=800');
+    if (!printWin) {
+      showInfo('No se pudo abrir la ventana de impresión. Revisa el bloqueador de ventanas emergentes.');
+      return;
+    }
+
+    printWin.document.open();
+    printWin.document.write(fullHtml);
+    printWin.document.close();
+    printWin.focus();
+
+    // Esperar un momento para que el navegador renderice la ventana de impresión
     setTimeout(() => {
       try {
-        window.print();
-      } finally {
-        // Eliminar wrapper después de la impresión
-        setTimeout(() => {
-          wrapper.remove();
-        }, 300);
+        printWin.print();
+      } catch (e) {
+        console.error('Error al imprimir desde ventana:', e);
       }
-    }, 250);
+      // Cerrar la ventana automáticamente unos instantes después de imprimir
+      setTimeout(() => {
+        try { printWin.close(); } catch (e) { /* ignore */ }
+      }, 600);
+    }, 500);
 
   } catch (e) {
-    console.error('Error generando ticket desde nota:', e);
+    console.error('Error generando ticket desde nota (fallback):', e);
   }
 }
 
