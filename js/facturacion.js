@@ -231,15 +231,10 @@ async function guardarTimbrado(e) {
 export async function obtenerTimbradoActivo() {
     try {
         const timbradosRef = collection(db, 'timbrados');
-        const hoy = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
-        const q = query(
-            timbradosRef,
-            where('activo', '==', true),
-            where('fechaVencimiento', '>=', hoy),
-            orderBy('fechaVencimiento', 'asc')
-        );
-
+        // Para evitar la necesidad de un índice compuesto en proyectos pequeños
+        // consultamos solo por 'activo' y luego filtramos/ordenamos en el cliente.
+        const q = query(timbradosRef, where('activo', '==', true));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
@@ -247,14 +242,42 @@ export async function obtenerTimbradoActivo() {
             return null;
         }
 
-        const timbrado = querySnapshot.docs[0];
-        return {
-            id: timbrado.id,
-            ...timbrado.data()
-        };
+        const hoy = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+
+        // Mapear y filtrar por fecha de vencimiento en el cliente
+        const timbrados = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        const timbradosValidos = timbrados
+            .filter(t => t.fechaVencimiento && t.fechaVencimiento >= hoy)
+            .sort((a, b) => a.fechaVencimiento.localeCompare(b.fechaVencimiento));
+
+        if (timbradosValidos.length === 0) {
+            console.warn('⚠️ No hay timbrado activo dentro de la vigencia');
+            return null;
+        }
+
+        return timbradosValidos[0];
 
     } catch (error) {
         console.error('❌ Error al obtener timbrado activo:', error);
+
+        // Si Firebase sugiere crear un índice compuesto, extraer el enlace y mostrarlo al usuario
+        const msg = error && error.message ? error.message : '';
+        const match = msg.match(/https?:\/\/console\.firebase\.google\.com\/[^")\s]+/);
+        if (match && match[0]) {
+            const url = match[0];
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al obtener timbrado activo',
+                html: `La consulta requiere un índice compuesto en Firestore. Cree el índice antes de continuar: <a href="${url}" target="_blank">Crear índice en Firebase Console</a>`
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al obtener timbrado activo',
+                text: error && error.message ? error.message : String(error)
+            });
+        }
+
         return null;
     }
 }

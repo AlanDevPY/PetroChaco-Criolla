@@ -338,8 +338,8 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
         return;
       }
 
-      // Por ahora: siempre imprimir solo el ticket comprobante (no emitir factura)
-      imprimirTicket(venta);
+      // Imprimir según checkbox: ticket o factura legal
+      await procesarImpresion(venta);
 
 
       // obtenner instancia de modalcobro y cerrar
@@ -384,8 +384,8 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
         return;
       }
 
-      // Por ahora: siempre imprimir solo el ticket comprobante (no emitir factura)
-      imprimirTicket(venta);
+      // Imprimir según checkbox: ticket o factura legal
+      await procesarImpresion(venta);
 
       // obtenner instancia de modalcobro y cerrar
       const modalCobro = bootstrap.Modal.getInstance(
@@ -674,17 +674,41 @@ async function imprimirFacturaFiscal(venta, timbrado) {
 
   // --- IMPRIMIR ---
   setTimeout(() => {
-    // Ocultar ticket normal, mostrar factura fiscal
-    document.getElementById("ticket-container").style.display = "none";
-    document.getElementById("factura-fiscal-container").style.display = "block";
+    try {
+      // Clonar el contenedor de factura para impresión en un contenedor temporal.
+      const original = document.getElementById('factura-fiscal-container');
+      if (!original) {
+        console.warn('No se encontró #factura-fiscal-container para imprimir');
+        window.print();
+        return;
+      }
 
-    window.print();
+      const cloneWrapper = document.createElement('div');
+      cloneWrapper.className = 'ticket-wrapper show-print';
 
-    // Restaurar después de imprimir
-    setTimeout(() => {
-      document.getElementById("ticket-container").style.display = "block";
-      document.getElementById("factura-fiscal-container").style.display = "none";
-    }, 1000);
+      // Clonar el nodo y limpiar ids para evitar duplicados
+      const clone = original.cloneNode(true);
+      // eliminar ids recursivamente en el clone para evitar duplicados en el DOM
+      clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+
+      // También limpiar el id del contenedor clonado si existe
+      if (clone.hasAttribute && clone.hasAttribute('id')) clone.removeAttribute('id');
+
+      cloneWrapper.appendChild(clone);
+      document.body.appendChild(cloneWrapper);
+
+      // Llamar a la impresión sobre el clone marcado con .show-print
+      window.print();
+
+      // Remover el clone después de imprimir
+      setTimeout(() => {
+        if (cloneWrapper && cloneWrapper.parentNode) cloneWrapper.parentNode.removeChild(cloneWrapper);
+      }, 1000);
+    } catch (err) {
+      console.error('Error durante la preparación de impresión de factura:', err);
+      // Fallback: imprimir lo que haya
+      window.print();
+    }
   }, 500);
 }
 
@@ -750,4 +774,33 @@ function imprimirTicket(venta) {
     }, 500);
   }, 3000);
 
+}
+
+
+// Procesar impresión: si el cajero marcó emitir factura legal, intentar imprimir factura fiscal
+async function procesarImpresion(venta) {
+  const emitirCheckbox = document.getElementById('emitirFacturaLegal');
+  const emitir = emitirCheckbox ? emitirCheckbox.checked : false;
+
+  if (emitir) {
+    // Obtener timbrado activo
+    try {
+      const timbrado = await obtenerTimbradoActivo();
+      if (!timbrado) {
+        alertaError('Sin timbrado activo', 'No se encontró un timbrado SET activo. Se imprimirá el comprobante normal.');
+        imprimirTicket(venta);
+        return;
+      }
+
+      // Llamar a la función que imprime la factura fiscal
+      await imprimirFacturaFiscal(venta, timbrado);
+    } catch (err) {
+      console.error('Error obteniendo timbrado activo:', err);
+      alertaError('Error', 'No se pudo obtener el timbrado. Se imprimirá el comprobante normal.');
+      imprimirTicket(venta);
+    }
+  } else {
+    // Imprimir comprobante normal
+    imprimirTicket(venta);
+  }
 }
