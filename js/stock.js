@@ -821,10 +821,97 @@ function mostrarDetalleNotaModal(nota, tipo) {
       const cantidad = it.cantidad || it.cant || 0;
       tbody.insertAdjacentHTML('beforeend', `<tr><td>${it.item || it.nombre || '-'}</td><td class="text-center">${cantidad}</td></tr>`);
     });
+    // Guardar la nota actualmente mostrada para acciones (ej: imprimir)
+    window._notaActualDetalle = { nota, tipo };
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     modal.show();
   } catch (e) {
     console.error('Error mostrando detalle de nota:', e);
   }
 }
+
+// Generar ticket imprimible desde una nota (reposicion o salida)
+export function generarTicketDesdeNota(nota, tipo) {
+  try {
+    const fecha = nota.fecha || dayjs().format('DD/MM/YYYY HH:mm:ss');
+    const usuario = nota.usuario || '-';
+    const descripcion = nota.descripcion || '';
+
+    const itemsHtml = (nota.items || []).map(it => {
+      const cantidad = it.cantidad || it.cant || 0;
+      return `<tr><td class="ticket-qty">${cantidad}</td><td class="ticket-desc">${it.item || it.nombre || '-'}</td></tr>`;
+    }).join('');
+
+    const totalItems = nota.totalItems || (nota.items || []).reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
+
+    const ticketHTML = `
+      <div class="ticket-container">
+        <div class="ticket-header ticket-center" style="border-bottom:2px solid #000;padding-bottom:1.5mm;margin-bottom:1.5mm;">
+          <div class="ticket-bold" style="font-size:15px;letter-spacing:1px;">Petro Chaco Criolla</div>
+          <div class="ticket-small">Nota: ${tipo === 'reposicion' ? 'Reposición' : 'Salida'}</div>
+        </div>
+        <div style="font-size:11px;text-align:left;margin-bottom:1.5mm;line-height:1.3;">
+          <span class="ticket-bold">Fecha:</span> ${fecha}<br>
+          <span class="ticket-bold">Usuario:</span> ${usuario}<br>
+          ${descripcion ? `<span class="ticket-bold">Descripción:</span> ${descripcion}<br>` : ''}
+        </div>
+        <div style="border-bottom:1px dashed #000;margin-bottom:1.5mm;"></div>
+        <table class="ticket-items">
+          <thead>
+            <tr>
+              <th class="ticket-qty">Cant</th>
+              <th class="ticket-desc">Producto</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+        <div style="border-bottom:1px dashed #000;margin-bottom:1.5mm;"></div>
+        <div class="ticket-total-row" style="background:#f5f5f5;border-radius:1.5mm;padding:1.2mm 0 1.2mm 0;margin-bottom:1.5mm;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:0.5mm;">
+            <span class="ticket-bold">Items</span>
+            <span class="ticket-right">${totalItems}</span>
+          </div>
+        </div>
+        <div class="ticket-msg" id="ticket-msg" style="margin-top:2mm;">Documento interno</div>
+      </div>
+    `;
+
+    // Crear wrapper clonable y marcar para impresión
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ticket-wrapper show-print';
+    wrapper.innerHTML = ticketHTML;
+    document.body.appendChild(wrapper);
+
+    // Esperar a que el navegador renderice el contenido imprimible
+    setTimeout(() => {
+      try {
+        window.print();
+      } finally {
+        // Eliminar wrapper después de la impresión
+        setTimeout(() => {
+          wrapper.remove();
+        }, 300);
+      }
+    }, 250);
+
+  } catch (e) {
+    console.error('Error generando ticket desde nota:', e);
+  }
+}
+
+// Botón imprimir en modal detalle
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btnImprimirNota');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const current = window._notaActualDetalle;
+    if (!current || !current.nota) {
+      showInfo('No hay nota seleccionada para imprimir');
+      return;
+    }
+    generarTicketDesdeNota(current.nota, current.tipo);
+  });
+});
 
