@@ -697,6 +697,10 @@ async function imprimirFacturaFiscal(venta, timbrado) {
       cloneWrapper.appendChild(clone);
       document.body.appendChild(cloneWrapper);
 
+      // Logs de depuración: confirmar que el clone contiene contenido antes de imprimir
+      console.log('Factura: clone preparado, longitud de texto:', cloneWrapper.innerText.length);
+      console.log('Factura: preview HTML (inicio):', cloneWrapper.innerHTML.slice(0, 500));
+
       // Llamar a la impresión sobre el clone marcado con .show-print
       window.print();
 
@@ -709,7 +713,7 @@ async function imprimirFacturaFiscal(venta, timbrado) {
       // Fallback: imprimir lo que haya
       window.print();
     }
-  }, 500);
+  }, 1200);
 }
 
 // FUNCION PARA GENERAR TICKTE DE VENTA
