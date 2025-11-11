@@ -26,18 +26,48 @@
   <!-- Custom CSS -->
   <style>
     /* Mejoras visuales para el modal de facturas */
-    #modalVerFacturas .modal-header { padding-bottom: 0.5rem; }
-    #modalVerFacturas .modal-header .form-control { min-width: 240px; max-width: 560px; }
-    #modalVerFacturas .modal-header .d-flex > .mt-2 { margin-top: .35rem; }
-    #facturasBadgeCount { font-size: 0.70rem; padding: .35rem .45rem; }
-    #facturasCacheBadge { font-size: 0.70rem; vertical-align: middle; }
+    #modalVerFacturas .modal-header {
+      padding-bottom: 0.5rem;
+    }
+
+    #modalVerFacturas .modal-header .form-control {
+      min-width: 240px;
+      max-width: 560px;
+    }
+
+    #modalVerFacturas .modal-header .d-flex>.mt-2 {
+      margin-top: .35rem;
+    }
+
+    #facturasBadgeCount {
+      font-size: 0.70rem;
+      padding: .35rem .45rem;
+    }
+
+    #facturasCacheBadge {
+      font-size: 0.70rem;
+      vertical-align: middle;
+    }
+
     /* Alinear el texto informativo a la derecha y con menor opacidad */
-    #facturasInfo { font-size: 0.85rem; color: rgba(0,0,0,0.6); }
+    #facturasInfo {
+      font-size: 0.85rem;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
     /* Evitar que DataTables inyecte su propio search y lo duplique en pantallas pequeñas */
-    .dataTables_filter { display: none !important; }
+    .dataTables_filter {
+      display: none !important;
+    }
+
     /* Ajustes de tabla para que no pegue a los bordes del modal */
-    #modalVerFacturas .table-responsive { margin-top: .5rem; }
-    #facturasEmpty { padding: 1rem 0; }
+    #modalVerFacturas .table-responsive {
+      margin-top: .5rem;
+    }
+
+    #facturasEmpty {
+      padding: 1rem 0;
+    }
   </style>
 
 </head>
