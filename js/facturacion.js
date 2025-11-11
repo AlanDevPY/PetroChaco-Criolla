@@ -2,13 +2,15 @@
 // FACTURACIÓN - GESTIÓN DE TIMBRADOS SET
 // ========================================
 
-import { db } from './firebase.js';
+import { db, obtenerFacturas, anularFactura, obtenerFacturaPorId } from './firebase.js';
+import { FirebaseCache } from './firebase-cache.js';
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, getDoc } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js';
 
 // ========================================
 // VARIABLES GLOBALES
 // ========================================
 let tablaTimbrados;
+let tablaFacturas;
 
 // ========================================
 // INICIALIZACIÓN
@@ -35,6 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Inicializar DataTable
         inicializarTabla();
+        inicializarTablaFacturas();
 
         // Cargar timbrados desde Firebase
         await cargarTimbrados();
@@ -77,6 +80,172 @@ function inicializarTabla() {
         ]
     });
 }
+
+function inicializarTablaFacturas() {
+    tablaFacturas = $('#tablaFacturas').DataTable({
+        language: {
+            url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+        },
+        responsive: true,
+        autoWidth: false,
+        // quitar filtro (search) por defecto, usamos nuestro input personalizado
+        dom: 'lrtip',
+        pageLength: 10,
+        order: [[4, 'desc']],
+        columnDefs: [
+            { targets: 0, visible: false },
+            { targets: 6, orderable: false }
+        ]
+    });
+}
+
+async function cargarFacturas() {
+    try {
+        // Intentar obtener del caché primero para conocer la procedencia y edad
+        const cache = new FirebaseCache('facturas');
+        let facturas = cache.get();
+        let fromCache = true;
+        if (!facturas) {
+            // Si no hay caché válido, pedir al helper (que además guardará en caché)
+            facturas = await obtenerFacturas(200);
+            fromCache = false;
+        }
+        if (!tablaFacturas) inicializarTablaFacturas();
+        tablaFacturas.clear();
+        facturas.forEach(f => {
+            const clienteNombre = (f.cliente && f.cliente.nombre) ? f.cliente.nombre : 'Consumidor Final';
+            const fecha = f.fechaTS && f.fechaTS.toDate ? f.fechaTS.toDate().toLocaleString() : '-';
+            const estado = f.estado === 'anulada' ? '<span class="badge bg-danger">Anulada</span>' : '<span class="badge bg-success">Activa</span>';
+            const acciones = `
+              <button class="btn btn-sm btn-primary" onclick="window.verFactura('${f.id}')"><i class="bi bi-eye"></i></button>
+              <button class="btn btn-sm btn-danger ms-1" onclick="window.anularFacturaConfirm('${f.id}')"><i class="bi bi-x-circle"></i></button>
+            `;
+            tablaFacturas.row.add([f.id, f.numeroFormateado || f.numero, clienteNombre, (f.total || 0).toLocaleString('es-PY') + ' Gs', fecha, estado, acciones]);
+        });
+        tablaFacturas.draw();
+
+        // Actualizar badge en botón y barra informativa
+        const badge = document.getElementById('facturasBadgeCount');
+        const cacheBadge = document.getElementById('facturasCacheBadge');
+        const info = document.getElementById('facturasInfo');
+        const empty = document.getElementById('facturasEmpty');
+        if (badge) badge.textContent = (facturas && facturas.length) ? facturas.length : 0;
+        if (empty) empty.style.display = (facturas && facturas.length) ? 'none' : 'block';
+
+        if (fromCache) {
+            if (cacheBadge) { cacheBadge.className = 'badge bg-info ms-2'; cacheBadge.textContent = 'cache'; }
+            if (info) info.textContent = `Obtenidas ${facturas.length || 0} (cache: ${cache.getAge()}s)`;
+        } else {
+            if (cacheBadge) { cacheBadge.className = 'badge bg-success ms-2'; cacheBadge.textContent = 'en vivo'; }
+            if (info) info.textContent = `Obtenidas ${facturas.length || 0} (consulta en vivo)`;
+        }
+    } catch (e) {
+        console.error('Error al cargar facturas', e);
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar las facturas.' });
+    }
+}
+
+// Función pública para actualizar el badge en la UI sin abrir el modal
+export function updateFacturasBadge() {
+    try {
+        const cache = new FirebaseCache('facturas');
+        const cached = cache.get();
+        const badge = document.getElementById('facturasBadgeCount');
+        const cacheBadge = document.getElementById('facturasCacheBadge');
+        if (badge) badge.textContent = (cached && cached.length) ? cached.length : 0;
+        if (cacheBadge) {
+            if (cached) { cacheBadge.className = 'badge bg-info ms-2'; cacheBadge.textContent = 'cache'; }
+            else { cacheBadge.className = 'badge bg-secondary ms-2'; cacheBadge.textContent = 'vacío'; }
+        }
+    } catch (e) {
+        console.warn('No se pudo actualizar el badge de facturas', e);
+    }
+}
+
+// Funciones globales para botones de la tabla (namespace window)
+window.anularFacturaConfirm = async function (id) {
+    const res = await Swal.fire({
+        title: '¿Anular factura?',
+        text: 'Se marcará la factura como anulada. Esta acción puede requerir autorizaciones según su flujo.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, anular',
+        cancelButtonText: 'Cancelar'
+    });
+    if (res.isConfirmed) {
+        try {
+            await anularFactura(id, { usuario: document.getElementById('usuarioLogueado')?.textContent || null });
+            Swal.fire({ icon: 'success', title: 'Anulada', text: 'La factura fue marcada como anulada.' });
+            cargarFacturas();
+        } catch (e) {
+            console.error('Error al anular factura', e);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo anular la factura.' });
+        }
+    }
+}
+
+window.verFactura = async function (id) {
+    try {
+        const f = await obtenerFacturaPorId(id);
+        if (!f) return Swal.fire({ icon: 'info', title: 'No encontrada', text: 'No se encontró la factura.' });
+        // Mostrar detalle simple
+        const cliente = f.cliente || {};
+        let itemsHtml = '';
+        if (f.venta && Array.isArray(f.venta)) {
+            f.venta.forEach(it => {
+                itemsHtml += `<tr><td>${it.cantidad}</td><td>${it.item}</td><td>${(it.subTotal || 0).toLocaleString('es-PY')} Gs</td></tr>`;
+            });
+        }
+        const html = `
+          <div>
+            <p><strong>Factura:</strong> ${f.numeroFormateado || f.numero}</p>
+            <p><strong>Cliente:</strong> ${cliente.nombre || 'Consumidor Final'}</p>
+            <p><strong>Total:</strong> ${(f.total || 0).toLocaleString('es-PY')} Gs</p>
+            <table class="table"><thead><tr><th>Cant</th><th>Item</th><th>SubTotal</th></tr></thead><tbody>${itemsHtml}</tbody></table>
+          </div>
+        `;
+        Swal.fire({ title: 'Detalle de factura', html, width: '800px' });
+    } catch (e) {
+        console.error('Error al ver factura', e);
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener el detalle.' });
+    }
+}
+
+// Cargar facturas cada vez que se abre el modal
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('modalVerFacturas');
+    if (modal) {
+        modal.addEventListener('shown.bs.modal', async () => {
+            await cargarFacturas();
+        });
+    }
+    // Wire search and refresh UI
+    const search = document.getElementById('facturaSearch');
+    if (search) {
+        search.addEventListener('input', (e) => {
+            if (tablaFacturas) {
+                tablaFacturas.search(e.target.value).draw();
+            }
+        });
+    }
+    const btnRefresh = document.getElementById('btnRefreshFacturas');
+    if (btnRefresh) {
+        btnRefresh.addEventListener('click', async () => {
+            // Invalidate cache and reload (use global invalidate if available)
+            try {
+                // try to invalidate using imported function if available
+                const { invalidateCache } = await import('./firebase-cache.js');
+                invalidateCache('facturas');
+            } catch (e) {
+                console.warn('No se pudo invalidar caché por import dinámico', e);
+            }
+            await cargarFacturas();
+        });
+    }
+
+    // Actualizar badge inicial con datos de caché (si existen)
+    try { updateFacturasBadge(); } catch (e) { /* ignore */ }
+});
 
 // ========================================
 // CARGAR TIMBRADOS DESDE FIREBASE

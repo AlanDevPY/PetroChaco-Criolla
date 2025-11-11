@@ -32,6 +32,7 @@ import { mejorarDatalist } from "./datalist-mejorado.js";
 
 // Importar funciones de facturación
 import { obtenerTimbradoActivo, incrementarNumeroFactura } from "./facturacion.js";
+import { registrarFactura } from "./firebase.js";
 
 // VARIABLES GLOBALES
 let pedido = [];
@@ -611,8 +612,19 @@ async function imprimirFacturaFiscal(venta, timbrado) {
     `${timbrado.fechaInicio.split('-').reverse().join('/')} - ${timbrado.fechaVencimiento.split('-').reverse().join('/')}`;
 
   // --- NÚMERO DE FACTURA ---
-  const numeroFactura = `${timbrado.establecimiento}-${timbrado.puntoExpedicion}-${String(timbrado.numeroActual).padStart(7, '0')}`;
-  document.getElementById("factura-numero").textContent = numeroFactura;
+  // Registrar la factura en Firestore y reservar el número de timbrado de forma atómica
+  let registroFacturaInfo = null;
+  try {
+    registroFacturaInfo = await registrarFactura({ venta, cliente: venta.cliente, total: venta.total, cajaId: null, usuario: document.getElementById('usuarioLogueado')?.textContent || null }, timbrado.id);
+    document.getElementById("factura-numero").textContent = registroFacturaInfo.numeroFormateado;
+    // exponer id de factura por si se necesita (no mutar venta original sin copy)
+    venta.facturaId = registroFacturaInfo.id;
+  } catch (err) {
+    console.error('Error al registrar la factura en Firestore:', err);
+    alertaError('Error', 'No se pudo registrar la factura en la base de datos. Se intentará imprimir igualmente.');
+    const numeroFactura = `${timbrado.establecimiento}-${timbrado.puntoExpedicion}-${String(timbrado.numeroActual).padStart(7, '0')}`;
+    document.getElementById("factura-numero").textContent = numeroFactura;
+  }
 
   // --- FECHA ---
   document.getElementById("factura-fecha").textContent = venta.fecha || new Date().toLocaleString("es-PY");
@@ -663,14 +675,7 @@ async function imprimirFacturaFiscal(venta, timbrado) {
   document.getElementById("factura-iva-10").textContent = iva10.toLocaleString("es-PY") + " Gs";
   document.getElementById("factura-total").textContent = venta.total.toLocaleString("es-PY") + " Gs";
 
-  // --- INCREMENTAR NÚMERO DE FACTURA EN FIREBASE ---
-  try {
-    await incrementarNumeroFactura(timbrado.id);
-    console.log("✅ Número de factura incrementado");
-  } catch (error) {
-    console.error("❌ Error al incrementar número de factura:", error);
-    alertaError("Error", "No se pudo incrementar el número de factura");
-  }
+  // Nota: la numeración se reservó y actualizó dentro de registrarFactura (transacción).
 
   // --- IMPRIMIR ---
   setTimeout(() => {

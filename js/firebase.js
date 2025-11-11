@@ -578,3 +578,97 @@ export const obtenerCajaPorId = async (id) => {
   }
 };
 
+// ==========================
+// FUNCIONES DE FACTURAS
+// ==========================
+// Registrar factura y reservar número de timbrado de forma atómica
+export const registrarFactura = async ({ venta, cliente, total, cajaId, usuario } = {}, timbradoId) => {
+  // usa una transacción para evitar duplicados en la numeración
+  try {
+    const result = await runTransaction(db, async (transaction) => {
+      const timbradoRef = doc(db, 'timbrados', timbradoId);
+      const timbradoSnap = await transaction.get(timbradoRef);
+      if (!timbradoSnap.exists()) throw new Error('Timbrado no encontrado');
+
+      const timbrado = timbradoSnap.data();
+      const current = Number(timbrado.numeroActual || timbrado.rangoDesde || 0);
+      if (current > Number(timbrado.rangoHasta)) throw new Error('Rango de facturas agotado');
+
+      // número que vamos a usar para esta factura
+      const numeroUsado = current;
+      const nuevoNumero = current + 1;
+
+      // actualizar timbrado
+      transaction.update(timbradoRef, { numeroActual: nuevoNumero });
+
+      // crear documento de factura con id generado
+      const facturaRef = doc(collection(db, 'Facturas'));
+      const facturaDoc = {
+        venta: venta || {},
+        cliente: cliente || {},
+        total: total || 0,
+        cajaId: cajaId || null,
+        usuario: usuario || null,
+        timbradoId: timbradoId,
+        timbradoNumero: timbrado.numeroTimbrado || null,
+        numero: numeroUsado,
+        numeroFormateado: `${timbrado.establecimiento}-${timbrado.puntoExpedicion}-${String(numeroUsado).padStart(7, '0')}`,
+        estado: 'activa',
+        fechaTS: serverTimestamp()
+      };
+
+      transaction.set(facturaRef, facturaDoc);
+
+      return { id: facturaRef.id, numero: numeroUsado, numeroFormateado: facturaDoc.numeroFormateado };
+    });
+
+    return result;
+  } catch (e) {
+    console.error('Error al registrar factura:', e);
+    throw e;
+  }
+};
+
+export const obtenerFacturas = async (max = 100) => {
+  return withCache('facturas', async () => {
+    try {
+      const q = query(collection(db, 'Facturas'), orderBy('fechaTS', 'desc'), limit(max));
+      const s = await getDocs(q);
+      return s.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+      console.error('Error al obtener facturas', e);
+      return [];
+    }
+  }, 5 * 60 * 1000);
+};
+
+export const obtenerFacturaPorId = async (id) => {
+  try {
+    const snap = await getDoc(doc(db, 'Facturas', id));
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...snap.data() };
+  } catch (e) {
+    console.error('Error al obtener factura por id', e);
+    return null;
+  }
+};
+
+// Anular (soft-delete) factura: cambiar estado a 'anulada' y guardar auditoría
+export const anularFactura = async (id, { motivo = null, usuario = null } = {}) => {
+  try {
+    const ref = doc(db, 'Facturas', id);
+    await updateDoc(ref, {
+      estado: 'anulada',
+      anuladoPor: usuario || null,
+      anuladoEn: serverTimestamp(),
+      motivoAnulacion: motivo || null
+    });
+    // invalidar cache de facturas
+    try { invalidateCache('facturas'); } catch (e) { /* ignore */ }
+  } catch (e) {
+    console.error('Error al anular factura', e);
+    throw e;
+  }
+};
+
+
