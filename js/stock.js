@@ -1,4 +1,4 @@
-import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId, obtenerStockPorId, sumarStockTransaccional, registrarReposicion, obtenerReposiciones } from "./firebase.js";
+import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId, obtenerStockPorId, sumarStockTransaccional, registrarReposicion, obtenerReposiciones, descontarStockTransaccional, registrarSalida, obtenerSalidas } from "./firebase.js";
 import { showSuccess, showError, showInfo, showLoading, hideLoading, showConfirm } from "./toast-utils.js";
 import { mostrarStockConDataTable, configurarEventosDataTable, actualizarFilaDataTable } from "./stock-modern.js";
 import { confirmarEliminacion, alertaAdvertencia } from "./swal-utils.js";
@@ -9,6 +9,7 @@ import { mejorarDatalist } from "./datalist-mejorado.js";
 let idStock
 let _cacheStock = [];
 let reposicionLista = [];
+let salidaLista = [];
 
 // Variable para controlar si usar DataTables o sistema manual
 const USAR_DATATABLES = true; // Cambiar a false para volver al sistema anterior
@@ -76,9 +77,12 @@ const reposicionCantidad = document.getElementById('reposicionCantidad');
 const reposicionPrecioCompra = document.getElementById('reposicionPrecioCompra');
 const reposicionPrecioVenta = document.getElementById('reposicionPrecioVenta');
 const reposicionTable = document.getElementById('reposicionTable');
+const salidaTable = document.getElementById('salidaTable');
 const reposicionTotalCompra = document.getElementById('reposicionTotalCompra');
 const btnConfirmarReposicion = document.getElementById('btnConfirmarReposicion');
 const btnCancelarReposicion = document.getElementById('btnCancelarReposicion');
+const btnConfirmarSalida = document.getElementById('btnConfirmarSalida');
+const btnCancelarSalida = document.getElementById('btnCancelarSalida');
 
 // Instancias de modales (solo los necesarios para formularios)
 const modalAgregarProducto = bootstrap.Modal.getOrCreateInstance(
@@ -100,6 +104,11 @@ const mostrarStock = async (resetearPagina = true) => {
     const dl = document.getElementById('listaProductosReposicion');
     if (dl) {
       dl.innerHTML = _cacheStock.map(s => `<option value="${s.item}"></option>`).join('');
+    }
+    // Poblar datalist para salida (misma data)
+    const dlSalida = document.getElementById('listaProductosSalida');
+    if (dlSalida) {
+      dlSalida.innerHTML = _cacheStock.map(s => `<option value="${s.item}"></option>`).join('');
     }
   } else {
     // Sistema manual original
@@ -343,6 +352,8 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   // Mejorar el datalist de reposición
   mejorarDatalist('reposicionProducto', 'listaProductosReposicion');
+  // Mejorar el datalist de salida (autocomplete)
+  mejorarDatalist('salidaProducto', 'listaProductosSalida');
 
   // Configurar eventos de DataTables si está activado
   if (USAR_DATATABLES) {
@@ -529,6 +540,32 @@ const renderReposicionTabla = () => {
   });
 };
 
+// Helpers Salida
+const renderSalidaTabla = () => {
+  if (!salidaTable) return;
+  salidaTable.innerHTML = '';
+  salidaLista.forEach((it, idx) => {
+    salidaTable.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${it.item}</td>
+        <td class="text-center">${it.cantidad}</td>
+        <td class="text-end"><button class="btn btn-sm btn-outline-danger" data-idx="${idx}">Eliminar</button></td>
+      </tr>`);
+  });
+  const enabled = salidaLista.length > 0;
+  if (btnConfirmarSalida) btnConfirmarSalida.disabled = !enabled;
+  if (btnCancelarSalida) btnCancelarSalida.disabled = !enabled;
+
+  // bind eliminar
+  salidaTable.querySelectorAll('button[data-idx]')?.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = Number(btn.getAttribute('data-idx'));
+      salidaLista.splice(i, 1);
+      renderSalidaTabla();
+    });
+  });
+};
+
 // Formateo de precios en inputs de reposición
 if (reposicionPrecioCompra) {
   reposicionPrecioCompra.addEventListener("input", () => {
@@ -597,6 +634,74 @@ if (formAgregarItemReposicion) {
   });
 }
 
+// --- SALIDA: agregar item a la nota de salida ---
+const formAgregarItemSalida = document.getElementById('formAgregarItemSalida');
+const salidaProducto = document.getElementById('salidaProducto');
+const salidaCantidad = document.getElementById('salidaCantidad');
+
+if (formAgregarItemSalida) {
+  formAgregarItemSalida.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const nombre = salidaProducto.value.trim();
+    const base = _cacheStock.find(s => String(s.item).toUpperCase() === nombre.toUpperCase());
+    const cant = Number(salidaCantidad.value);
+    if (!base) { showInfo('⚠️ Producto no encontrado en stock'); return; }
+    if (!cant || cant <= 0) { showInfo('⚠️ Cantidad inválida'); return; }
+
+    const existente = salidaLista.find(it => it.id === base.id);
+    if (existente) {
+      existente.cantidad += cant;
+    } else {
+      salidaLista.push({ id: base.id, item: base.item, cantidad: cant });
+    }
+    salidaProducto.value = '';
+    salidaCantidad.value = '1';
+    renderSalidaTabla();
+  });
+}
+
+// Cancelar salida
+if (btnCancelarSalida) {
+  btnCancelarSalida.addEventListener('click', () => {
+    salidaLista = [];
+    renderSalidaTabla();
+  });
+}
+
+// Confirmar salida: transacción y registro
+if (btnConfirmarSalida) {
+  btnConfirmarSalida.addEventListener('click', async () => {
+    if (salidaLista.length === 0) return;
+
+    const itemsTx = salidaLista.map(r => ({ id: r.id, cantidad: r.cantidad }));
+
+    try {
+      // descontar stock en una transacción
+      await descontarStockTransaccional(itemsTx);
+
+      // registrar nota de salida
+      const totalItems = salidaLista.reduce((acc, it) => acc + Number(it.cantidad), 0);
+      const usuario = (document.getElementById('usuarioLogueado')?.textContent || '').trim();
+      const nota = {
+        fecha: dayjs().format('DD/MM/YYYY HH:mm:ss'),
+        usuario,
+        items: salidaLista,
+        totalItems
+      };
+      await registrarSalida(nota);
+
+      // limpiar y refrescar
+      salidaLista = [];
+      renderSalidaTabla();
+      await mostrarStock();
+      showSuccess('✅ Salida registrada correctamente');
+    } catch (err) {
+      console.error('Error al procesar salida:', err);
+      showError('Error al procesar la salida. Revisa la consola.');
+    }
+  });
+}
+
 // Cancelar nota
 if (btnCancelarReposicion) {
   btnCancelarReposicion.addEventListener('click', () => {
@@ -656,6 +761,31 @@ if (modalHistorial) {
           <td>${n.usuario || '-'}</td>
           <td>${n.totalItems || (n.items?.length || 0)}</td>
           <td class="text-end">${formatGs(n.totalCompra || 0)}</td>
+          <td></td>
+        </tr>`);
+    });
+  });
+}
+
+// Historial Salidas
+const modalHistorialSalidas = document.getElementById('modalHistorialSalidas');
+if (modalHistorialSalidas) {
+  modalHistorialSalidas.addEventListener('show.bs.modal', async () => {
+    const tbody = document.getElementById('historialSalidasTable');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>';
+    const notas = await obtenerSalidas(50);
+    if (!notas.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sin registros</td></tr>';
+      return;
+    }
+    tbody.innerHTML = '';
+    notas.forEach(n => {
+      tbody.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td>${n.fecha || '-'}</td>
+          <td>${n.usuario || '-'}</td>
+          <td>${n.totalItems || (n.items?.length || 0)}</td>
           <td></td>
         </tr>`);
     });

@@ -388,6 +388,31 @@ export const obtenerReposiciones = async (max = 50) => {
   }, 5 * 60 * 1000); // Caché de 5 minutos
 };
 
+// Salidas (historial de notas de salida)
+export const registrarSalida = async (nota) => {
+  // nota: {fecha, usuario, items:[{id, item, cantidad}], totalItems}
+  try {
+    await addDoc(collection(db, "Salidas"), { ...nota, fechaTS: serverTimestamp() });
+    invalidateCache('salidas');
+  } catch (e) {
+    console.error('Error al registrar salida', e);
+    throw e;
+  }
+};
+
+export const obtenerSalidas = async (max = 50) => {
+  return withCache('salidas', async () => {
+    try {
+      const q = query(collection(db, "Salidas"), orderBy("fechaTS", "desc"), limit(max));
+      const s = await getDocs(q);
+      return s.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+      console.error('Error al obtener salidas', e);
+      return [];
+    }
+  }, 5 * 60 * 1000);
+};
+
 // * FUNCIONES QUE TENGAN QUE VER CON LA BASE DE DATOS DE CLIENTES
 
 // FUNCION PARA REGISTRAR CLIENTE
