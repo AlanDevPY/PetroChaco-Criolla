@@ -191,10 +191,19 @@ window.verFactura = async function (id) {
         // Mostrar detalle simple
         const cliente = f.cliente || {};
         let itemsHtml = '';
-        if (f.venta && Array.isArray(f.venta)) {
-            f.venta.forEach(it => {
+        // Soportar ambos casos: f.venta es array directo o es objeto con .venta array
+        let items = [];
+        if (Array.isArray(f.venta)) {
+            items = f.venta;
+        } else if (f.venta && Array.isArray(f.venta.venta)) {
+            items = f.venta.venta;
+        }
+        if (items.length > 0) {
+            items.forEach(it => {
                 itemsHtml += `<tr><td>${it.cantidad}</td><td>${it.item}</td><td>${(it.subTotal || 0).toLocaleString('es-PY')} Gs</td></tr>`;
             });
+        } else {
+            itemsHtml = '<tr><td colspan="3" class="text-center text-muted">Sin ítems</td></tr>';
         }
         const html = `
           <div>
