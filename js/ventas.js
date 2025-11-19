@@ -698,6 +698,7 @@ async function imprimirFacturaFiscal(venta, timbrado) {
 
       // --- IMPRESIÓN DOBLE: ORIGINAL Y COPIA SOLO PARA FACTURA FISCAL ---
       let paso = 0;
+      let copiaPendiente = false;
       const msg = document.querySelector('#factura-fiscal-container .ticket-msg');
       const mensajeOriginal = msg ? msg.innerHTML : '';
 
@@ -712,22 +713,32 @@ async function imprimirFacturaFiscal(venta, timbrado) {
         }, 500);
       }
 
+      function imprimirCopia() {
+        if (copiaPendiente) return; // Evita dobles disparos
+        copiaPendiente = true;
+        setTimeout(() => {
+          imprimirConMensaje('Copia: Comercio', () => {
+            if (msg) msg.innerHTML = mensajeOriginal;
+            window.onafterprint = null;
+          });
+        }, 100);
+      }
+
+      // Imprimir original y preparar handler para la copia
       paso = 1;
+      copiaPendiente = false;
       imprimirConMensaje('Original: Cliente', () => {
-        // Esperar a que el usuario cierre el diálogo de impresión
+        // Handler robusto para onafterprint
         let handler;
         handler = function () {
           window.onafterprint = null;
-          // Imprimir la copia
-          paso = 2;
-          setTimeout(() => {
-            imprimirConMensaje('Copia: Comercio', () => {
-              // Restaurar mensaje original después de imprimir la copia
-              if (msg) msg.innerHTML = mensajeOriginal;
-            });
-          }, 400);
+          imprimirCopia();
         };
         window.onafterprint = handler;
+        // Fallback: si onafterprint no dispara en 10s, forzar la copia
+        setTimeout(() => {
+          if (!copiaPendiente) imprimirCopia();
+        }, 10000);
       });
     } catch (err) {
       console.error('Error durante la preparación de impresión de factura:', err);
