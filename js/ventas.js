@@ -694,14 +694,41 @@ async function imprimirFacturaFiscal(venta, timbrado) {
       document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
       // Solo muestra la factura fiscal
       const fiscalWrapper = document.getElementById('factura-fiscal-container')?.closest('.ticket-wrapper');
-      if (fiscalWrapper) fiscalWrapper.classList.add('show-print');
+      if (!fiscalWrapper) return;
 
-      window.print();
+      // --- IMPRESIÓN DOBLE: ORIGINAL Y COPIA SOLO PARA FACTURA FISCAL ---
+      let paso = 0;
+      const msg = document.querySelector('#factura-fiscal-container .ticket-msg');
+      const mensajeOriginal = msg ? msg.innerHTML : '';
 
-      // Limpiar la marca de impresión después de un breve retardo
-      setTimeout(() => {
-        if (fiscalWrapper) fiscalWrapper.classList.remove('show-print');
-      }, 500);
+      function imprimirConMensaje(mensaje, callback) {
+        if (msg) msg.innerHTML = mensaje;
+        document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
+        fiscalWrapper.classList.add('show-print');
+        window.print();
+        setTimeout(() => {
+          fiscalWrapper.classList.remove('show-print');
+          if (callback) callback();
+        }, 500);
+      }
+
+      paso = 1;
+      imprimirConMensaje('Original: Cliente', () => {
+        // Esperar a que el usuario cierre el diálogo de impresión
+        let handler;
+        handler = function () {
+          window.onafterprint = null;
+          // Imprimir la copia
+          paso = 2;
+          setTimeout(() => {
+            imprimirConMensaje('Copia: Comercio', () => {
+              // Restaurar mensaje original después de imprimir la copia
+              if (msg) msg.innerHTML = mensajeOriginal;
+            });
+          }, 400);
+        };
+        window.onafterprint = handler;
+      });
     } catch (err) {
       console.error('Error durante la preparación de impresión de factura:', err);
       window.print();
@@ -750,22 +777,19 @@ function imprimirTicket(venta) {
 
   // --- MENSAJE FINAL PERSONALIZADO ---
   const msg = document.getElementById("ticket-msg");
-  msg.textContent = `¡Gracias ${cliente.nombre || "por tu compra"}! Vuelve pronto 🚗⛽`;
-
+  // Guardar mensaje original para restaurar luego
+  const mensajeOriginal = `¡Gracias ${cliente.nombre || "por tu compra"}! Vuelve pronto 🚗⛽`;
   // --- OCULTAR FACTURA, MOSTRAR SOLO TICKET ---
   document.getElementById("ticket-container").style.display = "block";
   document.getElementById("factura-fiscal-container").style.display = "none";
 
-  // --- IMPRIMIR SOLO EL TICKET ---
+  // --- IMPRESIÓN SIMPLE SOLO PARA TICKET ---
   setTimeout(() => {
     // Marcar únicamente el wrapper del ticket para impresión (compatibiliza con css .show-print)
     document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
     const ticketWrapper = document.getElementById('ticket-container')?.closest('.ticket-wrapper');
     if (ticketWrapper) ticketWrapper.classList.add('show-print');
-
     window.print();
-
-    // Limpiar la marca de impresión después de un breve retardo
     setTimeout(() => {
       if (ticketWrapper) ticketWrapper.classList.remove('show-print');
     }, 500);
