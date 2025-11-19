@@ -97,13 +97,27 @@
 @media print {
   @page {
     margin: 0;
+    size: auto;
   }
 
   body {
     margin: 0;
   }
 
+  #contenidoPrincipal,
+  .animated-bg,
+  .footer-ventas,
+  #spinnerCarga {
+    display: none !important;
+  }
+
+  /* Oculta todos los tickets por defecto */
   .ticket-wrapper {
+    display: none !important;
+  }
+
+  /* Solo muestra el ticket fiscal si tiene la clase .show-print */
+  .ticket-wrapper.show-print {
     display: flex !important;
     justify-content: center;
     background: none;
@@ -115,27 +129,4 @@
     margin: 0 auto;
     width: var(--ticket-width);
   }
-
-  #contenidoPrincipal {
-    display: none;
-  }
-
-  /* si querés ocultar otras secciones */
-
-  @page {
-    margin: 0;
-    /* elimina márgenes del navegador */
-    size: auto;
-    /* deja que el ancho se ajuste al contenido */
-  }
-
-  body {
-    margin: 0;
-  }
-
-  .ticket-container {
-    margin: 0 auto;
-  }
-
-
 }

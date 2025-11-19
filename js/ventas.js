@@ -12,6 +12,7 @@ import {
   descontarStockTransaccional,
 } from "./firebase.js";
 import { formatGs, mostrarAviso, debounce } from "./utils.js";
+import { toastSwal } from "./swal-utils.js";
 import {
   confirmarEliminacion,
   alertaExito,
@@ -402,7 +403,8 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   // resetear tabla de pedido
 
   btnConfirmarVenta.disabled = true;
-  alertaExito("Venta registrada", "La venta se ha registrado correctamente.");
+  // Usar toast en vez de modal para evitar que tape el ticket al imprimir
+  toastSwal("Venta registrada", "success");
   mostrarPedidoCargado();
   actualizarCobro();
   // Mostrar total en Guaraníes
@@ -455,7 +457,8 @@ const registrarVenta = async (venta, cajaAbierta) => {
     await actualizarCacheStock(venta.venta);
 
     // Mostrar mensaje de éxito
-    alertaExito("Venta registrada", "La venta se ha registrado correctamente.");
+    // Usar toast en vez de modal para evitar que tape el ticket al imprimir
+    toastSwal("Venta registrada", "success");
   } catch (error) {
     console.error("Error al registrar la venta:", error);
     alertaError("Error al registrar la venta", error.message || "Ocurrió un error desconocido.");
@@ -677,48 +680,33 @@ async function imprimirFacturaFiscal(venta, timbrado) {
 
   // Nota: la numeración se reservó y actualizó dentro de registrarFactura (transacción).
 
-  // --- IMPRIMIR ---
+  // --- OCULTAR MODAL DE COBRO Y ESPERAR ANTES DE IMPRIMIR SOLO FACTURA FISCAL ---
+  // Oculta el modal de cobro si está visible
+  const modalCobroEl = document.getElementById('modalCobro');
+  if (modalCobroEl && modalCobroEl.classList.contains('show')) {
+    const modalCobro = bootstrap.Modal.getInstance(modalCobroEl);
+    if (modalCobro) modalCobro.hide();
+  }
+  // Esperar a que el modal y el toast se oculten completamente (toastSwal dura 3s)
   setTimeout(() => {
     try {
-      // Clonar el contenedor de factura para impresión en un contenedor temporal.
-      const original = document.getElementById('factura-fiscal-container');
-      if (!original) {
-        console.warn('No se encontró #factura-fiscal-container para imprimir');
-        window.print();
-        return;
-      }
+      // Oculta todos los .ticket-wrapper
+      document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
+      // Solo muestra la factura fiscal
+      const fiscalWrapper = document.getElementById('factura-fiscal-container')?.closest('.ticket-wrapper');
+      if (fiscalWrapper) fiscalWrapper.classList.add('show-print');
 
-      const cloneWrapper = document.createElement('div');
-      cloneWrapper.className = 'ticket-wrapper show-print';
-
-      // Clonar el nodo y limpiar ids para evitar duplicados
-      const clone = original.cloneNode(true);
-      // eliminar ids recursivamente en el clone para evitar duplicados en el DOM
-      clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-
-      // También limpiar el id del contenedor clonado si existe
-      if (clone.hasAttribute && clone.hasAttribute('id')) clone.removeAttribute('id');
-
-      cloneWrapper.appendChild(clone);
-      document.body.appendChild(cloneWrapper);
-
-      // Logs de depuración: confirmar que el clone contiene contenido antes de imprimir
-      console.log('Factura: clone preparado, longitud de texto:', cloneWrapper.innerText.length);
-      console.log('Factura: preview HTML (inicio):', cloneWrapper.innerHTML.slice(0, 500));
-
-      // Llamar a la impresión sobre el clone marcado con .show-print
       window.print();
 
-      // Remover el clone después de imprimir
+      // Limpiar la marca de impresión después de un breve retardo
       setTimeout(() => {
-        if (cloneWrapper && cloneWrapper.parentNode) cloneWrapper.parentNode.removeChild(cloneWrapper);
-      }, 1000);
+        if (fiscalWrapper) fiscalWrapper.classList.remove('show-print');
+      }, 500);
     } catch (err) {
       console.error('Error durante la preparación de impresión de factura:', err);
-      // Fallback: imprimir lo que haya
       window.print();
     }
-  }, 1200);
+  }, 3200); // 3s para el toast + 200ms extra
 }
 
 // FUNCION PARA GENERAR TICKTE DE VENTA
