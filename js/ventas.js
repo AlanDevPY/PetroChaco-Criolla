@@ -637,6 +637,10 @@ async function imprimirFacturaFiscal(venta, timbrado) {
   document.getElementById("factura-cliente-nombre").textContent = cliente.nombre || "Consumidor Final";
   document.getElementById("factura-cliente-ruc").textContent = cliente.ruc || "0000000-0";
   document.getElementById("factura-cliente-direccion").textContent = cliente.direccion || "-";
+  document.getElementById("factura-cliente-telefono").textContent = cliente.telefono || cliente.celular || "-";
+  // Nombre del cajero (usuario logueado) en el encabezado
+  const usuario = document.getElementById('usuarioLogueado')?.textContent || '-';
+  document.getElementById("factura-cajero").textContent = usuario;
 
   // --- LIMPIAR ITEMS ANTERIORES ---
   const cuerpo = document.getElementById("factura-items-body");
