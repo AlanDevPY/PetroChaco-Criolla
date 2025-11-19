@@ -769,7 +769,7 @@ function imprimirTicket(venta) {
     setTimeout(() => {
       if (ticketWrapper) ticketWrapper.classList.remove('show-print');
     }, 500);
-  }, 3000);
+  }, 3200); // 3s para el toast + 200ms extra
 
 }
 
