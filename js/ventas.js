@@ -735,10 +735,10 @@ async function imprimirFacturaFiscal(venta, timbrado) {
           imprimirCopia();
         };
         window.onafterprint = handler;
-        // Fallback: si onafterprint no dispara en 10s, forzar la copia
+        // Fallback: si onafterprint no dispara en 1s, forzar la copia
         setTimeout(() => {
           if (!copiaPendiente) imprimirCopia();
-        }, 10000);
+        }, 1000);
       });
     } catch (err) {
       console.error('Error durante la preparación de impresión de factura:', err);
