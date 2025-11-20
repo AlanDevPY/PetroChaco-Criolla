@@ -11,7 +11,7 @@ import {
   obtenerStockCached,
   descontarStockTransaccional,
 } from "./firebase.js";
-import { formatGs, mostrarAviso, debounce } from "./utils.js";
+import { formatGs, mostrarAviso, debounce, parseGs, calcularDiferencia } from "./utils.js";
 import { toastSwal } from "./swal-utils.js";
 import {
   confirmarEliminacion,
@@ -127,13 +127,16 @@ document.getElementById("agregarProductoForm").addEventListener("submit", async 
   // Obtener el producto del stock
   const stockItem = await obtenerStockPorId(selectedId);
 
-  // Buscar si ya existe el item en el pedido
-  const pedidoExistente = pedido.find((p) => p.id === stockItem.id);
-
+  // Validar stock disponible
   if (stockItem.cantidad < cantidad) {
     alertaAdvertencia("Stock insuficiente", `Solo hay ${stockItem.cantidad} unidades disponibles.`);
     return;
-  } else if (pedidoExistente) {
+  }
+
+  // Buscar si ya existe el item en el pedido
+  const pedidoExistente = pedido.find((p) => p.id === stockItem.id);
+
+  if (pedidoExistente) {
     // Si ya existe, aumentar la cantidad y actualizar subtotal
     pedidoExistente.cantidad += cantidad;
     pedidoExistente.subTotal =
@@ -158,7 +161,6 @@ document.getElementById("agregarProductoForm").addEventListener("submit", async 
 
   // Mostrar total en Guaraníes
   document.getElementById("totalPedido").textContent = formatGs(calcularTotalPedido());
-  console.log(pedidoGenerado);
 });
 
 // FUNCION PARA MOSTRAR PEDIDO CARGADO
@@ -210,14 +212,11 @@ const modalTotalCobro = document.getElementById("modalTotalCobro");
 
 function actualizarCobro() {
   const totalPedido = calcularTotalPedido(); // total que el cliente debe
-  const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
-  const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
-  const transferencia = Number(
-    transferenciaInput.value.replace(/\./g, "") || 0
-  );
+  const efectivo = parseGs(efectivoInput.value);
+  const tarjeta = parseGs(tarjetaInput.value);
+  const transferencia = parseGs(transferenciaInput.value);
 
-  const pagado = efectivo + tarjeta + transferencia;
-  const diferencia = totalPedido - pagado;
+  const diferencia = calcularDiferencia(totalPedido, efectivo, tarjeta, transferencia);
 
   modalTotalCobro.classList.remove(
     "alert-danger",
@@ -244,6 +243,61 @@ function actualizarCobro() {
 [efectivoInput, tarjetaInput, transferenciaInput].forEach((input) => {
   input.addEventListener("input", actualizarCobro);
 });
+
+// Lógica de cálculo automático de pagos (siempre activa)
+if (efectivoInput && tarjetaInput && transferenciaInput) {
+  // Cuando se hace focus en efectivoInput, mostrar el total
+  efectivoInput.addEventListener("focus", () => {
+    const totalPedido = calcularTotalPedido();
+    // Si el input está vacío o tiene 0, mostrar el total
+    const valorActual = parseGs(efectivoInput.value);
+    if (valorActual === 0) {
+      efectivoInput.value = totalPedido.toLocaleString("de-DE");
+      efectivoInput.dataset.value = totalPedido.toString();
+      actualizarCobro();
+    }
+    // Seleccionar todo el texto para facilitar la edición
+    efectivoInput.select();
+  });
+
+  // Cuando se hace focus en tarjetaInput, calcular el restante automáticamente
+  tarjetaInput.addEventListener("focus", () => {
+    const totalPedido = calcularTotalPedido();
+    const efectivo = parseGs(efectivoInput.value);
+    const transferencia = parseGs(transferenciaInput.value);
+
+    // Calcular el restante: total - efectivo - transferencia
+    const restante = Math.max(0, totalPedido - efectivo - transferencia);
+
+    // Solo actualizar si el restante es mayor a 0
+    if (restante > 0) {
+      tarjetaInput.value = restante.toLocaleString("de-DE");
+      tarjetaInput.dataset.value = restante.toString();
+      actualizarCobro();
+    }
+    // Seleccionar todo el texto para facilitar la edición
+    tarjetaInput.select();
+  });
+
+  // Cuando se hace focus en transferenciaInput, calcular el restante automáticamente
+  transferenciaInput.addEventListener("focus", () => {
+    const totalPedido = calcularTotalPedido();
+    const efectivo = parseGs(efectivoInput.value);
+    const tarjeta = parseGs(tarjetaInput.value);
+
+    // Calcular el restante: total - efectivo - tarjeta
+    const restante = Math.max(0, totalPedido - efectivo - tarjeta);
+
+    // Solo actualizar si el restante es mayor a 0
+    if (restante > 0) {
+      transferenciaInput.value = restante.toLocaleString("de-DE");
+      transferenciaInput.dataset.value = restante.toString();
+      actualizarCobro();
+    }
+    // Seleccionar todo el texto para facilitar la edición
+    transferenciaInput.select();
+  });
+}
 
 // funcion con modal cobro cliente
 
@@ -283,30 +337,45 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
   // Busco si hay alguna caja abierta
   let cajaAbierta = Cajas.find((caja) => caja.estado === "abierta");
-  let usuarioLogueado = document.getElementById("usuarioLogueado").textContent
+  const usuarioLogueado = document.getElementById("usuarioLogueado")?.textContent || "";
 
   // Datos de la venta actual
   const venta = {
     cliente: cliente, // objeto cliente
     venta: pedido, // array de productos
     fecha: dayjs().format("DD/MM/YYYY HH:mm:ss"), // string legacy conservada
-    efectivo: Number(efectivoInput.value.replace(/\./g, "")),
-    tarjeta: Number(tarjetaInput.value.replace(/\./g, "")),
-    transferencia: Number(transferenciaInput.value.replace(/\./g, "")),
+    efectivo: parseGs(efectivoInput.value),
+    tarjeta: parseGs(tarjetaInput.value),
+    transferencia: parseGs(transferenciaInput.value),
     total: calcularTotalPedido(),
   };
 
 
-  // funcion para descontar stock de la venta
+  // Función para descontar stock de la venta
   // Descuento transaccional de stock para evitar condiciones de carrera
   const descontarStock = async (ventaActual) => {
     try {
-      await descontarStockTransaccional(ventaActual.venta.map(i => ({ id: i.id, cantidad: Number(i.cantidad) })));
+      const itemsDescuento = ventaActual.venta.map(i => ({
+        id: i.id,
+        cantidad: Number(i.cantidad)
+      }));
+      await descontarStockTransaccional(itemsDescuento);
       return true;
     } catch (err) {
       console.error("Error transaccional al descontar stock:", err);
       return false;
     }
+  };
+
+  // Función auxiliar para validar y calcular pagos
+  const validarPago = () => {
+    const totalPedido = calcularTotalPedido();
+    const efectivo = parseGs(efectivoInput.value);
+    const tarjeta = parseGs(tarjetaInput.value);
+    const transferencia = parseGs(transferenciaInput.value);
+    const diferencia = calcularDiferencia(totalPedido, efectivo, tarjeta, transferencia);
+
+    return { totalPedido, efectivo, tarjeta, transferencia, diferencia };
   };
 
   if (!cajaAbierta) {
@@ -316,22 +385,18 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
       estado: "abierta",
       totalRecaudado: venta.total,
       ventas: [venta], // registro la venta directamente
-      usuario: usuarioLogueado
+      usuario: usuarioLogueado || null
     };
 
-    const totalPedido = calcularTotalPedido(); // total que el cliente debe
-    const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
-    const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
-    const transferencia = Number(transferenciaInput.value.replace(/\./g, "") || 0);
-
-    const pagado = efectivo + tarjeta + transferencia;
-    const diferencia = totalPedido - pagado;
+    const { diferencia } = validarPago();
 
     if (diferencia > 0) {
       alertaAdvertencia("Pago insuficiente", "Falta pagar: " + formatGs(diferencia));
       btnConfirmarVenta.disabled = false;
       return;
-    } else {
+    }
+
+    try {
       await registrarCaja(nuevaCaja);
       const ok = await descontarStock(venta);
       if (!ok) {
@@ -343,15 +408,20 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
       // Imprimir según checkbox: ticket o factura legal
       await procesarImpresion(venta);
 
-
-      // obtenner instancia de modalcobro y cerrar
+      // Obtener instancia de modal cobro y cerrar
       const modalCobro = bootstrap.Modal.getInstance(document.getElementById("modalCobro"));
-      modalCobro.hide();
+      modalCobro?.hide();
       const badge = document.getElementById("estadoCajaBadge");
-      badge.textContent = "Caja Abierta";
-      badge.classList.remove("bg-danger");
-      badge.classList.add("bg-success");
-
+      if (badge) {
+        badge.textContent = "Caja Abierta";
+        badge.classList.remove("bg-danger");
+        badge.classList.add("bg-success");
+      }
+    } catch (error) {
+      console.error("Error al registrar caja:", error);
+      btnConfirmarVenta.disabled = false;
+      alertaError("Error", "No se pudo completar la venta. Por favor, intente nuevamente.");
+      return;
     }
   } else {
     // Caja abierta → agrego la venta al array de ventas existente
@@ -360,22 +430,15 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
     // Actualizo el total recaudado
     cajaAbierta.totalRecaudado += venta.total;
 
-    const totalPedido = calcularTotalPedido(); // total que el cliente debe
-    const efectivo = Number(efectivoInput.value.replace(/\./g, "") || 0);
-    const tarjeta = Number(tarjetaInput.value.replace(/\./g, "") || 0);
-    const transferencia = Number(transferenciaInput.value.replace(/\./g, "") || 0);
-
-    const pagado = efectivo + tarjeta + transferencia;
-    const diferencia = totalPedido - pagado;
+    const { diferencia } = validarPago();
 
     if (diferencia > 0) {
-      console.log("no se puede realizar cobro, monto insuficiente");
       alertaAdvertencia("Pago insuficiente", "Falta pagar: " + formatGs(diferencia));
       btnConfirmarVenta.disabled = false;
-
       return;
-    } else {
+    }
 
+    try {
       btnConfirmarVenta.disabled = true;
       // Actualizo la caja en Firestore
       await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
@@ -389,26 +452,29 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
       // Imprimir según checkbox: ticket o factura legal
       await procesarImpresion(venta);
 
-      // obtenner instancia de modalcobro y cerrar
-      const modalCobro = bootstrap.Modal.getInstance(
-        document.getElementById("modalCobro")
-      );
-      modalCobro.hide();
+      // Obtener instancia de modal cobro y cerrar
+      const modalCobro = bootstrap.Modal.getInstance(document.getElementById("modalCobro"));
+      modalCobro?.hide();
+    } catch (error) {
+      console.error("Error al actualizar caja:", error);
+      btnConfirmarVenta.disabled = false;
+      alertaError("Error", "No se pudo completar la venta. Por favor, intente nuevamente.");
+      return;
     }
   }
 
-  // Aquí podrías limpiar el formulario y resetear el pedido
+  // Limpiar el formulario y resetear el pedido
   pedido = [];
   document.getElementById("modalCobrarForm").reset();
-  // resetear tabla de pedido
-
-  btnConfirmarVenta.disabled = true;
-  // Usar toast en vez de modal para evitar que tape el ticket al imprimir
-  toastSwal("Venta registrada", "success");
   mostrarPedidoCargado();
   actualizarCobro();
+
+  btnConfirmarVenta.disabled = true;
   // Mostrar total en Guaraníes
   document.getElementById("totalPedido").textContent = formatGs(calcularTotalPedido());
+
+  // Usar toast en vez de modal para evitar que tape el ticket al imprimir
+  toastSwal("Venta registrada", "success");
 });
 
 // Invalidar caché de stock después de una venta
@@ -438,30 +504,6 @@ const actualizarCacheStock = async (productosVendidos) => {
     console.log("Caché de stock actualizada.");
   } catch (error) {
     console.error("Error al actualizar la caché de stock:", error);
-  }
-};
-
-// Modificar la lógica de registro de venta para actualizar la caché
-const registrarVenta = async (venta, cajaAbierta) => {
-  try {
-    // Actualizar la caja en Firebase
-    await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
-
-    // Descontar stock en Firebase
-    const ok = await descontarStockTransaccional(venta.venta.map(i => ({ id: i.id, cantidad: Number(i.cantidad) })));
-    if (!ok) {
-      throw new Error("Error al descontar stock");
-    }
-
-    // Actualizar la caché de stock
-    await actualizarCacheStock(venta.venta);
-
-    // Mostrar mensaje de éxito
-    // Usar toast en vez de modal para evitar que tape el ticket al imprimir
-    toastSwal("Venta registrada", "success");
-  } catch (error) {
-    console.error("Error al registrar la venta:", error);
-    alertaError("Error al registrar la venta", error.message || "Ocurrió un error desconocido.");
   }
 };
 
@@ -511,7 +553,7 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
   }
 
   // Limpiar formulario
-  formCliente.reset();
+  document.getElementById("formCliente").reset();
 
   await mostrarClientes();
 });
