@@ -110,6 +110,12 @@ body {
     -webkit-backdrop-filter: blur(12px) saturate(120%);
     border-radius: 16px !important;
     color: var(--text) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .4), inset 0 0 0 1px rgba(255, 255, 255, .08) !important;
 }
 
 .card-header {
@@ -1003,4 +1009,51 @@ footer {
 
 .table .btn-outline-danger {
     border-width: 1px;
+}
+
+/* Filas con estado de stock */
+.table-danger {
+    background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.table-danger:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+}
+
+.table-warning {
+    background: rgba(245, 158, 11, 0.1) !important;
+}
+
+.table-warning:hover {
+    background: rgba(245, 158, 11, 0.15) !important;
+}
+
+/* Cards de estadísticas */
+.card .card-body {
+    padding: 1.5rem;
+}
+
+.card .card-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+/* Kbd styling */
+kbd {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 0.15rem 0.35rem;
+    font-size: 0.75rem;
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+}
+
+/* Mejora visual para código de barra */
+code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
 }

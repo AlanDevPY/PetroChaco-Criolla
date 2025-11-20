@@ -1,8 +1,9 @@
 import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId, obtenerStockPorId, sumarStockTransaccional, registrarReposicion, obtenerReposiciones, descontarStockTransaccional, registrarSalida, obtenerSalidas } from "./firebase.js";
-import { showSuccess, showError, showInfo, showLoading, hideLoading, showConfirm } from "./toast-utils.js";
+import { showSuccess, showError, showInfo, showLoading, hideLoading, showConfirm, showWarning } from "./toast-utils.js";
 import { mostrarStockConDataTable, configurarEventosDataTable, actualizarFilaDataTable } from "./stock-modern.js";
 import { confirmarEliminacion, alertaAdvertencia } from "./swal-utils.js";
 import { mejorarDatalist } from "./datalist-mejorado.js";
+import { parseGs, formatGs } from "./utils.js";
 
 // variables globales
 
@@ -21,42 +22,29 @@ let productosFiltrados = []; // Para mantener los productos filtrados o todos
 
 
 
-//? Función para formatear el precio en el input y mostrar con decimales
+// Función reutilizable para formatear inputs de precio
+function formatearInputPrecio(input) {
+  if (!input) return;
+  input.addEventListener("input", () => {
+    // Quitamos cualquier caracter que no sea número
+    let valor = input.value.replace(/\D/g, "");
+    // Formateamos con separadores de miles
+    input.value = valor ? Number(valor).toLocaleString("es-PY") : "";
+    // Guardar valor puro en dataset para cálculos
+    input.dataset.value = valor;
+  });
+}
+
+// Aplicar formateo a todos los inputs de precio
 const inputPrecio = document.getElementById("nuevoCostoStock");
-inputPrecio.addEventListener("input", () => {
-  // Quitamos cualquier caracter que no sea número
-  let valor = inputPrecio.value.replace(/\D/g, "");
-
-  // Formateamos con separadores de miles
-  inputPrecio.value = valor ? Number(valor).toLocaleString("es-PY") : "";
-});
-
 const inputPrecioCompra = document.getElementById("nuevoPrecioCompraStock");
-inputPrecioCompra.addEventListener("input", () => {
-  // Quitamos cualquier caracter que no sea número
-  let valor = inputPrecioCompra.value.replace(/\D/g, "");
-
-  // Formateamos con separadores de miles
-  inputPrecioCompra.value = valor ? Number(valor).toLocaleString("es-PY") : "";
-});
-
 const actualizarCostoStock = document.getElementById("actualizarCostoStock");
-actualizarCostoStock.addEventListener("input", () => {
-  // Quitamos cualquier caracter que no sea número
-  let valor = actualizarCostoStock.value.replace(/\D/g, "");
-
-  // Formateamos con separadores de miles
-  actualizarCostoStock.value = valor ? Number(valor).toLocaleString("es-PY") : "";
-});
-
 const actualizarPrecioCompraStock = document.getElementById("actualizarPrecioCompraStock");
-actualizarPrecioCompraStock.addEventListener("input", () => {
-  // Quitamos cualquier caracter que no sea número
-  let valor = actualizarPrecioCompraStock.value.replace(/\D/g, "");
 
-  // Formateamos con separadores de miles
-  actualizarPrecioCompraStock.value = valor ? Number(valor).toLocaleString("es-PY") : "";
-});
+formatearInputPrecio(inputPrecio);
+formatearInputPrecio(inputPrecioCompra);
+formatearInputPrecio(actualizarCostoStock);
+formatearInputPrecio(actualizarPrecioCompraStock);
 
 
 // -------------------------------------------------------------------------------
@@ -78,7 +66,6 @@ const reposicionPrecioCompra = document.getElementById('reposicionPrecioCompra')
 const reposicionPrecioVenta = document.getElementById('reposicionPrecioVenta');
 const reposicionTable = document.getElementById('reposicionTable');
 const salidaTable = document.getElementById('salidaTable');
-const reposicionTotalCompra = document.getElementById('reposicionTotalCompra');
 const btnConfirmarReposicion = document.getElementById('btnConfirmarReposicion');
 const btnCancelarReposicion = document.getElementById('btnCancelarReposicion');
 const btnConfirmarSalida = document.getElementById('btnConfirmarSalida');
@@ -94,11 +81,43 @@ const modalActualizarProducto = bootstrap.Modal.getOrCreateInstance(
 
 
 
+// Función para actualizar estadísticas de stock
+function actualizarEstadisticas() {
+  const totalProductos = _cacheStock.length;
+  const stockBajo = _cacheStock.filter(p => p.cantidad > 0 && p.cantidad <= 10).length;
+  const stockAgotado = _cacheStock.filter(p => p.cantidad === 0).length;
+  const stockOk = _cacheStock.filter(p => p.cantidad > 10).length;
+
+  const totalProductosEl = document.getElementById('totalProductos');
+  const stockBajoEl = document.getElementById('stockBajo');
+  const stockAgotadoEl = document.getElementById('stockAgotado');
+  const stockOkEl = document.getElementById('stockOk');
+
+  if (totalProductosEl) totalProductosEl.textContent = totalProductos.toLocaleString('es-PY');
+  if (stockBajoEl) stockBajoEl.textContent = stockBajo.toLocaleString('es-PY');
+  if (stockAgotadoEl) stockAgotadoEl.textContent = stockAgotado.toLocaleString('es-PY');
+  if (stockOkEl) stockOkEl.textContent = stockOk.toLocaleString('es-PY');
+}
+
+// Función para obtener badge de stock según cantidad
+function obtenerBadgeStock(cantidad) {
+  if (cantidad === 0) {
+    return '<span class="badge bg-danger">Sin Stock</span>';
+  } else if (cantidad <= 10) {
+    return '<span class="badge bg-warning text-dark">Stock Bajo</span>';
+  } else {
+    return '<span class="badge bg-success">Disponible</span>';
+  }
+}
+
 // Función para mostrar stock en la tabla
 const mostrarStock = async (resetearPagina = true) => {
   if (USAR_DATATABLES) {
     // Usar DataTables moderno
     _cacheStock = await mostrarStockConDataTable(obtenerStock);
+
+    // Actualizar estadísticas
+    actualizarEstadisticas();
 
     // Poblar datalist para reposición
     const dl = document.getElementById('listaProductosReposicion');
@@ -115,6 +134,9 @@ const mostrarStock = async (resetearPagina = true) => {
     const stock = await obtenerStock();
     _cacheStock = stock;
     productosFiltrados = [...stock];
+
+    // Actualizar estadísticas
+    actualizarEstadisticas();
 
     if (resetearPagina) {
       paginaActual = 1;
@@ -159,18 +181,39 @@ function renderizarPagina() {
     const item = productosPagina[i];
     const numeroGlobal = indiceInicio + i + 1; // Número global del producto
 
+    // Determinar clase de fila según stock
+    let filaClase = '';
+    if (item.cantidad === 0) {
+      filaClase = 'table-danger';
+    } else if (item.cantidad <= 10) {
+      filaClase = 'table-warning';
+    }
+
     htmlRows += `
-      <tr>
+      <tr class="${filaClase}">
         <td>${numeroGlobal}</td>
-        <td>${item.item}</td>
-        <td>${item.categoria}</td>
-        <td>${item.codigoBarra}</td>
-        <td class="text-center">${Number(item.cantidad).toLocaleString("es-PY")}</td>
-        <td class="text-end">${Number(item.costoCompra).toLocaleString("es-PY")} Gs</td>
-        <td class="text-end">${Number(item.costo).toLocaleString("es-PY")} Gs</td>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <span>${item.item}</span>
+            ${obtenerBadgeStock(item.cantidad)}
+          </div>
+        </td>
+        <td><span class="badge bg-secondary">${item.categoria}</span></td>
+        <td><code class="text-muted">${item.codigoBarra}</code></td>
         <td class="text-center">
-          <button data-id="${item.id}" class="btn btn-sm btn-warning btn-editar-stock">✏️</button>
-          <button data-id="${item.id}" class="btn btn-sm btn-danger btn-eliminar-stock">❌</button>
+          <strong class="${item.cantidad === 0 ? 'text-danger' : item.cantidad <= 10 ? 'text-warning' : 'text-success'}">
+            ${Number(item.cantidad).toLocaleString("es-PY")}
+          </strong>
+        </td>
+        <td class="text-end">${formatGs(item.costoCompra)}</td>
+        <td class="text-end">${formatGs(item.costo)}</td>
+        <td class="text-center">
+          <button data-id="${item.id}" class="btn btn-sm btn-warning btn-editar-stock" title="Editar">
+            <i class="bi bi-pencil-square"></i>
+          </button>
+          <button data-id="${item.id}" class="btn btn-sm btn-danger btn-eliminar-stock" title="Eliminar">
+            <i class="bi bi-trash3"></i>
+          </button>
         </td>
       </tr>
     `;
@@ -278,70 +321,117 @@ function actualizarInfoPaginacion(inicio, fin, total) {
 // evento de submit para actualizar PRECIO DE VENTA únicamente (Precio Compra deshabilitado)
 actualizarStockForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  // Convertir el costo de string a number
-  let costo = document.getElementById("actualizarCostoStock").value;
-  // Quitar los puntos antes de guardar
-  costo = Number(costo.replace(/\./g, ""));
+  try {
+    // Convertir el costo de string a number usando parseGs
+    const costoInput = document.getElementById("actualizarCostoStock");
+    const costo = parseGs(costoInput.value);
+    const costoCompraInput = document.getElementById("actualizarPrecioCompraStock");
+    const costoCompra = parseGs(costoCompraInput.value);
 
-  const stockData = { costo };
+    const stockData = { costo, costoCompra };
 
-  await actualizarStockporId(idStock, stockData);
-  modalActualizarProducto.hide();
+    await actualizarStockporId(idStock, stockData);
+    modalActualizarProducto.hide();
 
-  showSuccess("✅ Stock actualizado correctamente");
+    showSuccess("✅ Stock actualizado correctamente");
 
-  await mostrarStock();
+    await mostrarStock();
+  } catch (error) {
+    console.error("Error al actualizar stock:", error);
+    showError("❌ Error al actualizar el stock. Por favor, intente nuevamente.");
+  }
 });
 
 // Evento submit para registrar stock
 registrarStockForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  try {
+    const FechaDeRegistro = dayjs().format("DD/MM/YYYY, h:mm:ss A"); // legacy string
+    // registrar item con mayúsculas y evitar espacio en blanco
+    const item = document.getElementById("nuevoItemStock").value.trim().toUpperCase();
+    const categoria = document.getElementById("nuevoCategoriaStock").value;
+    const codigoBarra = document.getElementById("nuevoCodigoBarraStock").value;
+    const cantidad = Number(document.getElementById("nuevoCantidadStock").value);
 
-  const FechaDeRegistro = dayjs().format("DD/MM/YYYY, h:mm:ss A"); // legacy string
-  // registrar item con mayuscular y evitar espacio en blanco
-  const item = document.getElementById("nuevoItemStock").value.trim().toUpperCase();
-  const categoria = document.getElementById("nuevoCategoriaStock").value;
-  const codigoBarra = document.getElementById("nuevoCodigoBarraStock").value;
-  const cantidad = Number(document.getElementById("nuevoCantidadStock").value);
+    // Validaciones
+    if (!item || item.length === 0) {
+      alertaAdvertencia("⚠️ Campo requerido", "El nombre del producto es obligatorio");
+      return;
+    }
 
-  // Convertir el costo de string a number
-  let costo = document.getElementById("nuevoCostoStock").value;
-  let costoCompra = document.getElementById("nuevoPrecioCompraStock").value;
+    if (!codigoBarra || codigoBarra.length === 0) {
+      alertaAdvertencia("⚠️ Campo requerido", "El código de barra es obligatorio");
+      return;
+    }
 
-  // Quitar los puntos antes de guardar
-  costo = Number(costo.replace(/\./g, ""));
-  costoCompra = Number(costoCompra.replace(/\./g, ""));
+    if (cantidad < 0) {
+      alertaAdvertencia("⚠️ Cantidad inválida", "La cantidad no puede ser negativa");
+      return;
+    }
 
+    // Convertir el costo de string a number usando parseGs
+    const costo = parseGs(document.getElementById("nuevoCostoStock").value);
+    const costoCompra = parseGs(document.getElementById("nuevoPrecioCompraStock").value);
 
-  const stockData = { FechaDeRegistro, item, codigoBarra, categoria, cantidad, costo, costoCompra };
+    const stockData = { FechaDeRegistro, item, codigoBarra, categoria, cantidad, costo, costoCompra };
 
-  let obtenerStockTotal = await obtenerStock();
+    // Verificar si el codigo de barra ya existe en el stock
+    const obtenerStockTotal = await obtenerStock();
+    if (obtenerStockTotal.some((item) => item.codigoBarra === codigoBarra)) {
+      alertaAdvertencia("⚠️ Código duplicado", "El código de barra ya existe en el stock");
+      return;
+    }
 
+    // ⚡ Cerrar modal "Agregar Producto"
+    modalAgregarProducto.hide();
 
-  // Verificar si el codigo de barra ya existe en el stock
-  if (obtenerStockTotal.some((item) => item.codigoBarra === codigoBarra)) {
-    alertaAdvertencia("⚠️ Código duplicado", "El código de barra ya existe en el stock");
-    return;
+    // ⚡ Mostrar notificación de carga
+    const loadingToast = showLoading("Agregando stock...");
+
+    await registrarStock(stockData);
+
+    // ⚡ Registrar stock en Firebase
+    hideLoading(loadingToast);
+    showSuccess("✅ Stock agregado correctamente");
+
+    registrarStockForm.reset();
+    await mostrarStock();
+  } catch (error) {
+    console.error("Error al registrar stock:", error);
+    showError("❌ Error al registrar el stock. Por favor, intente nuevamente.");
+  }
+});
+
+// Atajos de teclado
+document.addEventListener('keydown', (e) => {
+  // Ctrl/Cmd + K para enfocar búsqueda
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    const buscarInput = document.getElementById('buscarProducto');
+    if (buscarInput) {
+      buscarInput.focus();
+      buscarInput.select();
+    }
   }
 
+  // Ctrl/Cmd + N para agregar producto (solo admin)
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n' && document.querySelector('.solo-admin')) {
+    e.preventDefault();
+    const btnAgregar = document.getElementById('btnAgregar');
+    if (btnAgregar && !btnAgregar.disabled) {
+      btnAgregar.click();
+    }
+  }
 
-
-
-  // ⚡ Cerrar modal "Agregar Producto"
-  modalAgregarProducto.hide();
-
-  // ⚡ Mostrar notificación de carga
-  const loadingToast = showLoading("Agregando stock...");
-
-  await registrarStock(stockData);
-
-  //   ⚡ Registrar stock en Firebase
-  hideLoading(loadingToast);
-  showSuccess("✅ Stock agregado correctamente");
-
-  registrarStockForm.reset();
-  await mostrarStock();
+  // Escape para cerrar modales
+  if (e.key === 'Escape') {
+    const modalesAbiertos = document.querySelectorAll('.modal.show');
+    modalesAbiertos.forEach(modal => {
+      const modalInstance = bootstrap.Modal.getInstance(modal);
+      if (modalInstance) modalInstance.hide();
+    });
+  }
 });
 
 // Cargar stock al iniciar
@@ -398,6 +488,7 @@ if (buscarProductoInput) {
       buscandoActivo = false;
       productosFiltrados = [..._cacheStock];
       paginaActual = 1;
+      actualizarEstadisticas(); // Restaurar estadísticas completas
       renderizarPagina();
       return;
     }
@@ -448,12 +539,30 @@ function filtrarProductos(searchTerm, valorOriginal) {
   productosFiltrados = resultados;
   paginaActual = 1; // Resetear a primera página
 
+  // Actualizar estadísticas con resultados filtrados
+  const totalProductos = resultados.length;
+  const stockBajo = resultados.filter(p => p.cantidad > 0 && p.cantidad <= 10).length;
+  const stockAgotado = resultados.filter(p => p.cantidad === 0).length;
+  const stockOk = resultados.filter(p => p.cantidad > 10).length;
+
+  const totalProductosEl = document.getElementById('totalProductos');
+  const stockBajoEl = document.getElementById('stockBajo');
+  const stockAgotadoEl = document.getElementById('stockAgotado');
+  const stockOkEl = document.getElementById('stockOk');
+
+  if (totalProductosEl) totalProductosEl.textContent = totalProductos.toLocaleString('es-PY');
+  if (stockBajoEl) stockBajoEl.textContent = stockBajo.toLocaleString('es-PY');
+  if (stockAgotadoEl) stockAgotadoEl.textContent = stockAgotado.toLocaleString('es-PY');
+  if (stockOkEl) stockOkEl.textContent = stockOk.toLocaleString('es-PY');
+
   // Si no hay resultados
   if (resultados.length === 0) {
     stockTable.innerHTML = `
       <tr>
-        <td colspan="8" class="text-center text-muted py-4">
-          🔍 No se encontraron productos con "${valorOriginal}"
+        <td colspan="8" class="text-center text-muted py-5">
+          <i class="bi bi-search fs-1 d-block mb-3 opacity-50"></i>
+          <p class="mb-0">No se encontraron productos con "<strong>${valorOriginal}</strong>"</p>
+          <small class="text-muted">Intenta con otro término de búsqueda</small>
         </td>
       </tr>
     `;
@@ -506,12 +615,7 @@ function asignarEventosBotones() {
   });
 }
 
-// Helpers reposición
-const parseGs = (str) => {
-  if (!str) return 0;
-  return Number(String(str).replace(/\./g, '').replace(/\s/g, '')) || 0;
-};
-const formatGs = (n) => (Number(n) || 0).toLocaleString('es-PY') + ' Gs';
+// parseGs y formatGs ahora se importan de utils.js
 
 const renderReposicionTabla = () => {
   if (!reposicionTable) return;
@@ -566,20 +670,9 @@ const renderSalidaTabla = () => {
   });
 };
 
-// Formateo de precios en inputs de reposición
-if (reposicionPrecioCompra) {
-  reposicionPrecioCompra.addEventListener("input", () => {
-    let valor = reposicionPrecioCompra.value.replace(/\D/g, "");
-    reposicionPrecioCompra.value = valor ? Number(valor).toLocaleString("es-PY") : "";
-  });
-}
-
-if (reposicionPrecioVenta) {
-  reposicionPrecioVenta.addEventListener("input", () => {
-    let valor = reposicionPrecioVenta.value.replace(/\D/g, "");
-    reposicionPrecioVenta.value = valor ? Number(valor).toLocaleString("es-PY") : "";
-  });
-}
+// Formateo de precios en inputs de reposición (usando función reutilizable)
+formatearInputPrecio(reposicionPrecioCompra);
+formatearInputPrecio(reposicionPrecioVenta);
 
 // Auto-completar precios al seleccionar producto
 if (reposicionProducto) {
@@ -601,36 +694,59 @@ if (reposicionProducto) {
 if (formAgregarItemReposicion) {
   formAgregarItemReposicion.addEventListener('submit', (e) => {
     e.preventDefault();
-    const nombre = reposicionProducto.value.trim();
-    const base = _cacheStock.find(s => String(s.item).toUpperCase() === nombre.toUpperCase());
-    const cant = Number(reposicionCantidad.value);
-    if (!base) { showWarning('⚠️ Producto no encontrado en stock'); return; }
-    if (!cant || cant <= 0) { showWarning('⚠️ Cantidad inválida'); return; }
+    try {
+      const nombre = reposicionProducto.value.trim();
+      if (!nombre) {
+        showWarning('⚠️ Debe seleccionar un producto');
+        reposicionProducto.focus();
+        return;
+      }
 
-    // Si el usuario ingresó precios, usarlos; sino, usar los del producto
-    let cc = base.costoCompra || 0;
-    let cv = base.costo || 0;
+      const base = _cacheStock.find(s => String(s.item).toUpperCase() === nombre.toUpperCase());
+      if (!base) {
+        showWarning('⚠️ Producto no encontrado en stock');
+        reposicionProducto.focus();
+        return;
+      }
 
-    if (reposicionPrecioCompra && reposicionPrecioCompra.value.trim()) {
-      cc = parseGs(reposicionPrecioCompra.value);
-    }
-    if (reposicionPrecioVenta && reposicionPrecioVenta.value.trim()) {
-      cv = parseGs(reposicionPrecioVenta.value);
-    }
+      const cant = Number(reposicionCantidad.value);
+      if (!cant || cant <= 0) {
+        showWarning('⚠️ Cantidad inválida. Debe ser mayor a 0');
+        reposicionCantidad.focus();
+        return;
+      }
 
-    const existente = reposicionLista.find(it => it.id === base.id);
-    if (existente) {
-      existente.cantidad += cant;
-      existente.costoCompra = cc;
-      existente.costo = cv;
-    } else {
-      reposicionLista.push({ id: base.id, item: base.item, cantidad: cant, costoCompra: cc, costo: cv });
+      // Si el usuario ingresó precios, usarlos; sino, usar los del producto
+      let cc = base.costoCompra || 0;
+      let cv = base.costo || 0;
+
+      if (reposicionPrecioCompra && reposicionPrecioCompra.value.trim()) {
+        cc = parseGs(reposicionPrecioCompra.value);
+      }
+      if (reposicionPrecioVenta && reposicionPrecioVenta.value.trim()) {
+        cv = parseGs(reposicionPrecioVenta.value);
+      }
+
+      const existente = reposicionLista.find(it => it.id === base.id);
+      if (existente) {
+        existente.cantidad += cant;
+        existente.costoCompra = cc;
+        existente.costo = cv;
+      } else {
+        reposicionLista.push({ id: base.id, item: base.item, cantidad: cant, costoCompra: cc, costo: cv });
+      }
+
+      // Limpiar formulario
+      reposicionProducto.value = '';
+      reposicionCantidad.value = '1';
+      if (reposicionPrecioCompra) reposicionPrecioCompra.value = '';
+      if (reposicionPrecioVenta) reposicionPrecioVenta.value = '';
+      reposicionProducto.focus();
+      renderReposicionTabla();
+    } catch (error) {
+      console.error('Error al agregar item a reposición:', error);
+      showError('❌ Error al agregar el item. Por favor, intente nuevamente.');
     }
-    reposicionProducto.value = '';
-    reposicionCantidad.value = '1';
-    if (reposicionPrecioCompra) reposicionPrecioCompra.value = '';
-    if (reposicionPrecioVenta) reposicionPrecioVenta.value = '';
-    renderReposicionTabla();
   });
 }
 
@@ -643,21 +759,57 @@ const salidaDescripcion = document.getElementById('salidaDescripcion');
 if (formAgregarItemSalida) {
   formAgregarItemSalida.addEventListener('submit', (e) => {
     e.preventDefault();
-    const nombre = salidaProducto.value.trim();
-    const base = _cacheStock.find(s => String(s.item).toUpperCase() === nombre.toUpperCase());
-    const cant = Number(salidaCantidad.value);
-    if (!base) { showInfo('⚠️ Producto no encontrado en stock'); return; }
-    if (!cant || cant <= 0) { showInfo('⚠️ Cantidad inválida'); return; }
+    try {
+      const nombre = salidaProducto.value.trim();
+      if (!nombre) {
+        showWarning('⚠️ Debe seleccionar un producto');
+        salidaProducto.focus();
+        return;
+      }
 
-    const existente = salidaLista.find(it => it.id === base.id);
-    if (existente) {
-      existente.cantidad += cant;
-    } else {
-      salidaLista.push({ id: base.id, item: base.item, cantidad: cant });
+      const base = _cacheStock.find(s => String(s.item).toUpperCase() === nombre.toUpperCase());
+      if (!base) {
+        showWarning('⚠️ Producto no encontrado en stock');
+        salidaProducto.focus();
+        return;
+      }
+
+      const cant = Number(salidaCantidad.value);
+      if (!cant || cant <= 0) {
+        showWarning('⚠️ Cantidad inválida. Debe ser mayor a 0');
+        salidaCantidad.focus();
+        return;
+      }
+
+      // Validar que haya stock suficiente
+      if (base.cantidad < cant) {
+        showWarning(`⚠️ Stock insuficiente. Solo hay ${base.cantidad} unidades disponibles`);
+        salidaCantidad.focus();
+        return;
+      }
+
+      const existente = salidaLista.find(it => it.id === base.id);
+      if (existente) {
+        const nuevaCantidad = existente.cantidad + cant;
+        // Validar stock total si ya existe en la lista
+        if (base.cantidad < nuevaCantidad) {
+          showWarning(`⚠️ Stock insuficiente. Solo hay ${base.cantidad} unidades disponibles`);
+          return;
+        }
+        existente.cantidad = nuevaCantidad;
+      } else {
+        salidaLista.push({ id: base.id, item: base.item, cantidad: cant });
+      }
+
+      // Limpiar formulario
+      salidaProducto.value = '';
+      salidaCantidad.value = '1';
+      salidaProducto.focus();
+      renderSalidaTabla();
+    } catch (error) {
+      console.error('Error al agregar item a salida:', error);
+      showError('❌ Error al agregar el item. Por favor, intente nuevamente.');
     }
-    salidaProducto.value = '';
-    salidaCantidad.value = '1';
-    renderSalidaTabla();
   });
 }
 
@@ -672,11 +824,21 @@ if (btnCancelarSalida) {
 // Confirmar salida: transacción y registro
 if (btnConfirmarSalida) {
   btnConfirmarSalida.addEventListener('click', async () => {
-    if (salidaLista.length === 0) return;
-
-    const itemsTx = salidaLista.map(r => ({ id: r.id, cantidad: r.cantidad }));
+    if (salidaLista.length === 0) {
+      showWarning('⚠️ No hay items para procesar');
+      return;
+    }
 
     try {
+      const itemsTx = salidaLista.map(r => ({ id: r.id, cantidad: r.cantidad }));
+
+      // Validar que todos los items tengan cantidad válida
+      const itemsInvalidos = itemsTx.filter(item => !item.cantidad || item.cantidad <= 0);
+      if (itemsInvalidos.length > 0) {
+        showError('❌ Hay items con cantidades inválidas');
+        return;
+      }
+
       // descontar stock en una transacción
       await descontarStockTransaccional(itemsTx);
 
@@ -695,12 +857,13 @@ if (btnConfirmarSalida) {
 
       // limpiar y refrescar
       salidaLista = [];
+      if (salidaDescripcion) salidaDescripcion.value = '';
       renderSalidaTabla();
       await mostrarStock();
       showSuccess('✅ Salida registrada correctamente');
     } catch (err) {
       console.error('Error al procesar salida:', err);
-      showError('Error al procesar la salida. Revisa la consola.');
+      showError('❌ Error al procesar la salida. Por favor, intente nuevamente.');
     }
   });
 }
@@ -716,31 +879,51 @@ if (btnCancelarReposicion) {
 // Confirmar reposición
 if (btnConfirmarReposicion) {
   btnConfirmarReposicion.addEventListener('click', async () => {
-    if (reposicionLista.length === 0) return;
-    const itemsTx = reposicionLista.map(r => ({
-      id: r.id,
-      cantidad: r.cantidad,
-      costoCompra: r.costoCompra,
-      costo: r.costo
-    }));
-    // sumar stock en una transacción y actualizar precios
-    await sumarStockTransaccional(itemsTx);
-    // registrar nota
-    const totalCompra = reposicionLista.reduce((acc, it) => acc + (Number(it.costoCompra) || 0) * Number(it.cantidad), 0);
-    const totalItems = reposicionLista.reduce((acc, it) => acc + Number(it.cantidad), 0);
-    const usuario = (document.getElementById('usuarioLogueado')?.textContent || '').trim();
-    const nota = {
-      fecha: dayjs().format('DD/MM/YYYY HH:mm:ss'),
-      usuario,
-      items: reposicionLista,
-      totalCompra,
-      totalItems
-    };
-    await registrarReposicion(nota);
-    // limpiar y refrescar
-    reposicionLista = [];
-    renderReposicionTabla();
-    await mostrarStock();
+    if (reposicionLista.length === 0) {
+      showWarning('⚠️ No hay items para procesar');
+      return;
+    }
+
+    try {
+      // Validar que todos los items tengan cantidad válida
+      const itemsInvalidos = reposicionLista.filter(item => !item.cantidad || item.cantidad <= 0);
+      if (itemsInvalidos.length > 0) {
+        showError('❌ Hay items con cantidades inválidas');
+        return;
+      }
+
+      const itemsTx = reposicionLista.map(r => ({
+        id: r.id,
+        cantidad: r.cantidad,
+        costoCompra: r.costoCompra || 0,
+        costo: r.costo || 0
+      }));
+
+      // sumar stock en una transacción y actualizar precios
+      await sumarStockTransaccional(itemsTx);
+
+      // registrar nota
+      const totalCompra = reposicionLista.reduce((acc, it) => acc + (Number(it.costoCompra) || 0) * Number(it.cantidad), 0);
+      const totalItems = reposicionLista.reduce((acc, it) => acc + Number(it.cantidad), 0);
+      const usuario = (document.getElementById('usuarioLogueado')?.textContent || '').trim();
+      const nota = {
+        fecha: dayjs().format('DD/MM/YYYY HH:mm:ss'),
+        usuario,
+        items: reposicionLista,
+        totalCompra,
+        totalItems
+      };
+      await registrarReposicion(nota);
+
+      // limpiar y refrescar
+      reposicionLista = [];
+      renderReposicionTabla();
+      await mostrarStock();
+      showSuccess('✅ Reposición registrada correctamente');
+    } catch (err) {
+      console.error('Error al procesar reposición:', err);
+      showError('❌ Error al procesar la reposición. Por favor, intente nuevamente.');
+    }
   });
 }
 
