@@ -1,0 +1,122 @@
+/* Estilos para el Dashboard */
+
+.card-metrica {
+    border-left: 4px solid;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card-metrica:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.card-ventas {
+    border-left-color: #28a745;
+}
+
+.card-ganancia {
+    border-left-color: #007bff;
+}
+
+.card-stock {
+    border-left-color: #17a2b8;
+}
+
+.card-comparacion {
+    border-left-color: #ffc107;
+}
+
+.icono-metrica {
+    font-size: 2.5rem;
+    opacity: 0.3;
+}
+
+/* Alertas de stock bajo */
+.alerta-stock {
+    animation: slideInDown 0.5s ease-out;
+    border-left: 4px solid #ffc107;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Top productos */
+.top-producto-item {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s;
+}
+
+.top-producto-item:hover {
+    background-color: #f8f9fa;
+}
+
+.top-producto-item:last-child {
+    border-bottom: none;
+}
+
+.top-producto-numero {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.875rem;
+}
+
+.top-1 { background-color: #ffd700; color: #000; }
+.top-2 { background-color: #c0c0c0; color: #000; }
+.top-3 { background-color: #cd7f32; color: #fff; }
+.top-4, .top-5 { background-color: #6c757d; color: #fff; }
+
+/* Badge de estado de stock */
+.badge-stock-critico {
+    background-color: #dc3545;
+}
+
+.badge-stock-bajo {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.badge-stock-normal {
+    background-color: #28a745;
+}
+
+/* Animaciones */
+#contenedorDashboard {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .icono-metrica {
+        font-size: 2rem;
+    }
+    
+    .card-metrica h3 {
+        font-size: 1.5rem;
+    }
+}
+

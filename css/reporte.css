@@ -1,0 +1,136 @@
+/* Estilos para el módulo de Reportes */
+
+.card-ventas {
+    border-left: 4px solid #28a745;
+    transition: transform 0.2s;
+}
+
+.card-ventas:hover {
+    transform: translateY(-5px);
+}
+
+.card-gastos {
+    border-left: 4px solid #dc3545;
+    transition: transform 0.2s;
+}
+
+.card-gastos:hover {
+    transform: translateY(-5px);
+}
+
+.card-ganancia {
+    border-left: 4px solid #007bff;
+    transition: transform 0.2s;
+}
+
+.card-ganancia:hover {
+    transform: translateY(-5px);
+}
+
+.icono-grande {
+    font-size: 3rem;
+    opacity: 0.3;
+}
+
+#contenedorReporte {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#tablaResumenDiario {
+    font-size: 0.95rem;
+}
+
+#tablaResumenDiario tbody tr:hover {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+/* Responsive para gráficos */
+@media (max-width: 768px) {
+    .icono-grande {
+        font-size: 2rem;
+    }
+
+    #tablaResumenDiario {
+        font-size: 0.85rem;
+    }
+}
+
+/* Estilos para los botones de período rápido */
+.btn-group .btn {
+    border-radius: 0.375rem;
+    margin: 0 2px;
+}
+
+/* Mejoras visuales para las tarjetas */
+.card-ventas .card-body,
+.card-gastos .card-body,
+.card-ganancia .card-body {
+    padding: 1.5rem;
+}
+
+/* Animación para las tarjetas al cargar */
+.card-ventas,
+.card-gastos,
+.card-ganancia {
+    animation: slideInUp 0.5s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Estilo para el mensaje sin datos */
+#mensajeSinDatos {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Estilos para la tabla de productos vendidos */
+#tbodyProductosVendidos tr:hover {
+    background-color: #f8f9fa;
+}
+
+#tbodyProductosVendidos .sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Scrollbar personalizado para la tabla de productos */
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+

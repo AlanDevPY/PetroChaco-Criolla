@@ -1,4 +1,4 @@
-import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId, obtenerStockPorId, sumarStockTransaccional, registrarReposicion, obtenerReposiciones, descontarStockTransaccional, registrarSalida, obtenerSalidas } from "./firebase.js";
+import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId, obtenerStockPorId, sumarStockTransaccional, registrarReposicion, obtenerReposiciones, descontarStockTransaccional, registrarSalida, obtenerSalidas, eliminarReposicion, eliminarSalida } from "./firebase.js";
 import { showSuccess, showError, showInfo, showLoading, hideLoading, showConfirm, showWarning } from "./toast-utils.js";
 import { mostrarStockConDataTable, configurarEventosDataTable, actualizarFilaDataTable } from "./stock-modern.js";
 import { confirmarEliminacion, alertaAdvertencia } from "./swal-utils.js";
@@ -327,8 +327,9 @@ actualizarStockForm.addEventListener("submit", async (e) => {
     const costo = parseGs(costoInput.value);
     const costoCompraInput = document.getElementById("actualizarPrecioCompraStock");
     const costoCompra = parseGs(costoCompraInput.value);
+    const stockMinimo = Number(document.getElementById("actualizarStockMinimo").value) || 10;
 
-    const stockData = { costo, costoCompra };
+    const stockData = { costo, costoCompra, stockMinimo };
 
     await actualizarStockporId(idStock, stockData);
     modalActualizarProducto.hide();
@@ -373,8 +374,9 @@ registrarStockForm.addEventListener("submit", async (e) => {
     // Convertir el costo de string a number usando parseGs
     const costo = parseGs(document.getElementById("nuevoCostoStock").value);
     const costoCompra = parseGs(document.getElementById("nuevoPrecioCompraStock").value);
+    const stockMinimo = Number(document.getElementById("nuevoStockMinimo").value) || 10;
 
-    const stockData = { FechaDeRegistro, item, codigoBarra, categoria, cantidad, costo, costoCompra };
+    const stockData = { FechaDeRegistro, item, codigoBarra, categoria, cantidad, costo, costoCompra, stockMinimo };
 
     // Verificar si el codigo de barra ya existe en el stock
     const obtenerStockTotal = await obtenerStock();
@@ -610,8 +612,33 @@ function asignarEventosBotones() {
         document.getElementById("actualizarCodigoBarraStock").value = item.codigoBarra;
         document.getElementById("actualizarCostoStock").value = Number(item.costo).toLocaleString("es-PY");
         document.getElementById("actualizarPrecioCompraStock").value = Number(item.costoCompra).toLocaleString("es-PY");
+        document.getElementById("actualizarStockMinimo").value = item.stockMinimo || 10;
       }
     });
+  });
+}
+
+// Actualizar también en el código de DataTables
+if (USAR_DATATABLES) {
+  configurarEventosDataTable({
+    onEditar: async (id) => {
+      idStock = id;
+      const stock = await obtenerStockPorId(id);
+
+      document.getElementById("actualizarItemStock").value = stock.item;
+      document.getElementById("actualizarCategoriaStock").value = stock.categoria;
+      document.getElementById("actualizarCodigoBarraStock").value = stock.codigoBarra;
+      document.getElementById("actualizarCostoStock").value = Number(stock.costo).toLocaleString("es-PY");
+      document.getElementById("actualizarPrecioCompraStock").value = Number(stock.costoCompra).toLocaleString("es-PY");
+      document.getElementById("actualizarStockMinimo").value = stock.stockMinimo || 10;
+
+      modalActualizarProducto.show();
+    },
+    onEliminar: async (id) => {
+      await eliminarStockPorID(id);
+      showSuccess("✅ Stock eliminado correctamente");
+      await mostrarStock();
+    }
   });
 }
 
@@ -948,12 +975,22 @@ if (modalHistorial) {
           <td>${n.totalItems || (n.items?.length || 0)}</td>
           <td class="text-end">${formatGs(n.totalCompra || 0)}</td>
           <td class="text-end">
-            <button class="btn btn-sm btn-outline-primary" data-note-id="${n.id}" data-note-type="reposicion">Ver</button>
+            <div class="btn-group" role="group">
+              <button class="btn btn-sm btn-outline-primary" data-note-id="${n.id}" data-note-type="reposicion" data-action="ver">
+                <i class="bi bi-eye"></i> Ver
+              </button>
+              <button class="btn btn-sm btn-outline-danger" data-note-id="${n.id}" data-note-type="reposicion" data-action="eliminar">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
           </td>
         </tr>`);
-      // Attach click handler for the just-added button
-      const btn = tbody.querySelector(`button[data-note-id="${n.id}"][data-note-type="reposicion"]`);
-      if (btn) btn.addEventListener('click', () => mostrarDetalleNotaModal(n, 'reposicion'));
+      // Attach click handlers
+      const btnVer = tbody.querySelector(`button[data-note-id="${n.id}"][data-action="ver"]`);
+      if (btnVer) btnVer.addEventListener('click', () => mostrarDetalleNotaModal(n, 'reposicion'));
+      
+      const btnEliminar = tbody.querySelector(`button[data-note-id="${n.id}"][data-action="eliminar"]`);
+      if (btnEliminar) btnEliminar.addEventListener('click', () => eliminarReposicionHandler(n));
     });
   });
 }
@@ -979,12 +1016,22 @@ if (modalHistorialSalidas) {
           <td>${(n.descripcion && n.descripcion.length > 80) ? n.descripcion.slice(0, 80) + '...' : (n.descripcion || '-')}</td>
           <td>${n.totalItems || (n.items?.length || 0)}</td>
           <td class="text-end">
-            <button class="btn btn-sm btn-outline-primary" data-note-id="${n.id}" data-note-type="salida">Ver</button>
+            <div class="btn-group" role="group">
+              <button class="btn btn-sm btn-outline-primary" data-note-id="${n.id}" data-note-type="salida" data-action="ver">
+                <i class="bi bi-eye"></i> Ver
+              </button>
+              <button class="btn btn-sm btn-outline-danger" data-note-id="${n.id}" data-note-type="salida" data-action="eliminar">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
           </td>
         </tr>`);
-      // Attach click handler
-      const btnS = tbody.querySelector(`button[data-note-id="${n.id}"][data-note-type="salida"]`);
-      if (btnS) btnS.addEventListener('click', () => mostrarDetalleNotaModal(n, 'salida'));
+      // Attach click handlers
+      const btnVer = tbody.querySelector(`button[data-note-id="${n.id}"][data-action="ver"]`);
+      if (btnVer) btnVer.addEventListener('click', () => mostrarDetalleNotaModal(n, 'salida'));
+      
+      const btnEliminar = tbody.querySelector(`button[data-note-id="${n.id}"][data-action="eliminar"]`);
+      if (btnEliminar) btnEliminar.addEventListener('click', () => eliminarSalidaHandler(n));
     });
   });
 }
@@ -1010,6 +1057,120 @@ function mostrarDetalleNotaModal(nota, tipo) {
     modal.show();
   } catch (e) {
     console.error('Error mostrando detalle de nota:', e);
+  }
+}
+
+// Handler para eliminar reposición
+async function eliminarReposicionHandler(nota) {
+  try {
+    const confirmado = await Swal.fire({
+      title: '¿Eliminar nota de reposición?',
+      html: `Se eliminará la nota del <strong>${nota.fecha || 'fecha desconocida'}</strong>.<br><small class="text-muted">Esta acción no se puede deshacer</small>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '<i class="bi bi-trash me-1"></i> Sí, eliminar',
+      cancelButtonText: '<i class="bi bi-x-circle me-1"></i> Cancelar',
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d'
+    });
+    
+    if (!confirmado.isConfirmed) return;
+    
+    if (!confirmado) return;
+
+    // Mostrar loading
+    const loading = Swal.fire({
+      title: 'Eliminando...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    await eliminarReposicion(nota.id);
+
+    await Swal.fire({
+      icon: 'success',
+      title: '¡Eliminado!',
+      text: 'La nota de reposición ha sido eliminada correctamente',
+      timer: 2000,
+      showConfirmButton: false
+    });
+
+    // Recargar el historial
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalHistorialReposiciones'));
+    if (modal) {
+      modal.hide();
+      setTimeout(() => {
+        modal.show();
+      }, 300);
+    }
+  } catch (error) {
+    console.error('Error al eliminar reposición:', error);
+    await Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'No se pudo eliminar la nota de reposición. Intenta nuevamente.',
+      confirmButtonText: 'Aceptar'
+    });
+  }
+}
+
+// Handler para eliminar salida
+async function eliminarSalidaHandler(nota) {
+  try {
+    const confirmado = await Swal.fire({
+      title: '¿Eliminar nota de salida?',
+      html: `Se eliminará la nota del <strong>${nota.fecha || 'fecha desconocida'}</strong>.<br><small class="text-muted">Esta acción no se puede deshacer</small>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '<i class="bi bi-trash me-1"></i> Sí, eliminar',
+      cancelButtonText: '<i class="bi bi-x-circle me-1"></i> Cancelar',
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d'
+    });
+    
+    if (!confirmado.isConfirmed) return;
+    
+    if (!confirmado) return;
+
+    // Mostrar loading
+    const loading = Swal.fire({
+      title: 'Eliminando...',
+      text: 'Por favor espera',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    await eliminarSalida(nota.id);
+
+    await Swal.fire({
+      icon: 'success',
+      title: '¡Eliminado!',
+      text: 'La nota de salida ha sido eliminada correctamente',
+      timer: 2000,
+      showConfirmButton: false
+    });
+
+    // Recargar el historial
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalHistorialSalidas'));
+    if (modal) {
+      modal.hide();
+      setTimeout(() => {
+        modal.show();
+      }, 300);
+    }
+  } catch (error) {
+    console.error('Error al eliminar salida:', error);
+    await Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'No se pudo eliminar la nota de salida. Intenta nuevamente.',
+      confirmButtonText: 'Aceptar'
+    });
   }
 }
 

@@ -467,6 +467,30 @@ export const obtenerSalidas = async (max = 50) => {
   }, 5 * 60 * 1000);
 };
 
+// Eliminar reposición
+export const eliminarReposicion = async (id) => {
+  try {
+    await deleteDoc(doc(db, "Reposiciones", id));
+    invalidateCache('reposiciones');
+    console.log("Reposición eliminada con éxito");
+  } catch (error) {
+    console.error("Error al eliminar reposición:", error);
+    throw error;
+  }
+};
+
+// Eliminar salida
+export const eliminarSalida = async (id) => {
+  try {
+    await deleteDoc(doc(db, "Salidas", id));
+    invalidateCache('salidas');
+    console.log("Salida eliminada con éxito");
+  } catch (error) {
+    console.error("Error al eliminar salida:", error);
+    throw error;
+  }
+};
+
 // * FUNCIONES QUE TENGAN QUE VER CON LA BASE DE DATOS DE CLIENTES
 
 // FUNCION PARA REGISTRAR CLIENTE

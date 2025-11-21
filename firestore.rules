@@ -41,7 +41,8 @@ service cloud.firestore {
         (d.codigoBarra is string || d.codigoBarra is int) &&
         d.cantidad is int && d.cantidad >= 0 &&
         d.costo is int && d.costo >= 0 &&
-        d.costoCompra is int && d.costoCompra >= 0;
+        d.costoCompra is int && d.costoCompra >= 0 &&
+        (!('stockMinimo' in d) || (d.stockMinimo is int && d.stockMinimo >= 0));
     }
 
     // -------------------- CLIENTES --------------------
@@ -131,8 +132,11 @@ service cloud.firestore {
       // Escritura (crear): sólo admin y validación de estructura
       allow create: if isSignedIn() && isAdmin() && validateReposicion(request.resource.data);
 
-      // Inmutables: no se permite update/delete
-      allow update, delete: if false;
+      // Actualizar: no permitido (inmutable)
+      allow update: if false;
+
+      // Eliminar: solo admin (para limpiar datos de prueba)
+      allow delete: if isSignedIn() && isAdmin();
     }
 
     function validateReposicion(d) {
@@ -152,6 +156,22 @@ service cloud.firestore {
         i.cantidad is int && i.cantidad > 0 &&
         (!('costoCompra' in i) || (i.costoCompra is int && i.costoCompra >= 0)) &&
         (!('costo' in i) || (i.costo is int && i.costo >= 0));
+    }
+
+    // -------------------- SALIDAS --------------------
+    // Colección: Salidas (S mayúscula)
+    match /Salidas/{docId} {
+      // Lectura: cualquier usuario autenticado (para ver historial)
+      allow read: if isSignedIn();
+
+      // Crear: solo admin
+      allow create: if isSignedIn() && isAdmin();
+
+      // Actualizar: no permitido (inmutable)
+      allow update: if false;
+
+      // Eliminar: solo admin (para limpiar datos de prueba)
+      allow delete: if isSignedIn() && isAdmin();
     }
 
     // Fallback: denegar cualquier otra ruta no contemplada explícitamente

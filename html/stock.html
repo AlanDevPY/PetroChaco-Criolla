@@ -430,6 +430,14 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Stock Mínimo
+                                <small class="text-muted">(Alerta cuando baje de este nivel)</small>
+                            </label>
+                            <input type="number" id="nuevoStockMinimo" class="form-control text-center" placeholder="10"
+                                value="10" min="0">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">
                                 <i class="bi bi-cart-dash me-1"></i>Precio Compra
                             </label>
                             <input type="text" value="0" autocomplete="off" required id="nuevoPrecioCompraStock"
@@ -503,6 +511,15 @@
                         </div>
 
                         <!-- Campo de Stock removido: la cantidad se gestiona desde reposición/otras acciones -->
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Stock Mínimo
+                                <small class="text-muted">(Alerta cuando baje de este nivel)</small>
+                            </label>
+                            <input type="number" id="actualizarStockMinimo" class="form-control text-center"
+                                placeholder="10" value="10" min="0">
+                        </div>
 
                         <div class="mb-3">
                             <label class="form-label">
