@@ -129,49 +129,97 @@ onAuthStateChanged(auth, async (user) => {
     if (docSnap.exists()) {
       const rol = docSnap.data().rol;
       const nombre = docSnap.data().nombre;
-      console.log("Rol del usuario:", rol);
-      document.getElementById("usuarioLogueado").textContent = `${nombre.toUpperCase()}`;
+      console.log("✅ Usuario autenticado - Rol:", rol, "Nombre:", nombre);
+      
+      // Actualizar nombre de usuario en la UI
+      const usuarioLogueadoEl = document.getElementById("usuarioLogueado");
+      if (usuarioLogueadoEl) {
+        usuarioLogueadoEl.textContent = `${nombre.toUpperCase()}`;
+      }
 
-      // Aquí llamás tu función para aplicar permisos según rol
-      aplicarPermisos(rol);
-      // Exponer rol en el DOM para que otras páginas/scripts lo usen
+      // Exponer rol en el DOM PRIMERO para que otros scripts lo puedan usar
       try {
         document.body.dataset.rol = rol;
         document.dispatchEvent(new CustomEvent('rol-ready', { detail: { rol } }));
       } catch (e) {
         console.warn('No se pudo propagar rol al DOM:', e);
       }
+
+      // Aplicar permisos DESPUÉS de exponer el rol
+      aplicarPermisos(rol);
+      
       // Redirigir de la antigua vista de cajaUnica a la nueva unificada
       const paginaActual = window.location.pathname.split("/").pop();
       if (paginaActual === 'cajaUnica.html') {
         window.location.href = 'caja.html';
       }
+    } else {
+      console.warn("⚠️ Usuario no encontrado en la base de datos");
     }
   } catch (error) {
-    console.error("Error al obtener datos del usuario:", error);
+    console.error("❌ Error al obtener datos del usuario:", error);
   }
 });
 
 const aplicarPermisos = (rol) => {
-  const elementosAdmin = document.querySelectorAll(".solo-admin");
+  // Función interna para aplicar los permisos
+  const aplicar = () => {
+    const elementosAdmin = document.querySelectorAll(".solo-admin");
+    console.log(`🔐 Aplicando permisos para rol: ${rol}, elementos encontrados: ${elementosAdmin.length}`);
 
-  if (rol === "admin") {
-    // Mostrar botones y secciones exclusivas
-    elementosAdmin.forEach(el => el.style.display = "block");
-  } else {
-    // Ocultar todo lo que es solo para administradores
-    elementosAdmin.forEach(el => el.style.display = "none");
+    if (rol === "admin") {
+      // Mostrar botones y secciones exclusivas
+      elementosAdmin.forEach(el => {
+        // Determinar el display correcto según las clases del elemento
+        let displayValue = 'block'; // Por defecto
+        
+        if (el.classList.contains('d-flex') || el.classList.contains('flex')) {
+          displayValue = 'flex';
+        } else if (el.classList.contains('d-inline-flex')) {
+          displayValue = 'inline-flex';
+        } else if (el.classList.contains('d-inline-block')) {
+          displayValue = 'inline-block';
+        } else if (el.classList.contains('d-inline')) {
+          displayValue = 'inline';
+        } else if (el.classList.contains('card')) {
+          displayValue = 'block';
+        }
+        
+        // Agregar clase para indicar que está visible
+        el.classList.add('admin-visible');
+        // Establecer el display correcto
+        el.style.setProperty('display', displayValue, 'important');
+        console.log(`✅ Mostrando elemento admin con display: ${displayValue}`, el.className, el);
+      });
+    } else {
+      // Ocultar todo lo que es solo para administradores
+      elementosAdmin.forEach(el => {
+        el.classList.remove('admin-visible');
+        el.style.setProperty('display', 'none', 'important');
+      });
 
-    // 🔒 Lista de páginas restringidas solo para administradores
-    const paginasRestringidas = ["stock.html", "usuario.html", "usuario.html"];
+      // 🔒 Lista de páginas restringidas solo para administradores
+      const paginasRestringidas = ["stock.html", "usuario.html", "usuario.html"];
 
-    // Detectar en qué página está el usuario
-    const paginaActual = window.location.pathname.split("/").pop();
+      // Detectar en qué página está el usuario
+      const paginaActual = window.location.pathname.split("/").pop();
 
-    // Si la página actual está en la lista restringida, redirigir
-    if (paginasRestringidas.includes(paginaActual)) {
-      window.location.href = "ventas.html"; // o la página que sí puede ver
+      // Si la página actual está en la lista restringida, redirigir
+      if (paginasRestringidas.includes(paginaActual)) {
+        window.location.href = "ventas.html"; // o la página que sí puede ver
+      }
     }
+  };
+
+  // Intentar aplicar inmediatamente
+  if (document.readyState === 'loading') {
+    // Si el DOM aún no está listo, esperar
+    document.addEventListener('DOMContentLoaded', aplicar);
+  } else {
+    // Si el DOM ya está listo, aplicar inmediatamente
+    aplicar();
+    // También aplicar después de un pequeño delay por si acaso
+    setTimeout(aplicar, 100);
   }
 };
 

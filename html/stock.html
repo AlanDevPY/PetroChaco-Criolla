@@ -63,6 +63,27 @@
                         <kbd>Ctrl+K</kbd> para buscar
                     </small>
                 </div>
+                <div class="d-flex gap-2">
+                    <select class="form-select solo-admin" id="selectCategoriaImprimir" style="min-width: 180px;"
+                        title="Selecciona una categoría para imprimir">
+                        <option value="">Seleccionar categoría...</option>
+                        <option value="Comida">Comida</option>
+                        <option value="Bebida">Bebida</option>
+                        <option value="Postres">Postres</option>
+                        <option value="Helados">Helados</option>
+                        <option value="Dulces / Bombones">Dulces / Bombones</option>
+                        <option value="Snacks">Snacks</option>
+                        <option value="Combos">Combos</option>
+                        <option value="Promociones">Promociones</option>
+                        <option value="Insumos / Materia Prima">Insumos / Materia Prima</option>
+                        <option value="Utensilios / Equipamiento">Utensilios / Equipamiento</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                    <button class="btn btn-outline-primary solo-admin" id="btnImprimirStockCategoria"
+                        title="Imprimir stock de la categoría seleccionada" disabled>
+                        <i class="bi bi-printer me-1"></i> Imprimir Stock
+                    </button>
+                </div>
                 <button class="btn btn-primary solo-admin" id="btnAgregar" data-bs-toggle="modal"
                     data-bs-target="#modalAgregarProducto" title="Agregar nuevo producto (Ctrl+N)">
                     <i class="bi bi-plus-circle me-1"></i> Agregar Producto

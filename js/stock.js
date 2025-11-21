@@ -1128,3 +1128,160 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// Función para generar ticket de stock por categoría
+function generarTicketStockPorCategoria(categoria, productos) {
+  try {
+    const fecha = dayjs().format('DD/MM/YYYY HH:mm:ss');
+    const usuario = (document.getElementById('usuarioLogueado')?.textContent || '').trim() || '-';
+    
+    // Ordenar productos por nombre
+    const productosOrdenados = productos.sort((a, b) => {
+      const nombreA = (a.item || '').toUpperCase();
+      const nombreB = (b.item || '').toUpperCase();
+      return nombreA.localeCompare(nombreB);
+    });
+
+    const itemsHtml = productosOrdenados.map(producto => {
+      const cantidad = producto.cantidad || 0;
+      const nombre = producto.item || '-';
+      return `<tr><td class="ticket-qty">${cantidad}</td><td class="ticket-desc">${nombre}</td></tr>`;
+    }).join('');
+
+    const totalItems = productos.length;
+    const totalCantidad = productos.reduce((sum, p) => sum + (Number(p.cantidad) || 0), 0);
+
+    const ticketBody = `
+      <div class="ticket-container">
+        <div class="ticket-header ticket-center" style="border-bottom:2px solid #000;padding-bottom:1.5mm;margin-bottom:1.5mm;">
+          <div class="ticket-bold" style="font-size:15px;letter-spacing:1px;">Petro Chaco Criolla</div>
+          <div class="ticket-small">Control de Stock</div>
+        </div>
+        <div style="font-size:11px;text-align:left;margin-bottom:1.5mm;line-height:1.3;">
+          <span class="ticket-bold">Categoría:</span> ${categoria}<br>
+          <span class="ticket-bold">Fecha:</span> ${fecha}<br>
+          <span class="ticket-bold">Usuario:</span> ${usuario}<br>
+        </div>
+        <div style="border-bottom:1px dashed #000;margin-bottom:1.5mm;"></div>
+        <table class="ticket-items">
+          <thead>
+            <tr>
+              <th class="ticket-qty">Cant</th>
+              <th class="ticket-desc">Producto</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+        <div style="border-bottom:1px dashed #000;margin-bottom:1.5mm;"></div>
+        <div class="ticket-total-row" style="background:#f5f5f5;border-radius:1.5mm;padding:1.2mm 0 1.2mm 0;margin-bottom:1.5mm;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:0.5mm;">
+            <span class="ticket-bold">Productos</span>
+            <span class="ticket-right">${totalItems}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;">
+            <span class="ticket-bold">Total Unidades</span>
+            <span class="ticket-right">${totalCantidad}</span>
+          </div>
+        </div>
+        <div class="ticket-msg" id="ticket-msg" style="margin-top:2mm;">Documento para control interno</div>
+      </div>
+    `;
+
+    // Construir un documento HTML mínimo y abrirlo en una nueva ventana para imprimir
+    const fullHtml = `<!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Stock por Categoría - ${categoria}</title>
+          <style>
+            @media print { @page { size: 70mm auto; margin: 0; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+            body{ margin:0; padding:0; background:#fff; color:#000; }
+            .ticket-container{ width:70mm; box-sizing:border-box; padding:4px 4px; font-family: 'Courier New', monospace; font-size:12px; line-height:1.3; }
+            .ticket-header{ margin-bottom:6px; }
+            .ticket-center{ text-align:center; }
+            .ticket-bold{ font-weight:700; }
+            .ticket-items{ width:100%; border-collapse:collapse; margin:6px 0; }
+            .ticket-items th, .ticket-items td{ padding:4px 2px; text-align:left; }
+            .ticket-qty{ width:15%; text-align:center; }
+            .ticket-desc{ width:85%; }
+            .ticket-right{ text-align:right; }
+          </style>
+        </head>
+        <body>
+          ${ticketBody}
+        </body>
+      </html>`;
+
+    const printWin = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=400,height=800');
+    if (!printWin) {
+      showInfo('No se pudo abrir la ventana de impresión. Revisa el bloqueador de ventanas emergentes.');
+      return;
+    }
+
+    printWin.document.open();
+    printWin.document.write(fullHtml);
+    printWin.document.close();
+    printWin.focus();
+
+    // Esperar un momento para que el navegador renderice la ventana de impresión
+    setTimeout(() => {
+      try {
+        printWin.print();
+      } catch (e) {
+        console.error('Error al imprimir desde ventana:', e);
+      }
+      // Cerrar la ventana automáticamente unos instantes después de imprimir
+      setTimeout(() => {
+        try { printWin.close(); } catch (e) { /* ignore */ }
+      }, 600);
+    }, 500);
+
+  } catch (e) {
+    console.error('Error generando ticket de stock por categoría:', e);
+    showError('❌ Error al generar el ticket. Por favor, intente nuevamente.');
+  }
+}
+
+// Configurar selector de categoría y botón de imprimir
+document.addEventListener('DOMContentLoaded', () => {
+  const selectCategoria = document.getElementById('selectCategoriaImprimir');
+  const btnImprimirStock = document.getElementById('btnImprimirStockCategoria');
+
+  if (!selectCategoria || !btnImprimirStock) return;
+
+  // Habilitar/deshabilitar botón según selección
+  selectCategoria.addEventListener('change', () => {
+    btnImprimirStock.disabled = !selectCategoria.value;
+  });
+
+  // Evento click en botón imprimir
+  btnImprimirStock.addEventListener('click', async () => {
+    const categoria = selectCategoria.value;
+    if (!categoria) {
+      showWarning('⚠️ Por favor, selecciona una categoría');
+      return;
+    }
+
+    try {
+      // Obtener stock actualizado
+      const stock = await obtenerStock();
+      
+      // Filtrar productos por categoría
+      const productosCategoria = stock.filter(p => p.categoria === categoria);
+      
+      if (productosCategoria.length === 0) {
+        showWarning(`⚠️ No hay productos en la categoría "${categoria}"`);
+        return;
+      }
+
+      // Generar y imprimir ticket
+      generarTicketStockPorCategoria(categoria, productosCategoria);
+      showSuccess(`✅ Ticket generado para ${productosCategoria.length} productos de ${categoria}`);
+    } catch (error) {
+      console.error('Error al imprimir stock por categoría:', error);
+      showError('❌ Error al obtener el stock. Por favor, intente nuevamente.');
+    }
+  });
+});
+

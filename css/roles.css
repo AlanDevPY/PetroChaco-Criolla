@@ -1,4 +1,15 @@
-.solo-admin {
-  display: none; /* oculto por defecto */
+/* Ocultar por defecto solo si NO tiene la clase admin-visible */
+.solo-admin:not(.admin-visible) {
+  display: none !important;
+}
+
+/* Cuando tiene admin-visible, mostrar según su tipo */
+.solo-admin.admin-visible {
+  display: block !important;
+}
+
+/* Para elementos con d-flex */
+.solo-admin.admin-visible.d-flex {
+  display: flex !important;
 }
 
