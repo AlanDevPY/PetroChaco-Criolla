@@ -244,60 +244,8 @@ function actualizarCobro() {
   input.addEventListener("input", actualizarCobro);
 });
 
-// Lógica de cálculo automático de pagos (siempre activa)
-if (efectivoInput && tarjetaInput && transferenciaInput) {
-  // Cuando se hace focus en efectivoInput, mostrar el total
-  efectivoInput.addEventListener("focus", () => {
-    const totalPedido = calcularTotalPedido();
-    // Si el input está vacío o tiene 0, mostrar el total
-    const valorActual = parseGs(efectivoInput.value);
-    if (valorActual === 0) {
-      efectivoInput.value = totalPedido.toLocaleString("de-DE");
-      efectivoInput.dataset.value = totalPedido.toString();
-      actualizarCobro();
-    }
-    // Seleccionar todo el texto para facilitar la edición
-    efectivoInput.select();
-  });
-
-  // Cuando se hace focus en tarjetaInput, calcular el restante automáticamente
-  tarjetaInput.addEventListener("focus", () => {
-    const totalPedido = calcularTotalPedido();
-    const efectivo = parseGs(efectivoInput.value);
-    const transferencia = parseGs(transferenciaInput.value);
-
-    // Calcular el restante: total - efectivo - transferencia
-    const restante = Math.max(0, totalPedido - efectivo - transferencia);
-
-    // Solo actualizar si el restante es mayor a 0
-    if (restante > 0) {
-      tarjetaInput.value = restante.toLocaleString("de-DE");
-      tarjetaInput.dataset.value = restante.toString();
-      actualizarCobro();
-    }
-    // Seleccionar todo el texto para facilitar la edición
-    tarjetaInput.select();
-  });
-
-  // Cuando se hace focus en transferenciaInput, calcular el restante automáticamente
-  transferenciaInput.addEventListener("focus", () => {
-    const totalPedido = calcularTotalPedido();
-    const efectivo = parseGs(efectivoInput.value);
-    const tarjeta = parseGs(tarjetaInput.value);
-
-    // Calcular el restante: total - efectivo - tarjeta
-    const restante = Math.max(0, totalPedido - efectivo - tarjeta);
-
-    // Solo actualizar si el restante es mayor a 0
-    if (restante > 0) {
-      transferenciaInput.value = restante.toLocaleString("de-DE");
-      transferenciaInput.dataset.value = restante.toString();
-      actualizarCobro();
-    }
-    // Seleccionar todo el texto para facilitar la edición
-    transferenciaInput.select();
-  });
-}
+// Lógica de cálculo automático de pagos (deshabilitada)
+// Los cálculos automáticos al hacer focus han sido removidos
 
 // funcion con modal cobro cliente
 
