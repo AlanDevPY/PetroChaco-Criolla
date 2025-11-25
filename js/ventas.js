@@ -3,6 +3,7 @@ import {
   obtenerStockPorId,
   registrarCliente,
   obtenerClientesCached,
+  invalidarCacheClientes,
   obtenerCajas,
   actualizarStockporId,
   eliminarClientePorID,
@@ -34,6 +35,7 @@ import { mejorarDatalist } from "./datalist-mejorado.js";
 // Importar funciones de facturación
 import { obtenerTimbradoActivo, incrementarNumeroFactura } from "./facturacion.js";
 import { registrarFactura } from "./firebase.js";
+import { invalidateCache } from "./firebase-cache.js";
 
 // VARIABLES GLOBALES
 let pedido = [];
@@ -493,6 +495,37 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
 
   await registrarCliente(cliente);
   alertaExito("Cliente registrado", `${nombre} ha sido registrado correctamente.`);
+
+  // Invalidar completamente el caché de clientes para forzar recarga
+  // Esto asegura que el cliente recién registrado esté disponible inmediatamente
+  invalidateCache('clientes');
+  invalidarCacheClientes(); // Invalidar también el caché interno en memoria
+  
+  // Esperar un momento para que Firestore se actualice y luego recargar
+  await new Promise(resolve => setTimeout(resolve, 300)); // Esperar 300ms para que Firestore se actualice
+  
+  // Recargar clientes forzando la invalidación del caché
+  const clientes = await obtenerClientesCached(true); // forzar recarga
+  // Buscar el cliente recién registrado por RUC
+  const clienteRegistrado = clientes.find((c) => c.ruc === ruc);
+  
+  // Actualizar el campo RUC en el modal de cobro y cargar los datos del cliente
+  if (clienteRucCobro) {
+    clienteRucCobro.value = ruc;
+    
+    if (clienteRegistrado) {
+      // Si encontramos el cliente, cargar sus datos directamente
+      cliente = clienteRegistrado;
+      clienteNombreCobro.value = clienteRegistrado.nombre;
+      clienteDireccionCobro.value = clienteRegistrado.direccion || '';
+      clienteTelefonoCobro.value = clienteRegistrado.telefono || '';
+    } else {
+      // Si aún no se encuentra, disparar la búsqueda con un pequeño delay
+      setTimeout(() => {
+        clienteRucCobro.dispatchEvent(new Event('input', { bubbles: true }));
+      }, 200);
+    }
+  }
 
   // Cerrar el modal de registro
   const modalRegistrar = bootstrap.Modal.getInstance(document.getElementById('modalRegistrarCliente'));
