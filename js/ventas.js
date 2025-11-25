@@ -505,9 +505,9 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
   await new Promise(resolve => setTimeout(resolve, 300)); // Esperar 300ms para que Firestore se actualice
   
   // Recargar clientes forzando la invalidación del caché
-  const clientes = await obtenerClientesCached(true); // forzar recarga
+  const clientesActualizados = await obtenerClientesCached(true); // forzar recarga
   // Buscar el cliente recién registrado por RUC
-  const clienteRegistrado = clientes.find((c) => c.ruc === ruc);
+  const clienteRegistrado = clientesActualizados.find((c) => c.ruc === ruc);
   
   // Actualizar el campo RUC en el modal de cobro y cargar los datos del cliente
   if (clienteRucCobro) {
