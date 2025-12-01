@@ -39,11 +39,37 @@ const inicializarTabla = () => {
       language: {
         url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
       },
-      order: [[1, 'desc']], // Ordenar por fecha de apertura descendente
+      order: [[1, 'desc']], // Ordenar por fecha de apertura descendente (más reciente primero)
       pageLength: 10,
       lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Todos"]],
       responsive: true,
       columnDefs: [
+        {
+          targets: 1, // Columna de fecha de apertura
+          type: 'num', // Tipo numérico para ordenar por timestamp
+          render: function (data, type, row) {
+            // Para mostrar, devolver el HTML original
+            if (type === 'display') {
+              return data;
+            }
+            // Para ordenar, extraer el valor de data-order
+            const match = data.match(/data-order="(\d+)"/);
+            if (match) {
+              return parseInt(match[1], 10);
+            }
+            // Fallback: intentar parsear la fecha
+            const parseFecha = (s) => {
+              const f = ["DD/MM/YYYY, h:mm:ss A", "DD/MM/YYYY HH:mm:ss"];
+              for (const fmt of f) {
+                const d = dayjs(s, fmt, true);
+                if (d.isValid()) return d;
+              }
+              return dayjs(s);
+            };
+            const textoFecha = data.replace(/<[^>]*>/g, '').trim();
+            return parseFecha(textoFecha).valueOf();
+          }
+        },
         { orderable: false, targets: 5 } // Columna de acciones no ordenable
       ]
     });
@@ -106,6 +132,22 @@ const mostrarCajas = async () => {
     return;
   }
 
+  // Calcular timestamp para ordenamiento
+  const calcularTimestamp = (caja) => {
+    if (caja.fechaAperturaTS?.seconds) {
+      return dayjs.unix(caja.fechaAperturaTS.seconds).valueOf();
+    }
+    const parseFecha = (s) => {
+      const f = ["DD/MM/YYYY, h:mm:ss A", "DD/MM/YYYY HH:mm:ss"];
+      for (const fmt of f) {
+        const d = dayjs(s, fmt, true);
+        if (d.isValid()) return d;
+      }
+      return dayjs(s);
+    };
+    return parseFecha(caja.fechaApertura).valueOf();
+  };
+
   visibles.forEach((caja, index) => {
     const estadoBadge = caja.estado === 'abierta'
       ? '<span class="badge bg-success"><i class="bi bi-unlock me-1"></i>Abierta</span>'
@@ -122,9 +164,13 @@ const mostrarCajas = async () => {
       ` : ''}
     `;
 
+    // Calcular timestamp para ordenamiento correcto
+    const timestampApertura = calcularTimestamp(caja);
+    const fechaAperturaHtml = `<span data-order="${timestampApertura}">${caja.fechaApertura}</span>`;
+
     tablaCajas.row.add([
       index + 1,
-      caja.fechaApertura,
+      fechaAperturaHtml,
       caja.usuario || '-',
       caja.fechaCierre || '<span class="text-white-50">--</span>',
       estadoBadge,
@@ -132,7 +178,9 @@ const mostrarCajas = async () => {
     ]);
   });
 
-  tablaCajas.draw();
+  tablaCajas.draw(false); // false para mantener el orden actual
+  // Forzar reordenamiento después de agregar datos
+  tablaCajas.order([1, 'desc']).draw();
 
   // Agregar event listeners usando delegación de eventos
   $('#tablaCajas tbody').off('click', '.btn-ver-detalle').on('click', '.btn-ver-detalle', async function (e) {
