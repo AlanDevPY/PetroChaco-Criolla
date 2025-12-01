@@ -499,7 +499,8 @@ export const registrarCliente = async (cliente) => {
     await addDoc(collection(db, "Clientes"), cliente);
     console.log("Cliente registrado con éxito");
     // invalidar caché de clientes tras mutación
-    invalidarCacheClientes(); // Invalidar caché interno
+    _clientesCache = null;
+    _clientesCacheTimestamp = 0;
     invalidateCache('clientes'); // 🔥 Nuevo sistema de caché
   } catch (error) {
     console.error("Error al registrar cliente:", error);
@@ -528,22 +529,15 @@ let _clientesCache = null;
 let _clientesCacheTimestamp = 0;
 const CLIENTES_CACHE_TTL = 30 * 1000; // 30s
 
-// Función para invalidar el caché interno de clientes
-export const invalidarCacheClientes = () => {
-  _clientesCache = null;
-  _clientesCacheTimestamp = 0;
-};
-
-export const obtenerClientesCached = async (forzarRecarga = false) => {
+export const obtenerClientesCached = async () => {
   const ahora = Date.now();
-  // Si se fuerza la recarga o el caché está expirado, recargar
-  if (forzarRecarga || !_clientesCache || (ahora - _clientesCacheTimestamp) >= CLIENTES_CACHE_TTL) {
-    const data = await obtenerClientes();
-    _clientesCache = data;
-    _clientesCacheTimestamp = ahora;
-    return data;
+  if (_clientesCache && (ahora - _clientesCacheTimestamp) < CLIENTES_CACHE_TTL) {
+    return _clientesCache;
   }
-  return _clientesCache;
+  const data = await obtenerClientes();
+  _clientesCache = data;
+  _clientesCacheTimestamp = ahora;
+  return data;
 };
 
 // FUNCION PARA ELIMINAR CLIENTE
@@ -553,7 +547,8 @@ export const eliminarClientePorID = async (id) => {
     await deleteDoc(clienteRef);
     console.log("Cliente eliminado con éxito");
     // invalidar caché de clientes tras mutación
-    invalidarCacheClientes(); // Invalidar caché interno
+    _clientesCache = null;
+    _clientesCacheTimestamp = 0;
     invalidateCache('clientes'); // 🔥 Nuevo sistema de caché
   } catch (error) {
     console.error("Error al eliminar cliente:", error);

@@ -3,7 +3,6 @@ import {
   obtenerStockPorId,
   registrarCliente,
   obtenerClientesCached,
-  invalidarCacheClientes,
   obtenerCajas,
   actualizarStockporId,
   eliminarClientePorID,
@@ -35,7 +34,6 @@ import { mejorarDatalist } from "./datalist-mejorado.js";
 // Importar funciones de facturación
 import { obtenerTimbradoActivo, incrementarNumeroFactura } from "./facturacion.js";
 import { registrarFactura } from "./firebase.js";
-import { invalidateCache } from "./firebase-cache.js";
 
 // VARIABLES GLOBALES
 let pedido = [];
@@ -246,8 +244,60 @@ function actualizarCobro() {
   input.addEventListener("input", actualizarCobro);
 });
 
-// Lógica de cálculo automático de pagos (deshabilitada)
-// Los cálculos automáticos al hacer focus han sido removidos
+// Lógica de cálculo automático de pagos (siempre activa)
+if (efectivoInput && tarjetaInput && transferenciaInput) {
+  // Cuando se hace focus en efectivoInput, mostrar el total
+  efectivoInput.addEventListener("focus", () => {
+    const totalPedido = calcularTotalPedido();
+    // Si el input está vacío o tiene 0, mostrar el total
+    const valorActual = parseGs(efectivoInput.value);
+    if (valorActual === 0) {
+      efectivoInput.value = totalPedido.toLocaleString("de-DE");
+      efectivoInput.dataset.value = totalPedido.toString();
+      actualizarCobro();
+    }
+    // Seleccionar todo el texto para facilitar la edición
+    efectivoInput.select();
+  });
+
+  // Cuando se hace focus en tarjetaInput, calcular el restante automáticamente
+  tarjetaInput.addEventListener("focus", () => {
+    const totalPedido = calcularTotalPedido();
+    const efectivo = parseGs(efectivoInput.value);
+    const transferencia = parseGs(transferenciaInput.value);
+
+    // Calcular el restante: total - efectivo - transferencia
+    const restante = Math.max(0, totalPedido - efectivo - transferencia);
+
+    // Solo actualizar si el restante es mayor a 0
+    if (restante > 0) {
+      tarjetaInput.value = restante.toLocaleString("de-DE");
+      tarjetaInput.dataset.value = restante.toString();
+      actualizarCobro();
+    }
+    // Seleccionar todo el texto para facilitar la edición
+    tarjetaInput.select();
+  });
+
+  // Cuando se hace focus en transferenciaInput, calcular el restante automáticamente
+  transferenciaInput.addEventListener("focus", () => {
+    const totalPedido = calcularTotalPedido();
+    const efectivo = parseGs(efectivoInput.value);
+    const tarjeta = parseGs(tarjetaInput.value);
+
+    // Calcular el restante: total - efectivo - tarjeta
+    const restante = Math.max(0, totalPedido - efectivo - tarjeta);
+
+    // Solo actualizar si el restante es mayor a 0
+    if (restante > 0) {
+      transferenciaInput.value = restante.toLocaleString("de-DE");
+      transferenciaInput.dataset.value = restante.toString();
+      actualizarCobro();
+    }
+    // Seleccionar todo el texto para facilitar la edición
+    transferenciaInput.select();
+  });
+}
 
 // funcion con modal cobro cliente
 
@@ -495,37 +545,6 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
 
   await registrarCliente(cliente);
   alertaExito("Cliente registrado", `${nombre} ha sido registrado correctamente.`);
-
-  // Invalidar completamente el caché de clientes para forzar recarga
-  // Esto asegura que el cliente recién registrado esté disponible inmediatamente
-  invalidateCache('clientes');
-  invalidarCacheClientes(); // Invalidar también el caché interno en memoria
-  
-  // Esperar un momento para que Firestore se actualice y luego recargar
-  await new Promise(resolve => setTimeout(resolve, 300)); // Esperar 300ms para que Firestore se actualice
-  
-  // Recargar clientes forzando la invalidación del caché
-  const clientesActualizados = await obtenerClientesCached(true); // forzar recarga
-  // Buscar el cliente recién registrado por RUC
-  const clienteRegistrado = clientesActualizados.find((c) => c.ruc === ruc);
-  
-  // Actualizar el campo RUC en el modal de cobro y cargar los datos del cliente
-  if (clienteRucCobro) {
-    clienteRucCobro.value = ruc;
-    
-    if (clienteRegistrado) {
-      // Si encontramos el cliente, cargar sus datos directamente
-      cliente = clienteRegistrado;
-      clienteNombreCobro.value = clienteRegistrado.nombre;
-      clienteDireccionCobro.value = clienteRegistrado.direccion || '';
-      clienteTelefonoCobro.value = clienteRegistrado.telefono || '';
-    } else {
-      // Si aún no se encuentra, disparar la búsqueda con un pequeño delay
-      setTimeout(() => {
-        clienteRucCobro.dispatchEvent(new Event('input', { bubbles: true }));
-      }, 200);
-    }
-  }
 
   // Cerrar el modal de registro
   const modalRegistrar = bootstrap.Modal.getInstance(document.getElementById('modalRegistrarCliente'));
