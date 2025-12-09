@@ -318,10 +318,15 @@ function actualizarInfoPaginacion(inicio, fin, total) {
   infoPaginacion.textContent = `Mostrando ${inicio} - ${fin} de ${total} productos`;
 }
 
-// evento de submit para actualizar PRECIO DE VENTA únicamente (Precio Compra deshabilitado)
+// evento de submit para actualizar producto completo
 actualizarStockForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   try {
+    // Obtener todos los valores del formulario
+    const item = document.getElementById("actualizarItemStock").value.trim().toUpperCase();
+    const categoria = document.getElementById("actualizarCategoriaStock").value;
+    const codigoBarra = document.getElementById("actualizarCodigoBarraStock").value;
+    
     // Convertir el costo de string a number usando parseGs
     const costoInput = document.getElementById("actualizarCostoStock");
     const costo = parseGs(costoInput.value);
@@ -329,7 +334,37 @@ actualizarStockForm.addEventListener("submit", async (e) => {
     const costoCompra = parseGs(costoCompraInput.value);
     const stockMinimo = Number(document.getElementById("actualizarStockMinimo").value) || 10;
 
-    const stockData = { costo, costoCompra, stockMinimo };
+    // Validaciones
+    if (!item || item.length === 0) {
+      alertaAdvertencia("⚠️ Campo requerido", "El nombre del producto es obligatorio");
+      return;
+    }
+
+    if (!codigoBarra || codigoBarra.length === 0) {
+      alertaAdvertencia("⚠️ Campo requerido", "El código de barra es obligatorio");
+      return;
+    }
+
+    // Verificar si el código de barra ya existe en otro producto (no en el actual)
+    const obtenerStockTotal = await obtenerStock();
+    const codigoDuplicado = obtenerStockTotal.find((producto) => 
+      producto.codigoBarra === codigoBarra && producto.id !== idStock
+    );
+    
+    if (codigoDuplicado) {
+      alertaAdvertencia("⚠️ Código duplicado", "El código de barra ya existe en otro producto");
+      return;
+    }
+
+    // Incluir todos los campos en el objeto de actualización
+    const stockData = { 
+      item, 
+      categoria, 
+      codigoBarra, 
+      costo, 
+      costoCompra, 
+      stockMinimo 
+    };
 
     await actualizarStockporId(idStock, stockData);
     modalActualizarProducto.hide();
