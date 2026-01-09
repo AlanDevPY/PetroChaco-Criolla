@@ -763,8 +763,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   // Mostrar total en Guaraníes (debe ser 0)
   document.getElementById("totalPedido").textContent = formatGs(0);
 
-  // Usar toast en vez de modal para evitar que tape el ticket al imprimir
-  toastSwal("Venta registrada", "success");
+  // Notificación de venta registrada eliminada - ya no se usa
 });
 
 // Funciones de caché eliminadas - ahora todas las consultas van directo a Firebase
