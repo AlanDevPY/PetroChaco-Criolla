@@ -1,9 +1,12 @@
 import {
   obtenerStock,
   obtenerStockPorId,
+  obtenerStockTiempoReal,
   registrarCliente,
   obtenerClientes,
+  obtenerClientesTiempoReal,
   obtenerCajas,
+  obtenerCajasTiempoReal,
   actualizarStockporId,
   eliminarClientePorID,
   registrarCaja,
@@ -40,6 +43,11 @@ import { registrarFactura } from "./firebase.js";
 let pedido = [];
 let pedidoGenerado = {};
 let cliente;
+let unsubscribeStock = null; // Para almacenar la función de limpieza del listener en tiempo real
+let unsubscribeClientes = null; // Para almacenar la función de limpieza del listener de clientes en tiempo real
+let unsubscribeCajas = null; // Para almacenar la función de limpieza del listener de cajas en tiempo real
+let stockCache = []; // Cache de stock para uso en tiempo real
+let clientesCache = []; // Cache de clientes para uso en tiempo real
 
 // Referencias a elementos por id (evita depender de variables globales implícitas)
 const btnCobrar = document.getElementById("btnCobrar");
@@ -79,18 +87,26 @@ document.querySelectorAll(".formatearInput").forEach((input) => {
 });
 
 
-// FUNCION PARA OBTENER STOCK Y MOSTRAR EN EL DATALIST
-const mostrarStockDataList = async () => {
-  // Consulta directa a Firebase para obtener stock real
-  const stock = await obtenerStock();
-
+// FUNCION PARA ACTUALIZAR STOCK EN EL DATALIST (tiempo real)
+const actualizarStockDataList = (stock) => {
+  stockCache = stock; // Actualizar cache
   let stockDataList = document.getElementById("listaProductos");
+  if (!stockDataList) return;
 
+  // Limpiar y repoblar
+  stockDataList.innerHTML = '';
   stock.forEach((item) => {
     stockDataList.innerHTML += `
         <option data-id="${item.id}" value="${item.item}">${item.codigoBarra}</option>
         `;
   });
+};
+
+// FUNCION PARA OBTENER STOCK Y MOSTRAR EN EL DATALIST (mantener para compatibilidad inicial)
+const mostrarStockDataList = async () => {
+  // Consulta directa a Firebase para obtener stock real
+  const stock = await obtenerStock();
+  actualizarStockDataList(stock);
 };
 
 // FUNCION PARA AGREGAR PEDIDO
@@ -330,15 +346,27 @@ if (efectivoInput && tarjetaInput && transferenciaInput) {
 
 // funcion con modal cobro cliente
 
-const buscarClientePorRuc = debounce(async () => {
+const buscarClientePorRuc = debounce(() => {
   const ruc = clienteRucCobro.value.trim();
   if (!ruc) return;
-  const clientes = await obtenerClientes();
-  cliente = clientes.find((c) => c.ruc === ruc);
-  if (cliente) {
-    clienteNombreCobro.value = cliente.nombre;
-    clienteDireccionCobro.value = cliente.direccion;
-    clienteTelefonoCobro.value = cliente.telefono;
+  // Usar cache de clientes en tiempo real si está disponible, sino consultar
+  if (clientesCache.length > 0) {
+    cliente = clientesCache.find((c) => c.ruc === ruc);
+    if (cliente) {
+      clienteNombreCobro.value = cliente.nombre;
+      clienteDireccionCobro.value = cliente.direccion;
+      clienteTelefonoCobro.value = cliente.telefono;
+    }
+  } else {
+    // Si no hay cache, consultar (fallback)
+    obtenerClientes().then(clientes => {
+      cliente = clientes.find((c) => c.ruc === ruc);
+      if (cliente) {
+        clienteNombreCobro.value = cliente.nombre;
+        clienteDireccionCobro.value = cliente.direccion;
+        clienteTelefonoCobro.value = cliente.telefono;
+      }
+    });
   }
 }, 150);
 clienteRucCobro?.addEventListener("input", buscarClientePorRuc);
@@ -397,8 +425,17 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
 
 
-  // Obtengo todas las cajas
-  const Cajas = await obtenerCajas();
+  // Obtener cajas - usar cache si está disponible (será actualizado en tiempo real)
+  // Si no hay cache aún, consultar directamente
+  let Cajas;
+  if (unsubscribeCajas === null) {
+    // Si no hay listener aún, consultar directamente
+    Cajas = await obtenerCajas();
+  } else {
+    // Si hay listener, usar los datos del cache (se actualizará automáticamente)
+    // Pero para esta validación necesitamos datos frescos, así que consultamos
+    Cajas = await obtenerCajas();
+  }
 
   // Busco si hay alguna caja abierta
   let cajaAbierta = Cajas.find((caja) => caja.estado === "abierta");
@@ -431,7 +468,8 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
         throw new Error("No se encontraron IDs válidos en el pedido");
       }
 
-      const stockActual = await obtenerStock();
+      // Usar cache de stock en tiempo real si está disponible, sino consultar
+      const stockActual = stockCache.length > 0 ? stockCache : await obtenerStock();
       
       // Agrupar cantidades por producto en el pedido
       const cantidadesPedido = {};
@@ -729,7 +767,8 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
   };
 
   // verificar si hay cliente con ese mismo ruc registrado
-  const clientes = await obtenerClientes();
+  // Usar cache de clientes en tiempo real si está disponible
+  const clientes = clientesCache.length > 0 ? clientesCache : await obtenerClientes();
   const clienteExistente = clientes.find((c) => c.ruc === ruc);
   if (clienteExistente) {
     alertaAdvertencia("Cliente duplicado", "Ya existe un cliente con ese RUC registrado.");
@@ -748,13 +787,13 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
   // Limpiar formulario
   document.getElementById("formCliente").reset();
 
-  await mostrarClientes();
+  // No es necesario llamar mostrarClientes() - el listener en tiempo real actualiza automáticamente
 });
 
-// funcion para mostrar los clientes registrados
-async function mostrarClientes() {
-  const clientes = await obtenerClientes();
-
+// FUNCION PARA ACTUALIZAR CLIENTES (tiempo real)
+const actualizarClientes = (clientes) => {
+  clientesCache = clientes; // Actualizar cache
+  
   // Si DataTables está inicializado, poblar tabla
   if ($.fn.DataTable.isDataTable('#tablaClientes')) {
     poblarTablaClientes(clientes);
@@ -763,6 +802,12 @@ async function mostrarClientes() {
     initClientesDataTable();
     poblarTablaClientes(clientes);
   }
+};
+
+// funcion para mostrar los clientes registrados (mantener para compatibilidad inicial)
+async function mostrarClientes() {
+  const clientes = await obtenerClientes();
+  actualizarClientes(clientes);
 }
 
 // Configurar eventos de DataTable para eliminar clientes
@@ -771,23 +816,24 @@ function configurarEventosClientes() {
   $(document).on('click', '.btn-eliminar-cliente', async function () {
     const id = $(this).data('id');
 
-    // Buscar el nombre del cliente
-    const clientes = await obtenerClientes();
+    // Buscar el nombre del cliente - usar cache en tiempo real
+    const clientes = clientesCache.length > 0 ? clientesCache : await obtenerClientes();
     const cliente = clientes.find(c => c.id === id);
     const nombreCliente = cliente ? cliente.nombre : 'este cliente';
 
     const confirmacion = await confirmarEliminacion(nombreCliente, 'cliente');
 
-    if (confirmacion.isConfirmed) {
-      try {
-        await eliminarClientePorID(id);
-        eliminarClienteDeTabla(id);
-        alertaExito("Cliente eliminado", `${nombreCliente} ha sido eliminado correctamente.`);
-      } catch (error) {
-        console.error('Error al eliminar cliente:', error);
-        alertaError("Error al eliminar", "No se pudo eliminar el cliente.");
+      if (confirmacion.isConfirmed) {
+        try {
+          await eliminarClientePorID(id);
+          eliminarClienteDeTabla(id);
+          alertaExito("Cliente eliminado", `${nombreCliente} ha sido eliminado correctamente.`);
+          // No es necesario llamar mostrarClientes() - el listener en tiempo real actualiza automáticamente
+        } catch (error) {
+          console.error('Error al eliminar cliente:', error);
+          alertaError("Error al eliminar", "No se pudo eliminar el cliente.");
+        }
       }
-    }
   });
 }
 
@@ -795,45 +841,110 @@ function configurarEventosClientes() {
 
 
 
+// FUNCION PARA ACTUALIZAR ESTADO DE CAJA EN TIEMPO REAL
+const actualizarEstadoCaja = (cajas) => {
+  const cajaAbierta = cajas.find((caja) => caja.estado === "abierta");
+  const badge = document.getElementById("estadoCajaBadge");
+  
+  if (!badge) return;
+  
+  if (cajaAbierta) {
+    badge.innerHTML = '<i class="bi bi-unlock"></i> Caja Abierta';
+    badge.classList.remove("bg-danger");
+    badge.classList.add("bg-success");
+  } else {
+    badge.innerHTML = '<i class="bi bi-lock"></i> Caja Cerrada';
+    badge.classList.remove("bg-success");
+    badge.classList.add("bg-danger");
+  }
+};
+
 window.addEventListener("DOMContentLoaded", async () => {
   configurarEventosClientes();
-
-  // Cargar clientes cuando se abra el modal de Ver Clientes
-  const modalVerClientes = document.getElementById('modalVerClientes');
-  if (modalVerClientes) {
-    modalVerClientes.addEventListener('shown.bs.modal', async () => {
-      await mostrarClientes();
-    });
-  }
+  
+  let primeraCargaStock = true;
+  let primeraCargaClientes = true;
+  let primeraCargaCajas = true;
 
   const spinner = document.getElementById("spinnerCarga");
   const contenido = document.getElementById("contenidoPrincipal");
 
-  // Mostrar spinner usando Bootstrap;
+  // Mostrar spinner usando Bootstrap
   spinner.classList.add("d-flex");
 
+  // Suscribirse a cambios de STOCK en tiempo real
+  unsubscribeStock = obtenerStockTiempoReal((stock) => {
+    if (primeraCargaStock) {
+      primeraCargaStock = false;
+      // Primera carga - ocultar spinner si ya se cargaron todos
+      if (!primeraCargaClientes && !primeraCargaCajas) {
+        spinner.classList.remove("d-flex");
+        spinner.classList.add("d-none");
+      }
+    }
+    actualizarStockDataList(stock);
+    // Reinicializar datalist mejorado después de actualizar
+    mejorarDatalist('inputProducto', 'listaProductos');
+  });
 
+  // Suscribirse a cambios de CLIENTES en tiempo real
+  unsubscribeClientes = obtenerClientesTiempoReal((clientes) => {
+    if (primeraCargaClientes) {
+      primeraCargaClientes = false;
+      // Primera carga - ocultar spinner si ya se cargaron todos
+      if (!primeraCargaStock && !primeraCargaCajas) {
+        spinner.classList.remove("d-flex");
+        spinner.classList.add("d-none");
+      }
+    }
+    actualizarClientes(clientes);
+  });
 
-  // Esperar a que se carguen los datos
-  await mostrarStockDataList();
+  // Suscribirse a cambios de CAJAS en tiempo real
+  unsubscribeCajas = obtenerCajasTiempoReal((cajas) => {
+    if (primeraCargaCajas) {
+      primeraCargaCajas = false;
+      // Primera carga - ocultar spinner si ya se cargaron todos
+      if (!primeraCargaStock && !primeraCargaClientes) {
+        spinner.classList.remove("d-flex");
+        spinner.classList.add("d-none");
+      }
+    }
+    actualizarEstadoCaja(cajas);
+  });
 
-  // Inicializar datalist mejorado
-  mejorarDatalist('inputProducto', 'listaProductos');
-
-  const Cajas = await obtenerCajas();
-  let cajaAbierta = Cajas.find((caja) => caja.estado === "abierta");
-
-  if (cajaAbierta) {
-    const badge = document.getElementById("estadoCajaBadge");
-    badge.innerHTML = '<i class="bi bi-unlock"></i> Caja Abierta';
-    badge.classList.remove("bg-danger");
-    badge.classList.add("bg-success");
+  // Cargar clientes cuando se abra el modal de Ver Clientes (ya estarán en cache)
+  const modalVerClientes = document.getElementById('modalVerClientes');
+  if (modalVerClientes) {
+    modalVerClientes.addEventListener('shown.bs.modal', () => {
+      // Usar cache - ya está actualizado en tiempo real
+      if (clientesCache.length > 0) {
+        actualizarClientes(clientesCache);
+      } else {
+        // Fallback si no hay cache aún
+        mostrarClientes();
+      }
+    });
   }
+});
 
-  // Ocultar spinner y mostrar contenido usando clases Bootstrap
-  spinner.classList.remove("d-flex");
-  spinner.classList.add("d-none");
-
+// Limpiar listeners cuando se cierre la página
+window.addEventListener("beforeunload", () => {
+  if (unsubscribeStock) {
+    console.log("🔌 Desconectando listener de stock en tiempo real...");
+    unsubscribeStock();
+    unsubscribeStock = null;
+  }
+  if (unsubscribeClientes) {
+    console.log("🔌 Desconectando listener de clientes en tiempo real...");
+    unsubscribeClientes();
+    unsubscribeClientes = null;
+  }
+  if (unsubscribeCajas) {
+    console.log("🔌 Desconectando listener de cajas en tiempo real...");
+    unsubscribeCajas();
+    unsubscribeCajas = null;
+  }
 });
 
 

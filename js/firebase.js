@@ -522,6 +522,34 @@ export const obtenerClientesCached = async () => {
   return await obtenerClientes();
 };
 
+// FUNCION PARA OBTENER CLIENTES EN TIEMPO REAL - Usa onSnapshot para escuchar cambios
+export const obtenerClientesTiempoReal = (callback) => {
+  try {
+    console.log("📡 Suscribiéndose a cambios de Clientes en tiempo real...");
+    const q = query(
+      collection(db, "Clientes"),
+      limit(500) // Límite de seguridad
+    );
+    
+    // Retornar el unsubscribe function para poder limpiar el listener
+    return onSnapshot(q, 
+      (querySnapshot) => {
+        const clientes = querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+        console.log(`✅ Clientes actualizados en tiempo real: ${clientes.length}`);
+        callback(clientes);
+      },
+      (error) => {
+        console.error("❌ Error en suscripción de clientes en tiempo real:", error);
+        callback([]); // Llamar callback con array vacío en caso de error
+      }
+    );
+  } catch (error) {
+    console.error("❌ Error al suscribirse a clientes en tiempo real:", error);
+    callback([]); // Llamar callback con array vacío en caso de error
+    return () => {}; // Retornar función vacía si falla
+  }
+};
+
 // FUNCION PARA ELIMINAR CLIENTE
 export const eliminarClientePorID = async (id) => {
   try {
@@ -580,6 +608,31 @@ export const obtenerCajas = async () => {
     return querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error("Error al obtener cajas:", error);
+  }
+};
+
+// FUNCION PARA OBTENER CAJAS EN TIEMPO REAL - Usa onSnapshot para escuchar cambios
+export const obtenerCajasTiempoReal = (callback) => {
+  try {
+    console.log("📡 Suscribiéndose a cambios de Cajas en tiempo real...");
+    const q = collection(db, "Caja");
+    
+    // Retornar el unsubscribe function para poder limpiar el listener
+    return onSnapshot(q, 
+      (querySnapshot) => {
+        const cajas = querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+        console.log(`✅ Cajas actualizadas en tiempo real: ${cajas.length}`);
+        callback(cajas);
+      },
+      (error) => {
+        console.error("❌ Error en suscripción de cajas en tiempo real:", error);
+        callback([]); // Llamar callback con array vacío en caso de error
+      }
+    );
+  } catch (error) {
+    console.error("❌ Error al suscribirse a cajas en tiempo real:", error);
+    callback([]); // Llamar callback con array vacío en caso de error
+    return () => {}; // Retornar función vacía si falla
   }
 };
 
