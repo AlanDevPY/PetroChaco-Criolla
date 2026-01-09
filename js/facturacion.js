@@ -4,13 +4,16 @@
 
 import { db, obtenerFacturas, anularFactura, obtenerFacturaPorId, sincronizarNumeroActualTimbrado } from './firebase.js';
 import { FirebaseCache } from './firebase-cache.js';
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, limit, getDoc } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js';
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, limit, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js';
 
 // ========================================
 // VARIABLES GLOBALES
 // ========================================
 let tablaTimbrados;
 let tablaFacturas;
+let unsubscribeTimbrados = null; // Para almacenar la función de limpieza del listener de timbrados
+let unsubscribeFacturas = null; // Para almacenar la función de limpieza del listener de facturas
+let facturasCache = []; // Cache de facturas para calcular última factura por timbrado
 
 // ========================================
 // INICIALIZACIÓN
@@ -118,44 +121,25 @@ function inicializarTablaFacturas() {
 
 async function cargarFacturas() {
     try {
-        // Intentar obtener del caché primero para conocer la procedencia y edad
-        const cache = new FirebaseCache('facturas');
-        let facturas = cache.get();
-        let fromCache = true;
-        if (!facturas) {
-            // Si no hay caché válido, pedir al helper (que además guardará en caché)
-            facturas = await obtenerFacturas(200);
-            fromCache = false;
+        // Si no hay cache aún, cargar inicialmente
+        if (facturasCache.length === 0) {
+            const facturas = await obtenerFacturas(200);
+            facturasCache = facturas;
         }
+        
         if (!tablaFacturas) inicializarTablaFacturas();
-        tablaFacturas.clear();
-        facturas.forEach(f => {
-            const clienteNombre = (f.cliente && f.cliente.nombre) ? f.cliente.nombre : 'Consumidor Final';
-            const fecha = f.fechaTS && f.fechaTS.toDate ? f.fechaTS.toDate().toLocaleString() : '-';
-            const estado = f.estado === 'anulada' ? '<span class="badge bg-danger">Anulada</span>' : '<span class="badge bg-success">Activa</span>';
-            const acciones = `
-              <button class="btn btn-sm btn-primary" onclick="window.verFactura('${f.id}')"><i class="bi bi-eye"></i></button>
-              <button class="btn btn-sm btn-danger ms-1" onclick="window.anularFacturaConfirm('${f.id}')"><i class="bi bi-x-circle"></i></button>
-            `;
-            tablaFacturas.row.add([f.id, f.numeroFormateado || f.numero, clienteNombre, (f.total || 0).toLocaleString('es-PY') + ' Gs', fecha, estado, acciones]);
-        });
-        tablaFacturas.draw();
+        actualizarTablaFacturas();
 
         // Actualizar badge en botón y barra informativa
         const badge = document.getElementById('facturasBadgeCount');
         const cacheBadge = document.getElementById('facturasCacheBadge');
         const info = document.getElementById('facturasInfo');
         const empty = document.getElementById('facturasEmpty');
-        if (badge) badge.textContent = (facturas && facturas.length) ? facturas.length : 0;
-        if (empty) empty.style.display = (facturas && facturas.length) ? 'none' : 'block';
+        if (badge) badge.textContent = (facturasCache && facturasCache.length) ? facturasCache.length : 0;
+        if (empty) empty.style.display = (facturasCache && facturasCache.length) ? 'none' : 'block';
 
-        if (fromCache) {
-            if (cacheBadge) { cacheBadge.className = 'badge bg-info ms-2'; cacheBadge.textContent = 'cache'; }
-            if (info) info.textContent = `Obtenidas ${facturas.length || 0} (cache: ${cache.getAge()}s)`;
-        } else {
-            if (cacheBadge) { cacheBadge.className = 'badge bg-success ms-2'; cacheBadge.textContent = 'en vivo'; }
-            if (info) info.textContent = `Obtenidas ${facturas.length || 0} (consulta en vivo)`;
-        }
+        if (cacheBadge) { cacheBadge.className = 'badge bg-success ms-2'; cacheBadge.textContent = 'en vivo'; }
+        if (info) info.textContent = `Obtenidas ${facturasCache.length || 0} (tiempo real)`;
     } catch (e) {
         console.error('Error al cargar facturas', e);
         Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron cargar las facturas.' });
@@ -257,14 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnRefresh = document.getElementById('btnRefreshFacturas');
     if (btnRefresh) {
         btnRefresh.addEventListener('click', async () => {
-            // Invalidate cache and reload (use global invalidate if available)
-            try {
-                // try to invalidate using imported function if available
-                // Invalidación de caché eliminada - ahora todas las consultas van directo a Firebase
-            } catch (e) {
-                console.warn('No se pudo invalidar caché por import dinámico', e);
-            }
-            await cargarFacturas();
+            // Recargar facturas manualmente desde cache (ya está actualizado en tiempo real)
+            actualizarTablaFacturas();
         });
     }
 
@@ -273,7 +251,135 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ========================================
-// CARGAR TIMBRADOS DESDE FIREBASE
+// CONFIGURAR LISTENERS EN TIEMPO REAL
+// ========================================
+function configurarListenersTiempoReal() {
+    // Limpiar listeners anteriores si existen
+    if (unsubscribeTimbrados) {
+        unsubscribeTimbrados();
+    }
+    if (unsubscribeFacturas) {
+        unsubscribeFacturas();
+    }
+
+    // Listener para timbrados
+    const timbradosRef = collection(db, 'timbrados');
+    const timbradosQuery = query(timbradosRef, orderBy('fechaCreacion', 'desc'));
+    unsubscribeTimbrados = onSnapshot(timbradosQuery, (snapshot) => {
+        console.log('🔄 Timbrados actualizados en tiempo real');
+        // Usar el snapshot directamente para actualizar
+        cargarTimbradosDesdeSnapshot(snapshot);
+    }, (error) => {
+        console.error('❌ Error en listener de timbrados:', error);
+    });
+
+    // Listener para facturas (para actualizar última factura por timbrado)
+    const facturasRef = collection(db, 'Facturas');
+    const facturasQuery = query(facturasRef, orderBy('fechaTS', 'desc'), limit(500));
+    unsubscribeFacturas = onSnapshot(facturasQuery, (snapshot) => {
+        console.log('🔄 Facturas actualizadas en tiempo real');
+        // Actualizar cache de facturas
+        facturasCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Recargar timbrados para actualizar última factura
+        if (tablaTimbrados) {
+            cargarTimbrados();
+        }
+    }, (error) => {
+        console.error('❌ Error en listener de facturas:', error);
+    });
+}
+
+// ========================================
+// CARGAR TIMBRADOS DESDE SNAPSHOT (tiempo real)
+// ========================================
+function cargarTimbradosDesdeSnapshot(querySnapshot) {
+    try {
+        // Obtener últimas facturas por timbrado desde cache
+        let ultimasFacturasPorTimbrado = {};
+        facturasCache.forEach((factura) => {
+            const timbradoId = factura.timbradoId;
+            const estadoValido = !factura.estado || factura.estado === 'activa';
+            if (timbradoId && estadoValido && factura.numero) {
+                if (!ultimasFacturasPorTimbrado[timbradoId] || 
+                    factura.numero > (ultimasFacturasPorTimbrado[timbradoId].numero || 0)) {
+                    ultimasFacturasPorTimbrado[timbradoId] = {
+                        numeroFormateado: factura.numeroFormateado || null,
+                        numero: factura.numero || 0
+                    };
+                }
+            }
+        });
+
+        // Limpiar tabla
+        tablaTimbrados.clear();
+
+        querySnapshot.forEach((docSnap) => {
+            const timbrado = docSnap.data();
+            const id = docSnap.id;
+
+            // Calcular estado
+            const hoy = new Date();
+            const fechaVenc = new Date(timbrado.fechaVencimiento);
+            const diasRestantes = Math.ceil((fechaVenc - hoy) / (1000 * 60 * 60 * 24));
+
+            let estadoBadge;
+            if (diasRestantes < 0) {
+                estadoBadge = '<span class="badge bg-danger">Vencido</span>';
+            } else if (diasRestantes <= 30) {
+                estadoBadge = `<span class="badge bg-warning">Por vencer (${diasRestantes}d)</span>`;
+            } else {
+                estadoBadge = `<span class="badge bg-success">Activo (${diasRestantes}d)</span>`;
+            }
+
+            // Obtener la última factura emitida de este timbrado
+            let numeroActual;
+            const ultimaFactura = ultimasFacturasPorTimbrado[id];
+            if (ultimaFactura && ultimaFactura.numeroFormateado) {
+                numeroActual = ultimaFactura.numeroFormateado;
+            } else {
+                numeroActual = `${timbrado.establecimiento}-${timbrado.puntoExpedicion}-${String(timbrado.rangoDesde).padStart(7, '0')}`;
+            }
+
+            // Formatear rango
+            const rango = `${String(timbrado.rangoDesde).padStart(7, '0')} - ${String(timbrado.rangoHasta).padStart(7, '0')}`;
+
+            // Formatear vigencia
+            const vigencia = `${timbrado.fechaInicio} a ${timbrado.fechaVencimiento}`;
+
+            // Botones de acción
+            const acciones = `
+        <button class="btn btn-sm btn-info" onclick="sincronizarTimbrado('${id}')" title="Sincronizar número actual">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <button class="btn btn-sm btn-warning" onclick="editarTimbrado('${id}')" title="Editar">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm btn-danger" onclick="eliminarTimbrado('${id}')" title="Eliminar">
+          <i class="bi bi-trash"></i>
+        </button>
+      `;
+
+            // Agregar fila a la tabla
+            tablaTimbrados.row.add([
+                timbrado.numeroTimbrado,
+                timbrado.rucEmpresa,
+                timbrado.razonSocial,
+                vigencia,
+                numeroActual,
+                rango,
+                estadoBadge,
+                acciones
+            ]);
+        });
+
+        tablaTimbrados.draw();
+    } catch (error) {
+        console.error('❌ Error al cargar timbrados desde snapshot:', error);
+    }
+}
+
+// ========================================
+// CARGAR TIMBRADOS DESDE FIREBASE (inicial)
 // ========================================
 async function cargarTimbrados() {
     try {
@@ -451,8 +557,7 @@ async function guardarTimbrado(e) {
         modal.hide();
         document.getElementById('formNuevoTimbrado').reset();
 
-        // Recargar tabla
-        await cargarTimbrados();
+        // No es necesario recargar - el listener en tiempo real actualizará automáticamente
 
         Swal.fire({
             icon: 'success',

@@ -145,8 +145,21 @@ document.getElementById("agregarProductoForm").addEventListener("submit", async 
   const loadingToast = showLoading("Agregando producto...");
 
   try {
-    // Obtener el producto del stock
-    const stockItem = await obtenerStockPorId(selectedId);
+    // Obtener el producto del stock - usar cache actualizado en tiempo real primero
+    let stockItem;
+    if (stockCache.length > 0) {
+      // Buscar en el cache primero (más rápido y actualizado en tiempo real)
+      const itemEnCache = stockCache.find(item => item.id === selectedId);
+      if (itemEnCache) {
+        stockItem = itemEnCache;
+      } else {
+        // Si no está en cache, consultar directamente
+        stockItem = await obtenerStockPorId(selectedId);
+      }
+    } else {
+      // Si no hay cache, consultar directamente
+      stockItem = await obtenerStockPorId(selectedId);
+    }
 
     // Validar stock disponible
     if (stockItem.cantidad < cantidad) {
@@ -716,13 +729,39 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
   // Limpiar el formulario y resetear el pedido
   pedido = [];
+  cliente = null; // Limpiar cliente también
+  
+  // Limpiar formulario de cobro
   document.getElementById("modalCobrarForm").reset();
+  
+  // Limpiar formulario de agregar producto
+  document.getElementById("agregarProductoForm").reset();
+  
+  // Limpiar campos de cliente en el modal de cobro
+  if (clienteRucCobro) clienteRucCobro.value = '';
+  if (clienteNombreCobro) clienteNombreCobro.value = '';
+  if (clienteDireccionCobro) clienteDireccionCobro.value = '';
+  if (clienteTelefonoCobro) clienteTelefonoCobro.value = '';
+  
+  // Actualizar la vista del pedido (debe estar vacío)
   mostrarPedidoCargado();
   actualizarCobro();
 
+  // Forzar actualización del stock desde Firebase para asegurar datos frescos
+  // El listener en tiempo real ya actualiza automáticamente, pero forzamos una consulta
+  // para asegurar que el datalist tenga los datos más recientes
+  try {
+    const stockActualizado = await obtenerStock();
+    actualizarStockDataList(stockActualizado);
+    console.log('✅ Stock actualizado después de la venta');
+  } catch (error) {
+    console.error('⚠️ Error al actualizar stock después de la venta:', error);
+    // No es crítico, el listener en tiempo real lo actualizará
+  }
+
   btnConfirmarVenta.disabled = true;
-  // Mostrar total en Guaraníes
-  document.getElementById("totalPedido").textContent = formatGs(calcularTotalPedido());
+  // Mostrar total en Guaraníes (debe ser 0)
+  document.getElementById("totalPedido").textContent = formatGs(0);
 
   // Usar toast en vez de modal para evitar que tape el ticket al imprimir
   toastSwal("Venta registrada", "success");

@@ -3,6 +3,9 @@
  * Convierte datalists en dropdowns estilizados
  */
 
+// Cache para evitar múltiples inicializaciones
+const datalistInitialized = new Set();
+
 export function mejorarDatalist(inputId, datalistId) {
     const input = document.getElementById(inputId);
     const datalist = document.getElementById(datalistId);
@@ -21,14 +24,31 @@ export function mejorarDatalist(inputId, datalistId) {
         wrapper.appendChild(input);
     }
 
-    // Crear dropdown
-    const dropdown = document.createElement('div');
-    dropdown.className = 'datalist-dropdown';
-    wrapper.appendChild(dropdown);
+    // Verificar si ya está inicializado para evitar duplicados
+    const cacheKey = `${inputId}-${datalistId}`;
+    let dropdown = wrapper.querySelector('.datalist-dropdown');
+    
+    // Si ya existe el dropdown y ya está inicializado, solo actualizar las opciones
+    if (dropdown && datalistInitialized.has(cacheKey)) {
+        // Ya está inicializado, no hacer nada más (evita duplicar listeners)
+        return;
+    }
 
-    // Función para obtener opciones del datalist
+    // Si no existe, crear dropdown
+    if (!dropdown) {
+        dropdown = document.createElement('div');
+        dropdown.className = 'datalist-dropdown';
+        wrapper.appendChild(dropdown);
+    }
+    
+    // Marcar como inicializado
+    datalistInitialized.add(cacheKey);
+
+    // Función para obtener opciones del datalist (sin duplicados)
     function getOptions() {
-        return Array.from(datalist.options).map(opt => opt.value);
+        const options = Array.from(datalist.options).map(opt => opt.value);
+        // Eliminar duplicados
+        return [...new Set(options)];
     }
 
     // Función para mostrar opciones
