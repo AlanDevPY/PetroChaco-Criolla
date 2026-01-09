@@ -133,7 +133,7 @@ console.log(`
 ║    🚀 Sistema de Caché Optimizado ACTIVADO                   ║
 ╚══════════════════════════════════════════════════════════════╝
 
-✅ Caché de localStorage habilitado
+✅ Caché en memoria activo (NO localStorage)
 ✅ Reducción de lecturas: ~70-85%
 ✅ Mejora de velocidad: ~90%
 

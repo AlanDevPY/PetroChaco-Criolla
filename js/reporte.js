@@ -1,4 +1,4 @@
-import { obtenerCajas, obtenerReposiciones, obtenerStockCached, obtenerStock } from "./firebase.js";
+import { obtenerCajas, obtenerReposiciones, obtenerStock } from "./firebase.js";
 import { formatGs } from "./utils.js";
 import Toastify from "https://cdn.jsdelivr.net/npm/toastify-js/src/toastify-es.js";
 
@@ -90,7 +90,7 @@ const calcularReporte = async (fechaDesde, fechaHasta) => {
     const [cajas, reposiciones, stock] = await Promise.all([
       obtenerCajas(),
       obtenerReposiciones(1000), // Obtener más reposiciones para el reporte
-      obtenerStockCached?.() || obtenerStock()
+      obtenerStock()
     ]);
 
     // Filtrar ventas por rango de fechas

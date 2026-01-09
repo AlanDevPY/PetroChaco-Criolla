@@ -1,6 +1,7 @@
-import { registrarStock, obtenerStock, eliminarStockPorID, actualizarStockporId, obtenerStockPorId, sumarStockTransaccional, registrarReposicion, obtenerReposiciones, descontarStockTransaccional, registrarSalida, obtenerSalidas, eliminarReposicion, eliminarSalida } from "./firebase.js";
+import { registrarStock, obtenerStock, obtenerStockTiempoReal, eliminarStockPorID, actualizarStockporId, obtenerStockPorId, sumarStockTransaccional, registrarReposicion, obtenerReposiciones, descontarStockTransaccional, registrarSalida, obtenerSalidas, eliminarReposicion, eliminarSalida } from "./firebase.js";
 import { showSuccess, showError, showInfo, showLoading, hideLoading, showConfirm, showWarning } from "./toast-utils.js";
 import { mostrarStockConDataTable, configurarEventosDataTable, actualizarFilaDataTable } from "./stock-modern.js";
+import { poblarDataTable } from "./stock-datatable.js";
 import { confirmarEliminacion, alertaAdvertencia } from "./swal-utils.js";
 import { mejorarDatalist } from "./datalist-mejorado.js";
 import { parseGs, formatGs } from "./utils.js";
@@ -11,6 +12,7 @@ let idStock
 let _cacheStock = [];
 let reposicionLista = [];
 let salidaLista = [];
+let unsubscribeStock = null; // Para almacenar la función de limpieza del listener en tiempo real
 
 // Variable para controlar si usar DataTables o sistema manual
 const USAR_DATATABLES = true; // Cambiar a false para volver al sistema anterior
@@ -110,7 +112,35 @@ function obtenerBadgeStock(cantidad) {
   }
 }
 
-// Función para mostrar stock en la tabla
+// Función para actualizar stock cuando hay cambios en tiempo real
+const actualizarStockDesdeTiempoReal = (stock) => {
+  _cacheStock = stock;
+  
+  if (USAR_DATATABLES) {
+    // Actualizar DataTable
+    poblarDataTable(stock);
+  } else {
+    // Actualizar sistema manual
+    productosFiltrados = [...stock];
+    renderizarPagina();
+  }
+  
+  // Actualizar estadísticas
+  actualizarEstadisticas();
+  
+  // Poblar datalist para reposición
+  const dl = document.getElementById('listaProductosReposicion');
+  if (dl) {
+    dl.innerHTML = stock.map(s => `<option value="${s.item}"></option>`).join('');
+  }
+  // Poblar datalist para salida (misma data)
+  const dlSalida = document.getElementById('listaProductosSalida');
+  if (dlSalida) {
+    dlSalida.innerHTML = stock.map(s => `<option value="${s.item}"></option>`).join('');
+  }
+};
+
+// Función para mostrar stock en la tabla (mantener para compatibilidad inicial)
 const mostrarStock = async (resetearPagina = true) => {
   if (USAR_DATATABLES) {
     // Usar DataTables moderno
@@ -371,7 +401,7 @@ actualizarStockForm.addEventListener("submit", async (e) => {
 
     showSuccess("✅ Stock actualizado correctamente");
 
-    await mostrarStock();
+    // No es necesario llamar mostrarStock() - el listener en tiempo real actualiza automáticamente
   } catch (error) {
     console.error("Error al actualizar stock:", error);
     showError("❌ Error al actualizar el stock. Por favor, intente nuevamente.");
@@ -433,7 +463,7 @@ registrarStockForm.addEventListener("submit", async (e) => {
     showSuccess("✅ Stock agregado correctamente");
 
     registrarStockForm.reset();
-    await mostrarStock();
+    // No es necesario llamar mostrarStock() - el listener en tiempo real actualiza automáticamente
   } catch (error) {
     console.error("Error al registrar stock:", error);
     showError("❌ Error al registrar el stock. Por favor, intente nuevamente.");
@@ -471,11 +501,31 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Cargar stock al iniciar
+// Variable para manejar el loading
+let loadingToastStock = null;
+let primeraCargaStock = true;
+
+// Cargar stock al iniciar CON TIEMPO REAL
 window.addEventListener("DOMContentLoaded", async () => {
-  const loadingToast = showLoading("Obteniendo stock...");
-  await mostrarStock();
-  hideLoading(loadingToast);
+  loadingToastStock = showLoading("Conectando a stock en tiempo real...");
+  primeraCargaStock = true;
+  
+  // Inicializar DataTable primero si está activado
+  if (USAR_DATATABLES) {
+    const { initDataTable } = await import('./stock-datatable.js');
+    initDataTable();
+  }
+  
+  // Suscribirse a cambios en tiempo real
+  unsubscribeStock = obtenerStockTiempoReal((stock) => {
+    // Primera carga - ocultar loading
+    if (primeraCargaStock && loadingToastStock) {
+      hideLoading(loadingToastStock);
+      loadingToastStock = null;
+      primeraCargaStock = false;
+    }
+    actualizarStockDesdeTiempoReal(stock);
+  });
 
   // Mejorar el datalist de reposición
   mejorarDatalist('reposicionProducto', 'listaProductosReposicion');
@@ -500,10 +550,25 @@ window.addEventListener("DOMContentLoaded", async () => {
       onEliminar: async (id) => {
         await eliminarStockPorID(id);
         showSuccess("✅ Stock eliminado correctamente");
-        await mostrarStock();
+        // No es necesario llamar mostrarStock() porque el listener en tiempo real se encargará
       }
     });
   }
+});
+
+// Limpiar listener cuando se cierre la página o cambie de página
+window.addEventListener("beforeunload", () => {
+  if (unsubscribeStock) {
+    console.log("🔌 Desconectando listener de stock en tiempo real...");
+    unsubscribeStock();
+    unsubscribeStock = null;
+  }
+});
+
+// También limpiar cuando se oculta la página (opcional, para ahorrar recursos)
+document.addEventListener("visibilitychange", () => {
+  // Si la página está oculta, podríamos desconectar, pero mejor mantener conectado
+  // para que cuando vuelva esté actualizado
 });
 
 // 🔍 Funcionalidad de búsqueda de productos (optimizada con debouncing)
@@ -627,7 +692,7 @@ function asignarEventosBotones() {
 
       showSuccess("✅ Stock eliminado correctamente");
 
-      await mostrarStock();
+      // No es necesario llamar mostrarStock() - el listener en tiempo real actualiza automáticamente
       // Limpiar búsqueda
       if (buscarProductoInput) buscarProductoInput.value = '';
     });
@@ -672,7 +737,7 @@ if (USAR_DATATABLES) {
     onEliminar: async (id) => {
       await eliminarStockPorID(id);
       showSuccess("✅ Stock eliminado correctamente");
-      await mostrarStock();
+      // No es necesario llamar mostrarStock() - el listener en tiempo real actualiza automáticamente
     }
   });
 }
@@ -921,7 +986,7 @@ if (btnConfirmarSalida) {
       salidaLista = [];
       if (salidaDescripcion) salidaDescripcion.value = '';
       renderSalidaTabla();
-      await mostrarStock();
+      // No es necesario llamar mostrarStock() - el listener en tiempo real actualiza automáticamente
       showSuccess('✅ Salida registrada correctamente');
     } catch (err) {
       console.error('Error al procesar salida:', err);
@@ -980,7 +1045,7 @@ if (btnConfirmarReposicion) {
       // limpiar y refrescar
       reposicionLista = [];
       renderReposicionTabla();
-      await mostrarStock();
+      // No es necesario llamar mostrarStock() - el listener en tiempo real actualiza automáticamente
       showSuccess('✅ Reposición registrada correctamente');
     } catch (err) {
       console.error('Error al procesar reposición:', err);
@@ -1480,4 +1545,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
 

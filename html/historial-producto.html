@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0f2027">
+    <title>Historial de Producto — Petro Chaco Criolla POS</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+    <!-- DataTables Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+
+    <!-- Toastify CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+
+    <!-- SheetJS para exportar a Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <!-- Estilos propios -->
+    <link rel="stylesheet" href="../css/roles.css">
+
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- Fondo animado -->
+    <div class="bg-animated" aria-hidden="true">
+        <span class="blob blob-1"></span>
+        <span class="blob blob-2"></span>
+        <span class="blob blob-3"></span>
+    </div>
+
+    <!-- Navbar parcial -->
+    <div id="navbar-placeholder"></div>
+
+    <!-- Contenido principal -->
+    <main class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 animate__animated animate__fadeInDown">
+            <div>
+                <h2 class="fw-bold mb-1">
+                    <i class="bi bi-clock-history me-2"></i>Historial de Producto
+                </h2>
+                <p class="mb-0 text-muted">Consulta las ventas y reposiciones de un producto específico</p>
+            </div>
+        </div>
+
+        <!-- Card de búsqueda -->
+        <div class="card mb-4 animate__animated animate__fadeInUp">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-search me-2"></i>Buscar Producto
+                </h5>
+                <form id="formBuscarProducto" class="row g-3">
+                    <div class="col-md-8">
+                        <label for="inputBuscarProducto" class="form-label">Nombre del Producto</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="inputBuscarProducto" 
+                               placeholder="Ej: COCA COLA 2.5L"
+                               list="listaProductos"
+                               autocomplete="off"
+                               required>
+                        <datalist id="listaProductos">
+                            <!-- Se llena dinámicamente -->
+                        </datalist>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search me-2"></i>Buscar Historial
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Información del producto actual -->
+        <div id="infoProducto" class="card mb-4 d-none animate__animated animate__fadeInUp">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-box-seam me-2"></i>Información del Producto
+                </h5>
+                <button type="button" class="btn btn-success btn-sm" id="btnExportarExcel">
+                    <i class="bi bi-file-earmark-excel me-2"></i>Exportar a Excel
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <small class="text-muted d-block">Producto</small>
+                            <strong id="infoNombre">--</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <small class="text-muted d-block">Stock Actual</small>
+                            <strong id="infoStock" class="text-primary">--</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <small class="text-muted d-block">Categoría</small>
+                            <strong id="infoCategoria">--</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <small class="text-muted d-block">Código de Barra</small>
+                            <strong id="infoCodigoBarra">--</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Ventas -->
+        <div id="cardVentas" class="card mb-4 d-none animate__animated animate__fadeInUp">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-cart-check me-2"></i>Historial de Ventas
+                    <span class="badge bg-light text-dark ms-2" id="badgeCantidadVentas">0</span>
+                </h5>
+                <div>
+                    <small>Total vendido: <strong id="totalVendido">0</strong> unidades</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped" id="tablaVentas">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th><i class="bi bi-calendar-event me-1"></i>Fecha</th>
+                                <th><i class="bi bi-hash me-1"></i>Cantidad</th>
+                                <th><i class="bi bi-currency-dollar me-1"></i>Precio Unitario</th>
+                                <th><i class="bi bi-calculator me-1"></i>Subtotal</th>
+                                <th><i class="bi bi-person me-1"></i>Cliente</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyVentas">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="sinVentas" class="text-center text-muted py-4 d-none">
+                    <i class="bi bi-cart-x" style="font-size: 3rem;"></i>
+                    <p class="mt-2 mb-0">No se encontraron ventas para este producto</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Reposiciones -->
+        <div id="cardReposiciones" class="card mb-4 d-none animate__animated animate__fadeInUp">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-box-arrow-in-down me-2"></i>Historial de Reposiciones
+                    <span class="badge bg-light text-dark ms-2" id="badgeCantidadReposiciones">0</span>
+                </h5>
+                <div>
+                    <small>Total repuesto: <strong id="totalRepuesto">0</strong> unidades</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped" id="tablaReposiciones">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th><i class="bi bi-calendar-event me-1"></i>Fecha</th>
+                                <th><i class="bi bi-hash me-1"></i>Cantidad</th>
+                                <th><i class="bi bi-currency-dollar me-1"></i>Precio Compra</th>
+                                <th><i class="bi bi-calculator me-1"></i>Total Compra</th>
+                                <th><i class="bi bi-person me-1"></i>Usuario</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyReposiciones">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="sinReposiciones" class="text-center text-muted py-4 d-none">
+                    <i class="bi bi-box-seam" style="font-size: 3rem;"></i>
+                    <p class="mt-2 mb-0">No se encontraron reposiciones para este producto</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- jQuery (requerido por DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <!-- DataTables -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+    <!-- Toastify JS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+    <!-- Dayjs -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
+
+    <!-- Navbar -->
+    <script type="module" src="../js/navbar.js"></script>
+
+    <!-- Utilidades Toast -->
+    <script type="module" src="../js/toast-utils.js"></script>
+
+    <!-- Custom JS -->
+    <script type="module" src="../js/historial-producto.js"></script>
+</body>
+
+</html>
+

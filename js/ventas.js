@@ -2,17 +2,18 @@ import {
   obtenerStock,
   obtenerStockPorId,
   registrarCliente,
-  obtenerClientesCached,
+  obtenerClientes,
   obtenerCajas,
   actualizarStockporId,
   eliminarClientePorID,
   registrarCaja,
   actualizarCajaporId,
-  obtenerStockCached,
   descontarStockTransaccional,
+  sumarStockTransaccional,
 } from "./firebase.js";
 import { formatGs, mostrarAviso, debounce, parseGs, calcularDiferencia } from "./utils.js";
 import { toastSwal } from "./swal-utils.js";
+import { showLoading, hideLoading } from "./toast-utils.js";
 import {
   confirmarEliminacion,
   alertaExito,
@@ -80,8 +81,8 @@ document.querySelectorAll(".formatearInput").forEach((input) => {
 
 // FUNCION PARA OBTENER STOCK Y MOSTRAR EN EL DATALIST
 const mostrarStockDataList = async () => {
-  // Usa caché para evitar lecturas repetidas
-  const stock = (await obtenerStockCached?.()) || (await obtenerStock());
+  // Consulta directa a Firebase para obtener stock real
+  const stock = await obtenerStock();
 
   let stockDataList = document.getElementById("listaProductos");
 
@@ -124,43 +125,71 @@ document.getElementById("agregarProductoForm").addEventListener("submit", async 
     return;
   }
 
-  // Obtener el producto del stock
-  const stockItem = await obtenerStockPorId(selectedId);
+  // Mostrar spinner mientras se procesa
+  const loadingToast = showLoading("Agregando producto...");
 
-  // Validar stock disponible
-  if (stockItem.cantidad < cantidad) {
-    alertaAdvertencia("Stock insuficiente", `Solo hay ${stockItem.cantidad} unidades disponibles.`);
-    return;
+  try {
+    // Obtener el producto del stock
+    const stockItem = await obtenerStockPorId(selectedId);
+
+    // Validar stock disponible
+    if (stockItem.cantidad < cantidad) {
+      hideLoading(loadingToast);
+      alertaAdvertencia("Stock insuficiente", `Solo hay ${stockItem.cantidad} unidades disponibles.`);
+      return;
+    }
+
+    // Buscar si ya existe el item en el pedido
+    const pedidoExistente = pedido.find((p) => p.id === stockItem.id);
+
+    // Calcular cantidad total que se está pidiendo (incluyendo lo que ya está en el pedido)
+    const cantidadEnPedido = pedidoExistente ? pedidoExistente.cantidad : 0;
+    const cantidadTotalSolicitada = cantidadEnPedido + cantidad;
+
+    // Validar stock disponible contra la cantidad total solicitada
+    if (stockItem.cantidad < cantidadTotalSolicitada) {
+      hideLoading(loadingToast);
+      alertaAdvertencia("Stock insuficiente", 
+        `Stock disponible: ${stockItem.cantidad} unidades. ` +
+        `Ya tiene ${cantidadEnPedido} en el pedido. ` +
+        `Solicita ${cantidad} más. ` +
+        `Total: ${cantidadTotalSolicitada} unidades.`);
+      return;
+    }
+
+    if (pedidoExistente) {
+      // Si ya existe, aumentar la cantidad y actualizar subtotal
+      pedidoExistente.cantidad += cantidad;
+      pedidoExistente.subTotal =
+        pedidoExistente.cantidad * pedidoExistente.costo;
+    } else {
+      // Si no existe, agregar como nuevo item
+      const pedidoItem = {
+        id: stockItem.id,
+        item: stockItem.item,
+        cantidad,
+        costo: stockItem.costo,
+        subTotal: stockItem.costo * cantidad,
+      };
+      pedido.push(pedidoItem);
+    }
+
+    // Ocultar spinner y mostrar el pedido actualizado
+    hideLoading(loadingToast);
+    mostrarPedidoCargado();
+
+    // Limpiar el formulario y mantener el foco
+    document.getElementById("agregarProductoForm").reset();
+    document.getElementById("inputProducto").focus();
+
+    // Mostrar total en Guaraníes
+    document.getElementById("totalPedido").textContent = formatGs(calcularTotalPedido());
+  } catch (error) {
+    // Ocultar spinner en caso de error
+    hideLoading(loadingToast);
+    console.error("Error al agregar producto:", error);
+    alertaError("Error", "No se pudo agregar el producto. Por favor, intente nuevamente.");
   }
-
-  // Buscar si ya existe el item en el pedido
-  const pedidoExistente = pedido.find((p) => p.id === stockItem.id);
-
-  if (pedidoExistente) {
-    // Si ya existe, aumentar la cantidad y actualizar subtotal
-    pedidoExistente.cantidad += cantidad;
-    pedidoExistente.subTotal =
-      pedidoExistente.cantidad * pedidoExistente.costo;
-  } else {
-    // Si no existe, agregar como nuevo item
-    const pedidoItem = {
-      id: stockItem.id,
-      item: stockItem.item,
-      cantidad,
-      costo: stockItem.costo,
-      subTotal: stockItem.costo * cantidad,
-    };
-    pedido.push(pedidoItem);
-  }
-
-  mostrarPedidoCargado();
-
-  // Limpiar el formulario y mantener el foco
-  document.getElementById("agregarProductoForm").reset();
-  document.getElementById("inputProducto").focus();
-
-  // Mostrar total en Guaraníes
-  document.getElementById("totalPedido").textContent = formatGs(calcularTotalPedido());
 });
 
 // FUNCION PARA MOSTRAR PEDIDO CARGADO
@@ -304,7 +333,7 @@ if (efectivoInput && tarjetaInput && transferenciaInput) {
 const buscarClientePorRuc = debounce(async () => {
   const ruc = clienteRucCobro.value.trim();
   if (!ruc) return;
-  const clientes = await obtenerClientesCached();
+  const clientes = await obtenerClientes();
   cliente = clientes.find((c) => c.ruc === ruc);
   if (cliente) {
     clienteNombreCobro.value = cliente.nombre;
@@ -325,6 +354,42 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   if (!cliente || !cliente.ruc || cliente.ruc.trim() === "") {
     alertaAdvertencia("Cliente requerido", "Ingrese un RUC válido antes de cobrar.");
     clienteRucCobro.focus();
+    btnConfirmarVenta.disabled = false;
+    return;
+  }
+
+  // Validar que el pedido no esté vacío
+  if (!pedido || pedido.length === 0) {
+    alertaAdvertencia("Pedido vacío", "Debe agregar al menos un producto antes de procesar la venta.");
+    btnConfirmarVenta.disabled = false;
+    return;
+  }
+
+  // Validar estructura del pedido
+  const pedidoInvalido = pedido.find(item => 
+    !item.id || 
+    !item.item || 
+    !item.cantidad || 
+    Number(item.cantidad) <= 0 || 
+    !item.costo || 
+    Number(item.costo) < 0 ||
+    !item.subTotal ||
+    Number(item.subTotal) < 0
+  );
+
+  if (pedidoInvalido) {
+    alertaError("Pedido inválido", "El pedido contiene items con datos inválidos. Por favor, verifique y vuelva a intentar.");
+    btnConfirmarVenta.disabled = false;
+    return;
+  }
+
+  // Validar que el total calculado coincida con la suma de subtotales
+  const totalCalculado = calcularTotalPedido();
+  const sumaSubtotales = pedido.reduce((sum, item) => sum + (Number(item.subTotal) || 0), 0);
+  
+  if (Math.abs(totalCalculado - sumaSubtotales) > 1) { // Permitir diferencia de 1 Gs por redondeos
+    console.error("❌ Discrepancia en totales:", { totalCalculado, sumaSubtotales });
+    alertaError("Error de cálculo", "Hay una discrepancia en los totales. Por favor, recargue la página y vuelva a intentar.");
     btnConfirmarVenta.disabled = false;
     return;
   }
@@ -351,19 +416,83 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   };
 
 
+  // Función para validar stock antes de la venta
+  const validarStockVenta = async (ventaActual) => {
+    try {
+      // Validar que venta tenga items
+      if (!ventaActual.venta || !Array.isArray(ventaActual.venta) || ventaActual.venta.length === 0) {
+        throw new Error("La venta no tiene items");
+      }
+
+      // Obtener stock actual de todos los productos en la venta
+      const itemsIds = [...new Set(ventaActual.venta.map(i => i.id).filter(id => id))]; // Filtrar IDs nulos/undefined
+      
+      if (itemsIds.length === 0) {
+        throw new Error("No se encontraron IDs válidos en el pedido");
+      }
+
+      const stockActual = await obtenerStock();
+      
+      // Agrupar cantidades por producto en el pedido
+      const cantidadesPedido = {};
+      ventaActual.venta.forEach(item => {
+        if (!item.id) {
+          throw new Error(`Item sin ID: ${item.item || 'desconocido'}`);
+        }
+        if (!cantidadesPedido[item.id]) {
+          cantidadesPedido[item.id] = 0;
+        }
+        const cantidad = Number(item.cantidad) || 0;
+        if (cantidad <= 0) {
+          throw new Error(`Cantidad inválida para ${item.item}: ${item.cantidad}`);
+        }
+        cantidadesPedido[item.id] += cantidad;
+      });
+      
+      // Validar que haya stock suficiente para cada producto
+      for (const [id, cantidadPedido] of Object.entries(cantidadesPedido)) {
+        const producto = stockActual.find(p => p.id === id);
+        if (!producto) {
+          throw new Error(`Producto con ID ${id} no encontrado en stock`);
+        }
+        const stockDisponible = Number(producto.cantidad) || 0;
+        if (stockDisponible < cantidadPedido) {
+          throw new Error(`Stock insuficiente para ${producto.item}: disponible ${stockDisponible}, solicitado ${cantidadPedido}`);
+        }
+      }
+      return { valido: true };
+    } catch (err) {
+      console.error("Error al validar stock:", err);
+      return { valido: false, error: err.message };
+    }
+  };
+
   // Función para descontar stock de la venta
   // Descuento transaccional de stock para evitar condiciones de carrera
   const descontarStock = async (ventaActual) => {
     try {
-      const itemsDescuento = ventaActual.venta.map(i => ({
-        id: i.id,
-        cantidad: Number(i.cantidad)
+      // Agrupar cantidades por producto (por si hay duplicados)
+      const itemsAgrupados = {};
+      ventaActual.venta.forEach(item => {
+        if (!itemsAgrupados[item.id]) {
+          itemsAgrupados[item.id] = 0;
+        }
+        itemsAgrupados[item.id] += Number(item.cantidad) || 0;
+      });
+      
+      // Convertir a array para la función de descuento
+      const itemsDescuento = Object.entries(itemsAgrupados).map(([id, cantidad]) => ({
+        id,
+        cantidad
       }));
+      
+      console.log(`📦 Descontando stock para ${itemsDescuento.length} productos...`);
       await descontarStockTransaccional(itemsDescuento);
-      return true;
+      console.log(`✅ Stock descontado exitosamente`);
+      return { ok: true };
     } catch (err) {
-      console.error("Error transaccional al descontar stock:", err);
-      return false;
+      console.error("❌ Error transaccional al descontar stock:", err);
+      return { ok: false, error: err.message };
     }
   };
 
@@ -396,14 +525,54 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
       return;
     }
 
+    // Mostrar spinner durante todo el proceso de venta
+    const loadingVenta = showLoading("Procesando venta...");
+
     try {
-      await registrarCaja(nuevaCaja);
-      const ok = await descontarStock(venta);
-      if (!ok) {
+      // VALIDAR STOCK ANTES DE REGISTRAR LA VENTA
+      const validacionStock = await validarStockVenta(venta);
+      if (!validacionStock.valido) {
+        hideLoading(loadingVenta);
         btnConfirmarVenta.disabled = false;
-        alertaError("Error al descontar stock", "No se pudo completar la venta.");
+        alertaError("Stock insuficiente", validacionStock.error || "No hay suficiente stock para completar la venta.");
         return;
       }
+
+      // DESCONTAR STOCK PRIMERO (antes de registrar la venta)
+      // Guardar los items descontados para poder revertir si falla
+      const itemsDescontados = venta.venta.map(item => ({
+        id: item.id,
+        cantidad: Number(item.cantidad) || 0
+      }));
+
+      const resultadoDescuento = await descontarStock(venta);
+      if (!resultadoDescuento.ok) {
+        hideLoading(loadingVenta);
+        btnConfirmarVenta.disabled = false;
+        alertaError("Error al descontar stock", resultadoDescuento.error || "No se pudo descontar el stock. La venta no se registró.");
+        return;
+      }
+
+      // AHORA SÍ registrar la venta en la caja (ya se descontó el stock)
+      try {
+        await registrarCaja(nuevaCaja);
+      } catch (error) {
+        // ROLLBACK: Si falla registrar la caja, revertir el descuento de stock
+        console.error("❌ Error al registrar caja, revirtiendo descuento de stock...", error);
+        hideLoading(loadingVenta);
+        try {
+          await sumarStockTransaccional(itemsDescontados);
+          console.log("✅ Stock revertido exitosamente");
+        } catch (rollbackError) {
+          console.error("❌ CRÍTICO: Error al revertir stock después de fallar registro de caja:", rollbackError);
+          alertaError("Error crítico", "La venta falló y no se pudo revertir el stock automáticamente. Por favor, contacte al administrador.");
+        }
+        btnConfirmarVenta.disabled = false;
+        alertaError("Error al registrar venta", "No se pudo registrar la venta en la caja. El stock fue revertido.");
+        return;
+      }
+
+      hideLoading(loadingVenta);
 
       // Imprimir según checkbox: ticket o factura legal
       await procesarImpresion(venta);
@@ -418,18 +587,14 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
         badge.classList.add("bg-success");
       }
     } catch (error) {
-      console.error("Error al registrar caja:", error);
+      hideLoading(loadingVenta);
+      console.error("Error al procesar venta:", error);
       btnConfirmarVenta.disabled = false;
       alertaError("Error", "No se pudo completar la venta. Por favor, intente nuevamente.");
       return;
     }
   } else {
     // Caja abierta → agrego la venta al array de ventas existente
-    cajaAbierta.ventas.push(venta);
-
-    // Actualizo el total recaudado
-    cajaAbierta.totalRecaudado += venta.total;
-
     const { diferencia } = validarPago();
 
     if (diferencia > 0) {
@@ -438,16 +603,63 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
       return;
     }
 
+    // Mostrar spinner durante todo el proceso de venta
+    const loadingVenta = showLoading("Procesando venta...");
+
     try {
       btnConfirmarVenta.disabled = true;
-      // Actualizo la caja en Firestore
-      await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
-      const ok = await descontarStock(venta);
-      if (!ok) {
+
+      // VALIDAR STOCK ANTES DE REGISTRAR LA VENTA
+      const validacionStock = await validarStockVenta(venta);
+      if (!validacionStock.valido) {
+        hideLoading(loadingVenta);
         btnConfirmarVenta.disabled = false;
-        alertaError("Error al descontar stock", "No se pudo completar la venta.");
+        alertaError("Stock insuficiente", validacionStock.error || "No hay suficiente stock para completar la venta.");
         return;
       }
+
+      // DESCONTAR STOCK PRIMERO (antes de registrar la venta)
+      // Guardar los items descontados para poder revertir si falla
+      const itemsDescontados = venta.venta.map(item => ({
+        id: item.id,
+        cantidad: Number(item.cantidad) || 0
+      }));
+
+      const resultadoDescuento = await descontarStock(venta);
+      if (!resultadoDescuento.ok) {
+        hideLoading(loadingVenta);
+        btnConfirmarVenta.disabled = false;
+        alertaError("Error al descontar stock", resultadoDescuento.error || "No se pudo descontar el stock. La venta no se registró.");
+        return;
+      }
+
+      // AHORA SÍ agregar la venta a la caja (ya se descontó el stock)
+      cajaAbierta.ventas.push(venta);
+      cajaAbierta.totalRecaudado += venta.total;
+
+      // Actualizar la caja en Firestore
+      try {
+        await actualizarCajaporId(cajaAbierta.id, cajaAbierta);
+      } catch (error) {
+        // ROLLBACK: Si falla actualizar la caja, revertir el descuento de stock
+        console.error("❌ Error al actualizar caja, revirtiendo descuento de stock...", error);
+        hideLoading(loadingVenta);
+        try {
+          await sumarStockTransaccional(itemsDescontados);
+          console.log("✅ Stock revertido exitosamente");
+          // Revertir cambios en memoria
+          cajaAbierta.ventas.pop();
+          cajaAbierta.totalRecaudado -= venta.total;
+        } catch (rollbackError) {
+          console.error("❌ CRÍTICO: Error al revertir stock después de fallar actualización de caja:", rollbackError);
+          alertaError("Error crítico", "La venta falló y no se pudo revertir el stock automáticamente. Por favor, contacte al administrador.");
+        }
+        btnConfirmarVenta.disabled = false;
+        alertaError("Error al registrar venta", "No se pudo actualizar la caja. El stock fue revertido.");
+        return;
+      }
+
+      hideLoading(loadingVenta);
 
       // Imprimir según checkbox: ticket o factura legal
       await procesarImpresion(venta);
@@ -456,7 +668,8 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
       const modalCobro = bootstrap.Modal.getInstance(document.getElementById("modalCobro"));
       modalCobro?.hide();
     } catch (error) {
-      console.error("Error al actualizar caja:", error);
+      hideLoading(loadingVenta);
+      console.error("Error al procesar venta:", error);
       btnConfirmarVenta.disabled = false;
       alertaError("Error", "No se pudo completar la venta. Por favor, intente nuevamente.");
       return;
@@ -477,34 +690,14 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   toastSwal("Venta registrada", "success");
 });
 
-// Invalidar caché de stock después de una venta
+// Funciones de caché eliminadas - ahora todas las consultas van directo a Firebase
+// El stock siempre se consulta desde Firebase para tener datos reales
 const invalidarCacheStock = () => {
-  if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("stockCache");
-    console.log("Caché de stock invalidada.");
-  }
+  // Función obsoleta - ya no se usa caché
 };
 
-// Actualizar solo los productos modificados en la caché después de una venta
 const actualizarCacheStock = async (productosVendidos) => {
-  try {
-    // Obtener la caché actual
-    const stockCache = JSON.parse(localStorage.getItem("stockCache")) || [];
-
-    // Actualizar los productos vendidos en la caché
-    productosVendidos.forEach((productoVendido) => {
-      const productoEnCache = stockCache.find((item) => item.id === productoVendido.id);
-      if (productoEnCache) {
-        productoEnCache.cantidad -= productoVendido.cantidad;
-      }
-    });
-
-    // Guardar la caché actualizada
-    localStorage.setItem("stockCache", JSON.stringify(stockCache));
-    console.log("Caché de stock actualizada.");
-  } catch (error) {
-    console.error("Error al actualizar la caché de stock:", error);
-  }
+  // Función obsoleta - ya no se usa caché
 };
 
 // ?FUNCIONES CON MODAL GESTION DE CLIENTES
@@ -536,7 +729,7 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
   };
 
   // verificar si hay cliente con ese mismo ruc registrado
-  const clientes = await obtenerClientesCached();
+  const clientes = await obtenerClientes();
   const clienteExistente = clientes.find((c) => c.ruc === ruc);
   if (clienteExistente) {
     alertaAdvertencia("Cliente duplicado", "Ya existe un cliente con ese RUC registrado.");
@@ -560,7 +753,7 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
 
 // funcion para mostrar los clientes registrados
 async function mostrarClientes() {
-  const clientes = await obtenerClientesCached();
+  const clientes = await obtenerClientes();
 
   // Si DataTables está inicializado, poblar tabla
   if ($.fn.DataTable.isDataTable('#tablaClientes')) {
@@ -579,7 +772,7 @@ function configurarEventosClientes() {
     const id = $(this).data('id');
 
     // Buscar el nombre del cliente
-    const clientes = await obtenerClientesCached();
+    const clientes = await obtenerClientes();
     const cliente = clientes.find(c => c.id === id);
     const nombreCliente = cliente ? cliente.nombre : 'este cliente';
 

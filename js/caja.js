@@ -677,12 +677,15 @@ async function descontarStock(itemsVendidos) {
 }
 
 // Modificar el evento de confirmación de venta para incluir el descuento de stock
+// Variable en memoria para el carrito (NO localStorage)
+let carritoEnMemoria = [];
+
 document.getElementById("modalCobrarForm")?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   try {
-    // Obtener los ítems vendidos del carrito
-    const itemsVendidos = JSON.parse(localStorage.getItem("carrito")) || [];
+    // Obtener los ítems vendidos del carrito (desde memoria)
+    const itemsVendidos = carritoEnMemoria || [];
 
     if (itemsVendidos.length === 0) {
       alert("No hay productos en el carrito para procesar la venta.");
@@ -696,7 +699,7 @@ document.getElementById("modalCobrarForm")?.addEventListener("submit", async (e)
     alert("Venta confirmada y stock actualizado.");
 
     // Limpiar el carrito y cerrar el modal
-    localStorage.removeItem("carrito");
+    carritoEnMemoria = [];
     document.getElementById("carritoTableBody").innerHTML = "";
     document.getElementById("totalPedido").textContent = "0 Gs";
     bootstrap.Modal.getInstance(document.getElementById("modalCobro"))?.hide();

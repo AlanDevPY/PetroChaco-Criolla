@@ -1,13 +1,14 @@
 /**
  * Sistema de Caché Optimizado para Firebase
  * Reduce lecturas hasta en un 85%
+ * NOTA: Usa solo memoria (NO localStorage)
  * 
  * @author AlanDevPy
- * @version 1.0
+ * @version 2.0
  */
 
-const CACHE_PREFIX = 'petrochaco_';
-const CACHE_VERSION = 'v1';
+// Caché en memoria (no persiste entre recargas)
+const memoryCache = {};
 
 // Configuración de TTL (tiempo de vida) por colección
 const CACHE_TTL = {
@@ -21,58 +22,44 @@ const CACHE_TTL = {
 };
 
 /**
- * Clase para gestionar caché con localStorage
+ * Clase para gestionar caché en memoria (NO localStorage)
  */
 export class FirebaseCache {
     constructor(collectionName, customTTL = null) {
         this.collection = collectionName;
         this.ttl = customTTL || CACHE_TTL[collectionName] || 5 * 60 * 1000;
-        this.cacheKey = `${CACHE_PREFIX}${collectionName}_${CACHE_VERSION}`;
+        this.cacheKey = collectionName;
     }
 
     /**
-     * Guardar datos en caché
+     * Guardar datos en caché (solo memoria)
      * @param {*} data - Datos a guardar
      */
     set(data) {
         try {
-            const cacheItem = {
+            memoryCache[this.cacheKey] = {
                 data: data,
                 timestamp: Date.now(),
                 collection: this.collection
             };
-            localStorage.setItem(this.cacheKey, JSON.stringify(cacheItem));
-            console.log(`✅ ${this.collection} guardado en caché (${this._getSize()} KB)`);
+            console.log(`✅ ${this.collection} guardado en caché (memoria)`);
         } catch (e) {
-            // Si localStorage está lleno, limpiar cachés viejos
-            if (e.name === 'QuotaExceededError') {
-                console.warn('⚠️ localStorage lleno, limpiando...');
-                this._clearOldCaches();
-                // Intentar guardar nuevamente
-                try {
-                    localStorage.setItem(this.cacheKey, JSON.stringify(cacheItem));
-                } catch (e2) {
-                    console.error('❌ No se pudo guardar en caché:', e2);
-                }
-            } else {
-                console.warn(`⚠️ Error guardando ${this.collection} en caché:`, e);
-            }
+            console.warn(`⚠️ Error guardando ${this.collection} en caché:`, e);
         }
     }
 
     /**
-     * Obtener datos del caché
+     * Obtener datos del caché (solo memoria)
      * @returns {*|null} - Datos o null si no existe/expiró
      */
     get() {
         try {
-            const item = localStorage.getItem(this.cacheKey);
-            if (!item) {
+            const cacheItem = memoryCache[this.cacheKey];
+            if (!cacheItem) {
                 console.log(`ℹ️ ${this.collection} no encontrado en caché`);
                 return null;
             }
 
-            const cacheItem = JSON.parse(item);
             const now = Date.now();
             const age = now - cacheItem.timestamp;
 
@@ -96,7 +83,7 @@ export class FirebaseCache {
      * Limpiar caché de esta colección
      */
     clear() {
-        localStorage.removeItem(this.cacheKey);
+        delete memoryCache[this.cacheKey];
         console.log(`🗑️ Caché de ${this.collection} limpiado`);
     }
 
@@ -106,10 +93,9 @@ export class FirebaseCache {
      */
     isValid() {
         try {
-            const item = localStorage.getItem(this.cacheKey);
-            if (!item) return false;
+            const cacheItem = memoryCache[this.cacheKey];
+            if (!cacheItem) return false;
 
-            const cacheItem = JSON.parse(item);
             const now = Date.now();
             const age = now - cacheItem.timestamp;
 
@@ -125,10 +111,9 @@ export class FirebaseCache {
      */
     getAge() {
         try {
-            const item = localStorage.getItem(this.cacheKey);
-            if (!item) return Infinity;
+            const cacheItem = memoryCache[this.cacheKey];
+            if (!cacheItem) return Infinity;
 
-            const cacheItem = JSON.parse(item);
             return Math.round((Date.now() - cacheItem.timestamp) / 1000);
         } catch (e) {
             return Infinity;
@@ -136,51 +121,12 @@ export class FirebaseCache {
     }
 
     /**
-     * Obtener tamaño del caché en KB
-     * @returns {number}
-     * @private
-     */
-    _getSize() {
-        try {
-            const item = localStorage.getItem(this.cacheKey);
-            if (!item) return 0;
-            return Math.round(new Blob([item]).size / 1024);
-        } catch (e) {
-            return 0;
-        }
-    }
-
-    /**
-     * Limpiar cachés antiguos si localStorage está lleno
-     * @private
-     */
-    _clearOldCaches() {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
-        const caches = keys.map(key => {
-            try {
-                const item = JSON.parse(localStorage.getItem(key));
-                return { key, timestamp: item.timestamp || 0 };
-            } catch (e) {
-                return { key, timestamp: 0 };
-            }
-        });
-
-        // Ordenar por antigüedad y eliminar los 3 más viejos
-        caches.sort((a, b) => a.timestamp - b.timestamp);
-        caches.slice(0, 3).forEach(cache => {
-            localStorage.removeItem(cache.key);
-            console.log(`🗑️ Caché antiguo eliminado: ${cache.key}`);
-        });
-    }
-
-    /**
      * Limpiar TODOS los cachés de la app
      * @static
      */
     static clearAll() {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
-        keys.forEach(key => localStorage.removeItem(key));
-        console.log(`🗑️ ${keys.length} cachés eliminados`);
+        Object.keys(memoryCache).forEach(key => delete memoryCache[key]);
+        console.log(`🗑️ Todos los cachés en memoria eliminados`);
     }
 
     /**
@@ -189,26 +135,21 @@ export class FirebaseCache {
      * @returns {Object}
      */
     static getStats() {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
+        const keys = Object.keys(memoryCache);
         const stats = {
             total: keys.length,
-            totalSize: 0,
             caches: []
         };
 
         keys.forEach(key => {
             try {
-                const item = localStorage.getItem(key);
-                const size = Math.round(new Blob([item]).size / 1024);
-                const data = JSON.parse(item);
-                const age = Math.round((Date.now() - data.timestamp) / 1000);
+                const cacheItem = memoryCache[key];
+                const age = Math.round((Date.now() - cacheItem.timestamp) / 1000);
 
-                stats.totalSize += size;
                 stats.caches.push({
-                    collection: data.collection || 'unknown',
-                    size: size + ' KB',
+                    collection: cacheItem.collection || 'unknown',
                     age: age + 's',
-                    items: data.data?.length || 0
+                    items: cacheItem.data?.length || 0
                 });
             } catch (e) {
                 console.warn('Error al leer stats de', key, e);
@@ -224,10 +165,9 @@ export class FirebaseCache {
      */
     static logStats() {
         const stats = FirebaseCache.getStats();
-        console.log('📊 Estadísticas de Caché Firebase');
+        console.log('📊 Estadísticas de Caché Firebase (Memoria)');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log(`Total cachés: ${stats.total}`);
-        console.log(`Tamaño total: ${stats.totalSize} KB`);
         console.log('');
         console.table(stats.caches);
     }

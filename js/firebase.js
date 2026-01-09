@@ -28,8 +28,7 @@ import {
   limit
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-// Sistema de caché optimizado
-import { FirebaseCache, withCache, invalidateCache } from './firebase-cache.js';
+// Sistema de caché desactivado - consultas directas a Firebase
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -245,47 +244,62 @@ export const registrarStock = async (stock) => {
   try {
     await addDoc(collection(db, "Stock"), { ...stock, fechaTS: serverTimestamp() });
     console.log("stock registrado con éxito");
-    // invalidar caché de stock tras mutación
-    _stockCache = null;
-    _stockCacheTimestamp = 0;
-    invalidateCache('stock'); // 🔥 Nuevo sistema de caché
   } catch (error) {
     console.error("Error al registrar stock:", error);
   }
 };
 
-// Cache simple en memoria para evitar lecturas repetidas en una sesión
-let _stockCache = null;
-let _stockCacheTimestamp = 0;
-const STOCK_CACHE_TTL = 30 * 1000; // 30s
-
-// FUNCION PARA OBTENER LOS STOCK (con caché optimizado)
+// FUNCION PARA OBTENER LOS STOCK - Consulta directa a Firebase (sin caché)
 export const obtenerStock = async () => {
-  return withCache('stock', async () => {
-    try {
-      const q = query(
-        collection(db, "Stock"),
-        orderBy("item"),
-        limit(1000) // Límite de seguridad
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((docSnap) => ({ ...docSnap.data(), id: docSnap.id }));
-    } catch (error) {
-      console.error("Error al obtener stock:", error);
-      return [];
-    }
-  });
+  try {
+    console.log("📡 Consultando Firebase: Stock...");
+    const q = query(
+      collection(db, "Stock"),
+      orderBy("item"),
+      limit(1000) // Límite de seguridad
+    );
+    const querySnapshot = await getDocs(q);
+    const stock = querySnapshot.docs.map((docSnap) => ({ ...docSnap.data(), id: docSnap.id }));
+    console.log(`✅ Stock obtenido de Firebase: ${stock.length} productos`);
+    return stock;
+  } catch (error) {
+    console.error("Error al obtener stock:", error);
+    return [];
+  }
 };
 
-export const obtenerStockCached = async () => {
-  const ahora = Date.now();
-  if (_stockCache && (ahora - _stockCacheTimestamp) < STOCK_CACHE_TTL) {
-    return _stockCache;
+// FUNCION PARA OBTENER STOCK EN TIEMPO REAL - Usa onSnapshot para escuchar cambios
+export const obtenerStockTiempoReal = (callback) => {
+  try {
+    console.log("📡 Suscribiéndose a cambios de Stock en tiempo real...");
+    const q = query(
+      collection(db, "Stock"),
+      orderBy("item"),
+      limit(1000) // Límite de seguridad
+    );
+    
+    // Retornar el unsubscribe function para poder limpiar el listener
+    return onSnapshot(q, 
+      (querySnapshot) => {
+        const stock = querySnapshot.docs.map((docSnap) => ({ ...docSnap.data(), id: docSnap.id }));
+        console.log(`✅ Stock actualizado en tiempo real: ${stock.length} productos`);
+        callback(stock);
+      },
+      (error) => {
+        console.error("❌ Error en suscripción de stock en tiempo real:", error);
+        callback([]); // Llamar callback con array vacío en caso de error
+      }
+    );
+  } catch (error) {
+    console.error("❌ Error al suscribirse a stock en tiempo real:", error);
+    callback([]); // Llamar callback con array vacío en caso de error
+    return () => {}; // Retornar función vacía si falla
   }
-  const data = await obtenerStock();
-  _stockCache = data;
-  _stockCacheTimestamp = ahora;
-  return data;
+};
+
+// Función obsoleta - mantener por compatibilidad pero usa obtenerStock directamente
+export const obtenerStockCached = async () => {
+  return await obtenerStock();
 };
 
 // FUNCION PARA ELIMINAR STOCK
@@ -294,10 +308,6 @@ export const eliminarStockPorID = async (id) => {
     const clienteRef = doc(db, "Stock", id);
     await deleteDoc(clienteRef);
     console.log("Stock eliminado con éxito");
-    // invalidar caché de stock tras mutación
-    _stockCache = null;
-    _stockCacheTimestamp = 0;
-    invalidateCache('stock'); // 🔥 Nuevo sistema de caché
   } catch (error) {
     console.error("Error al eliminar Stock:", error);
   }
@@ -309,10 +319,6 @@ export const actualizarStockporId = async (id, stockActualizado) => {
     const stockRef = doc(db, "Stock", id);
     await updateDoc(stockRef, stockActualizado);
     console.log("Stock actualizado con éxito");
-    // invalidar caché de stock tras mutación
-    _stockCache = null;
-    _stockCacheTimestamp = 0;
-    invalidateCache('stock'); // 🔥 Nuevo sistema de caché
   } catch (error) {
     console.error("Error al actualizar stock:", error);
     throw error;
@@ -359,14 +365,7 @@ export const descontarStockTransaccional = async (items) => {
     }
   });
 
-  // Invalidar caché FUERA de la transacción (asegurarse que la UI pida datos nuevos)
-  _stockCache = null;
-  _stockCacheTimestamp = 0;
-  try {
-    invalidateCache('stock');
-  } catch (e) {
-    console.warn('No se pudo invalidar el cache externo de stock:', e);
-  }
+  // Transacción completada
 };
 
 // Incremento transaccional de stock (reposiciones)
@@ -411,10 +410,7 @@ export const sumarStockTransaccional = async (items) => {
     }
   });
 
-  // Invalidar caché FUERA de la transacción
-  _stockCache = null;
-  _stockCacheTimestamp = 0;
-  invalidateCache('stock'); // 🔥 Nuevo sistema de caché
+  // Transacción completada
 };
 
 // Reposiciones (historial de notas)
@@ -422,7 +418,7 @@ export const registrarReposicion = async (nota) => {
   // nota: {fecha, usuario, items:[{id, item, cantidad, costoCompra?, costo?}], totalCompra, totalItems}
   try {
     await addDoc(collection(db, "Reposiciones"), { ...nota, fechaTS: serverTimestamp() });
-    invalidateCache('reposiciones'); // 🔥 Nuevo sistema de caché
+    console.log("Reposición registrada con éxito");
   } catch (e) {
     console.error('Error al registrar reposición', e);
     throw e;
@@ -430,16 +426,17 @@ export const registrarReposicion = async (nota) => {
 };
 
 export const obtenerReposiciones = async (max = 50) => {
-  return withCache('reposiciones', async () => {
-    try {
-      const q = query(collection(db, "Reposiciones"), orderBy("fechaTS", "desc"), limit(max));
-      const s = await getDocs(q);
-      return s.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-      console.error('Error al obtener reposiciones', e);
-      return [];
-    }
-  }, 5 * 60 * 1000); // Caché de 5 minutos
+  try {
+    console.log("📡 Consultando Firebase: Reposiciones...");
+    const q = query(collection(db, "Reposiciones"), orderBy("fechaTS", "desc"), limit(max));
+    const s = await getDocs(q);
+    const reposiciones = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log(`✅ Reposiciones obtenidas de Firebase: ${reposiciones.length}`);
+    return reposiciones;
+  } catch (e) {
+    console.error('Error al obtener reposiciones', e);
+    return [];
+  }
 };
 
 // Salidas (historial de notas de salida)
@@ -447,7 +444,7 @@ export const registrarSalida = async (nota) => {
   // nota: {fecha, usuario, items:[{id, item, cantidad}], totalItems}
   try {
     await addDoc(collection(db, "Salidas"), { ...nota, fechaTS: serverTimestamp() });
-    invalidateCache('salidas');
+    console.log("Salida registrada con éxito");
   } catch (e) {
     console.error('Error al registrar salida', e);
     throw e;
@@ -455,23 +452,23 @@ export const registrarSalida = async (nota) => {
 };
 
 export const obtenerSalidas = async (max = 50) => {
-  return withCache('salidas', async () => {
-    try {
-      const q = query(collection(db, "Salidas"), orderBy("fechaTS", "desc"), limit(max));
-      const s = await getDocs(q);
-      return s.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-      console.error('Error al obtener salidas', e);
-      return [];
-    }
-  }, 5 * 60 * 1000);
+  try {
+    console.log("📡 Consultando Firebase: Salidas...");
+    const q = query(collection(db, "Salidas"), orderBy("fechaTS", "desc"), limit(max));
+    const s = await getDocs(q);
+    const salidas = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log(`✅ Salidas obtenidas de Firebase: ${salidas.length}`);
+    return salidas;
+  } catch (e) {
+    console.error('Error al obtener salidas', e);
+    return [];
+  }
 };
 
 // Eliminar reposición
 export const eliminarReposicion = async (id) => {
   try {
     await deleteDoc(doc(db, "Reposiciones", id));
-    invalidateCache('reposiciones');
     console.log("Reposición eliminada con éxito");
   } catch (error) {
     console.error("Error al eliminar reposición:", error);
@@ -483,7 +480,6 @@ export const eliminarReposicion = async (id) => {
 export const eliminarSalida = async (id) => {
   try {
     await deleteDoc(doc(db, "Salidas", id));
-    invalidateCache('salidas');
     console.log("Salida eliminada con éxito");
   } catch (error) {
     console.error("Error al eliminar salida:", error);
@@ -498,46 +494,32 @@ export const registrarCliente = async (cliente) => {
   try {
     await addDoc(collection(db, "Clientes"), cliente);
     console.log("Cliente registrado con éxito");
-    // invalidar caché de clientes tras mutación
-    _clientesCache = null;
-    _clientesCacheTimestamp = 0;
-    invalidateCache('clientes'); // 🔥 Nuevo sistema de caché
   } catch (error) {
     console.error("Error al registrar cliente:", error);
   }
 };
 
-// FUNCION PARA OBTENER CLIENTES (con caché optimizado)
+// FUNCION PARA OBTENER CLIENTES - Consulta directa a Firebase (sin caché)
 export const obtenerClientes = async () => {
-  return withCache('clientes', async () => {
-    try {
-      const q = query(
-        collection(db, "Clientes"),
-        limit(500) // Límite de seguridad
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
-    } catch (error) {
-      console.error("Error al obtener clientes:", error);
-      return [];
-    }
-  }, 10 * 60 * 1000); // Caché de 10 minutos
+  try {
+    console.log("📡 Consultando Firebase: Clientres...");
+    const q = query(
+      collection(db, "Clientes"),
+      limit(500) // Límite de seguridad
+    );
+    const querySnapshot = await getDocs(q);
+    const clientes = querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+    console.log(`✅ Clientes obtenidos de Firebase: ${clientes.length}`);
+    return clientes;
+  } catch (error) {
+    console.error("Error al obtener clientes:", error);
+    return [];
+  }
 };
 
-// Cache de clientes (evita lecturas en cada pulsación)
-let _clientesCache = null;
-let _clientesCacheTimestamp = 0;
-const CLIENTES_CACHE_TTL = 30 * 1000; // 30s
-
+// Función obsoleta - mantener por compatibilidad pero usa obtenerClientes directamente
 export const obtenerClientesCached = async () => {
-  const ahora = Date.now();
-  if (_clientesCache && (ahora - _clientesCacheTimestamp) < CLIENTES_CACHE_TTL) {
-    return _clientesCache;
-  }
-  const data = await obtenerClientes();
-  _clientesCache = data;
-  _clientesCacheTimestamp = ahora;
-  return data;
+  return await obtenerClientes();
 };
 
 // FUNCION PARA ELIMINAR CLIENTE
@@ -546,10 +528,6 @@ export const eliminarClientePorID = async (id) => {
     const clienteRef = doc(db, "Clientes", id);
     await deleteDoc(clienteRef);
     console.log("Cliente eliminado con éxito");
-    // invalidar caché de clientes tras mutación
-    _clientesCache = null;
-    _clientesCacheTimestamp = 0;
-    invalidateCache('clientes'); // 🔥 Nuevo sistema de caché
   } catch (error) {
     console.error("Error al eliminar cliente:", error);
   }
@@ -560,19 +538,13 @@ export const actualizarClienteporId = async (id, clienteActualizado) => {
   try {
     const clienteRef = doc(db, "Clientes", id);
     await updateDoc(clienteRef, clienteActualizado);
-    console.log("Cliente actualizado conxito");
-    // invalidar caché de clientes tras mutación
-    _clientesCache = null;
-    _clientesCacheTimestamp = 0;
-    invalidateCache('clientes'); // 🔥 Nuevo sistema de caché
+    console.log("Cliente actualizado con éxito");
   } catch (error) {
     console.error("Error al actualizar cliente:", error);
   }
 };
 
-// Opcional: exportar funciones para invalidar caché manualmente si se requiere
-export const invalidateStockCache = () => { _stockCache = null; _stockCacheTimestamp = 0; };
-export const invalidateClientesCache = () => { _clientesCache = null; _clientesCacheTimestamp = 0; };
+// Funciones de invalidación de caché eliminadas - ahora todas las consultas van directo a Firebase
 
 // FUNCION PARA OBTENER CLIENTE POR ID
 export const obtenerClientePorId = async (id) => {
@@ -627,9 +599,10 @@ export const actualizarCajaporId = async (id, cajaActualizado) => {
   try {
     const cajaRef = doc(db, "Caja", id);
     await updateDoc(cajaRef, cajaActualizado);
-    console.log("Caja actualizada conxito");
+    console.log("Caja actualizada con éxito");
   } catch (error) {
     console.error("Error al actualizar caja:", error);
+    throw error; // Lanzar error para que se pueda manejar y hacer rollback
   }
 };
 
@@ -702,16 +675,17 @@ export const registrarFactura = async ({ venta, cliente, total, cajaId, usuario 
 };
 
 export const obtenerFacturas = async (max = 100) => {
-  return withCache('facturas', async () => {
-    try {
-      const q = query(collection(db, 'Facturas'), orderBy('fechaTS', 'desc'), limit(max));
-      const s = await getDocs(q);
-      return s.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-      console.error('Error al obtener facturas', e);
-      return [];
-    }
-  }, 5 * 60 * 1000);
+  try {
+    console.log("📡 Consultando Firebase: Facturas...");
+    const q = query(collection(db, 'Facturas'), orderBy('fechaTS', 'desc'), limit(max));
+    const s = await getDocs(q);
+    const facturas = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log(`✅ Facturas obtenidas de Firebase: ${facturas.length}`);
+    return facturas;
+  } catch (e) {
+    console.error('Error al obtener facturas', e);
+    return [];
+  }
 };
 
 export const obtenerFacturaPorId = async (id) => {
@@ -735,8 +709,7 @@ export const anularFactura = async (id, { motivo = null, usuario = null } = {}) 
       anuladoEn: serverTimestamp(),
       motivoAnulacion: motivo || null
     });
-    // invalidar cache de facturas
-    try { invalidateCache('facturas'); } catch (e) { /* ignore */ }
+    console.log("Factura anulada con éxito");
   } catch (e) {
     console.error('Error al anular factura', e);
     throw e;

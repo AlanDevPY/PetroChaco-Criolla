@@ -1,4 +1,4 @@
-import { obtenerCajas, obtenerStockCached, obtenerStock } from "./firebase.js";
+import { obtenerCajas, obtenerStock } from "./firebase.js";
 import { formatGs } from "./utils.js";
 import Toastify from "https://cdn.jsdelivr.net/npm/toastify-js/src/toastify-es.js";
 
@@ -82,7 +82,7 @@ const calcularVentasDia = async (fecha) => {
 // Función para calcular ganancia del día
 const calcularGananciaDia = async (fecha) => {
   try {
-    const stock = await obtenerStockCached?.() || await obtenerStock();
+    const stock = await obtenerStock();
     const { productosVendidos } = await calcularVentasDia(fecha);
 
     let totalGanancia = 0;
@@ -151,7 +151,7 @@ const obtenerVentasSemana = async () => {
 // Función para obtener productos con stock bajo
 const obtenerProductosStockBajo = async () => {
   try {
-    const stock = await obtenerStockCached?.() || await obtenerStock();
+    const stock = await obtenerStock();
     
     return stock.filter(producto => {
       const stockActual = producto.cantidad || 0;
@@ -339,7 +339,7 @@ const cargarDashboard = async () => {
       calcularVentasDia(fechaHoy),
       calcularVentasDia(fechaAyer),
       calcularGananciaDia(fechaHoy),
-      obtenerStockCached?.() || obtenerStock(),
+      obtenerStock(),
       obtenerProductosStockBajo(),
       obtenerVentasSemana()
     ]);

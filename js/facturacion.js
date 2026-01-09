@@ -243,8 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Invalidate cache and reload (use global invalidate if available)
             try {
                 // try to invalidate using imported function if available
-                const { invalidateCache } = await import('./firebase-cache.js');
-                invalidateCache('facturas');
+                // Invalidación de caché eliminada - ahora todas las consultas van directo a Firebase
             } catch (e) {
                 console.warn('No se pudo invalidar caché por import dinámico', e);
             }
