@@ -138,5 +138,5 @@ export function mejorarDatalist(inputId, datalistId) {
         }
     });
 
-    console.log('✅ Datalist mejorado inicializado para:', inputId);
+    // console.log('✅ Datalist mejorado inicializado para:', inputId);
 }

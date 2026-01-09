@@ -794,13 +794,17 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
 const actualizarClientes = (clientes) => {
   clientesCache = clientes; // Actualizar cache
   
-  // Si DataTables está inicializado, poblar tabla
-  if ($.fn.DataTable.isDataTable('#tablaClientes')) {
-    poblarTablaClientes(clientes);
-  } else {
-    // Inicializar DataTable por primera vez
-    initClientesDataTable();
-    poblarTablaClientes(clientes);
+  // Solo actualizar la tabla si el modal está visible
+  const modalVerClientes = document.getElementById('modalVerClientes');
+  if (modalVerClientes && modalVerClientes.classList.contains('show')) {
+    // Si DataTables está inicializado, poblar tabla
+    if ($.fn.DataTable.isDataTable('#tablaClientes')) {
+      poblarTablaClientes(clientes);
+    } else {
+      // Inicializar DataTable por primera vez
+      initClientesDataTable();
+      poblarTablaClientes(clientes);
+    }
   }
 };
 
@@ -816,24 +820,44 @@ function configurarEventosClientes() {
   $(document).on('click', '.btn-eliminar-cliente', async function () {
     const id = $(this).data('id');
 
+    // Validar que el ID existe
+    if (!id) {
+      alertaError("Error", "No se pudo obtener el ID del cliente.");
+      return;
+    }
+
     // Buscar el nombre del cliente - usar cache en tiempo real
     const clientes = clientesCache.length > 0 ? clientesCache : await obtenerClientes();
     const cliente = clientes.find(c => c.id === id);
     const nombreCliente = cliente ? cliente.nombre : 'este cliente';
 
-    const confirmacion = await confirmarEliminacion(nombreCliente, 'cliente');
-
-      if (confirmacion.isConfirmed) {
-        try {
-          await eliminarClientePorID(id);
-          eliminarClienteDeTabla(id);
-          alertaExito("Cliente eliminado", `${nombreCliente} ha sido eliminado correctamente.`);
-          // No es necesario llamar mostrarClientes() - el listener en tiempo real actualiza automáticamente
-        } catch (error) {
-          console.error('Error al eliminar cliente:', error);
-          alertaError("Error al eliminar", "No se pudo eliminar el cliente.");
-        }
-      }
+    try {
+      // Deshabilitar el botón mientras se procesa
+      const btnEliminar = $(this);
+      btnEliminar.prop('disabled', true);
+      btnEliminar.html('<i class="bi bi-hourglass-split"></i> Eliminando...');
+      
+      // Eliminar de Firebase directamente
+      await eliminarClientePorID(id);
+      
+      // Actualizar cache local removiendo el cliente eliminado
+      clientesCache = clientesCache.filter(c => c.id !== id);
+      
+      // Intentar eliminar de la tabla (opcional, el listener en tiempo real también lo hará)
+      eliminarClienteDeTabla(id);
+      
+      alertaExito("Cliente eliminado", `${nombreCliente} ha sido eliminado correctamente.`);
+      
+      // El listener en tiempo real actualizará automáticamente cuando Firebase propague el cambio
+    } catch (error) {
+      console.error('❌ Error al eliminar cliente:', error);
+      alertaError("Error al eliminar", `No se pudo eliminar el cliente: ${error.message || 'Error desconocido'}`);
+      
+      // Rehabilitar el botón en caso de error
+      const btnEliminar = $(this);
+      btnEliminar.prop('disabled', false);
+      btnEliminar.html('<i class="bi bi-trash3"></i> Eliminar');
+    }
   });
 }
 

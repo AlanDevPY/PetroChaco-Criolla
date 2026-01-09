@@ -1,4 +1,6 @@
-import { obtenerCajas, obtenerCajaPorId, actualizarCajaporId, sumarStockTransaccional } from "./firebase.js";
+import { obtenerCajas, obtenerCajaPorId, actualizarCajaporId, sumarStockTransaccional, registrarFactura, obtenerFacturaPorId } from "./firebase.js";
+import { obtenerTimbradoActivo } from "./facturacion.js";
+import { alertaError, alertaExito } from "./swal-utils.js";
 
 let idCajaIndividual;
 let tablaCajas; // Variable para DataTable
@@ -357,13 +359,16 @@ const mostrarDetalleCaja = async () => {
             </table>
           </div>
           
-          ${rol === 'admin' && caja.estado === 'abierta' ? `
-            <div class="text-end mt-3">
+          <div class="text-end mt-3 d-flex gap-2 justify-content-end">
+            <button class="btn btn-primary btnImprimirFactura" data-index="${index}">
+              <i class="bi bi-printer me-2"></i>Imprimir Factura Legal
+            </button>
+            ${rol === 'admin' && caja.estado === 'abierta' ? `
               <button class="btn btn-outline-danger btnRevertirVenta" data-index="${index}">
                 <i class="bi bi-arrow-counterclockwise me-2"></i>Revertir Venta
               </button>
-            </div>
-          ` : ''}
+            ` : ''}
+          </div>
         </div>
       </div>
     `;
@@ -380,6 +385,36 @@ const mostrarDetalleCaja = async () => {
         });
       });
     }
+
+    // Agregar listeners a los botones de imprimir factura
+    document.querySelectorAll('.btnImprimirFactura').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ventaIndex = parseInt(btn.getAttribute('data-index'));
+        const venta = caja.ventas[ventaIndex];
+        
+        // Guardar el estado original del botón
+        const btnOriginal = btn;
+        const contenidoOriginal = btn.innerHTML;
+        
+        // Mostrar spinner en el botón
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Cargando factura...';
+        
+        try {
+          // Imprimir factura directamente con los datos de la venta
+          await imprimirFacturaFiscalDesdeCaja(venta);
+        } catch (error) {
+          console.error('Error al imprimir factura:', error);
+          alertaError('Error', 'No se pudo imprimir la factura. Por favor, intente nuevamente.');
+        } finally {
+          // Restaurar el botón después de un breve delay
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = contenidoOriginal;
+          }, 1000);
+        }
+      });
+    });
 
   } catch (error) {
     console.error('Error en mostrarDetalleCaja():', error);
@@ -582,6 +617,185 @@ function imprimirCierre(caja) {
     window.removeEventListener('afterprint', hideTicket);
   };
   window.addEventListener('afterprint', hideTicket);
+}
+
+// ========================================
+// FUNCIÓN PARA IMPRIMIR FACTURA FISCAL DESDE CAJA
+// ========================================
+async function imprimirFacturaFiscalDesdeCaja(venta) {
+  try {
+    // Obtener timbrado activo
+    const timbrado = await obtenerTimbradoActivo();
+    if (!timbrado) {
+      alertaError('Sin timbrado activo', 'No se encontró un timbrado SET activo. No se puede imprimir la factura legal.');
+      return;
+    }
+
+    // --- DATOS DEL TIMBRADO Y EMPRESA ---
+    document.getElementById("factura-razon-social").textContent = timbrado.razonSocial;
+    document.getElementById("factura-ruc").textContent = `RUC: ${timbrado.rucEmpresa}`;
+    document.getElementById("factura-direccion").textContent = timbrado.direccionFiscal;
+    document.getElementById("factura-timbrado").textContent = timbrado.numeroTimbrado;
+    document.getElementById("factura-vigencia").textContent =
+      `${timbrado.fechaInicio.split('-').reverse().join('/')} - ${timbrado.fechaVencimiento.split('-').reverse().join('/')}`;
+
+    // --- NÚMERO DE FACTURA ---
+    // Si la venta ya tiene facturaId, usar ese número, sino registrar nueva factura
+    let numeroFactura = '';
+    if (venta.facturaId) {
+      // La venta ya tiene factura registrada, obtener el número
+      try {
+        const factura = await obtenerFacturaPorId(venta.facturaId);
+        if (factura && factura.numeroFormateado) {
+          numeroFactura = factura.numeroFormateado;
+        } else {
+          // Si no se encuentra, generar número desde timbrado
+          numeroFactura = `${timbrado.establecimiento}-${timbrado.puntoExpedicion}-${String(timbrado.numeroActual).padStart(7, '0')}`;
+        }
+      } catch (err) {
+        console.warn('No se pudo obtener factura existente, generando número nuevo:', err);
+        numeroFactura = `${timbrado.establecimiento}-${timbrado.puntoExpedicion}-${String(timbrado.numeroActual).padStart(7, '0')}`;
+      }
+    } else {
+      // Registrar nueva factura en Firestore y reservar el número de timbrado
+      try {
+        const registroFacturaInfo = await registrarFactura(
+          { 
+            venta, 
+            cliente: venta.cliente, 
+            total: venta.total, 
+            cajaId: idCajaIndividual, 
+            usuario: document.getElementById('usuarioLogueado')?.textContent || null 
+          }, 
+          timbrado.id
+        );
+        numeroFactura = registroFacturaInfo.numeroFormateado;
+        venta.facturaId = registroFacturaInfo.id; // Guardar ID para futuras impresiones
+      } catch (err) {
+        console.error('Error al registrar la factura en Firestore:', err);
+        alertaError('Error', 'No se pudo registrar la factura en la base de datos. Se intentará imprimir igualmente.');
+        numeroFactura = `${timbrado.establecimiento}-${timbrado.puntoExpedicion}-${String(timbrado.numeroActual).padStart(7, '0')}`;
+      }
+    }
+    
+    document.getElementById("factura-numero").textContent = numeroFactura;
+
+    // --- FECHA ---
+    document.getElementById("factura-fecha").textContent = venta.fecha || new Date().toLocaleString("es-PY");
+
+    // --- DATOS DEL CLIENTE ---
+    const cliente = venta.cliente || {};
+    document.getElementById("factura-cliente-nombre").textContent = cliente.nombre || "Consumidor Final";
+    document.getElementById("factura-cliente-ruc").textContent = cliente.ruc || "0000000-0";
+    document.getElementById("factura-cliente-direccion").textContent = cliente.direccion || "-";
+    document.getElementById("factura-cliente-telefono").textContent = cliente.telefono || cliente.celular || "-";
+    
+    // Nombre del cajero (usuario logueado) en el encabezado
+    const usuario = document.getElementById('usuarioLogueado')?.textContent || '-';
+    document.getElementById("factura-cajero").textContent = usuario;
+
+    // --- LIMPIAR ITEMS ANTERIORES ---
+    const cuerpo = document.getElementById("factura-items-body");
+    cuerpo.innerHTML = "";
+
+    // --- CALCULAR TOTALES POR IVA ---
+    let totalGravadas5 = 0;
+    let totalGravadas10 = 0;
+    let totalExentas = 0;
+
+    // --- AGREGAR PRODUCTOS ---
+    if (venta.venta && Array.isArray(venta.venta)) {
+      venta.venta.forEach((item) => {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td class="ticket-qty">${item.cantidad}</td>
+          <td class="ticket-desc">${item.item}</td>
+          <td class="ticket-price">${item.subTotal.toLocaleString("es-PY")}</td>
+        `;
+        cuerpo.appendChild(fila);
+
+        // Por ahora asumimos todo gravado al 10%
+        // TODO: Agregar campo IVA a productos en stock
+        totalGravadas10 += item.subTotal;
+      });
+    }
+
+    // --- CALCULAR IVA ---
+    const iva5 = Math.round(totalGravadas5 / 21); // 5% incluido = total / 21
+    const iva10 = Math.round(totalGravadas10 / 11); // 10% incluido = total / 11
+
+    // --- MOSTRAR TOTALES ---
+    document.getElementById("factura-gravadas-5").textContent = totalGravadas5.toLocaleString("es-PY") + " Gs";
+    document.getElementById("factura-gravadas-10").textContent = totalGravadas10.toLocaleString("es-PY") + " Gs";
+    document.getElementById("factura-exentas").textContent = totalExentas.toLocaleString("es-PY") + " Gs";
+    document.getElementById("factura-iva-5").textContent = iva5.toLocaleString("es-PY") + " Gs";
+    document.getElementById("factura-iva-10").textContent = iva10.toLocaleString("es-PY") + " Gs";
+    document.getElementById("factura-total").textContent = venta.total.toLocaleString("es-PY") + " Gs";
+
+    // --- IMPRESIÓN DOBLE: ORIGINAL Y COPIA ---
+    setTimeout(() => {
+      try {
+        // Oculta todos los .ticket-wrapper
+        document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
+        // Solo muestra la factura fiscal
+        const fiscalWrapper = document.getElementById('factura-fiscal-container')?.closest('.ticket-wrapper');
+        if (!fiscalWrapper) {
+          console.error('No se encontró el contenedor de factura fiscal');
+          return;
+        }
+
+        let paso = 0;
+        let copiaPendiente = false;
+        const msg = document.querySelector('#factura-fiscal-container .ticket-msg');
+        const mensajeOriginal = msg ? msg.innerHTML : '';
+
+        function imprimirConMensaje(mensaje, callback) {
+          if (msg) msg.innerHTML = mensaje;
+          document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
+          fiscalWrapper.classList.add('show-print');
+          window.print();
+          setTimeout(() => {
+            fiscalWrapper.classList.remove('show-print');
+            if (callback) callback();
+          }, 500);
+        }
+
+        function imprimirCopia() {
+          if (copiaPendiente) return; // Evita dobles disparos
+          copiaPendiente = true;
+          setTimeout(() => {
+            imprimirConMensaje('Copia: Comercio', () => {
+              if (msg) msg.innerHTML = mensajeOriginal;
+              window.onafterprint = null;
+            });
+          }, 100);
+        }
+
+        // Imprimir original y preparar handler para la copia
+        paso = 1;
+        copiaPendiente = false;
+        imprimirConMensaje('Original: Cliente', () => {
+          // Handler robusto para onafterprint
+          let handler;
+          handler = function () {
+            window.onafterprint = null;
+            imprimirCopia();
+          };
+          window.onafterprint = handler;
+          // Fallback: si onafterprint no dispara en 1s, forzar la copia
+          setTimeout(() => {
+            if (!copiaPendiente) imprimirCopia();
+          }, 1000);
+        });
+      } catch (err) {
+        console.error('Error durante la preparación de impresión de factura:', err);
+        window.print();
+      }
+    }, 300);
+  } catch (error) {
+    console.error('Error al imprimir factura fiscal:', error);
+    alertaError('Error', 'No se pudo imprimir la factura. Por favor, intente nuevamente.');
+  }
 }
 
 // Función para revertir una venta (solo admin)

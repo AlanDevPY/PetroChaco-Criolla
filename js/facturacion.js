@@ -2,9 +2,9 @@
 // FACTURACIÓN - GESTIÓN DE TIMBRADOS SET
 // ========================================
 
-import { db, obtenerFacturas, anularFactura, obtenerFacturaPorId } from './firebase.js';
+import { db, obtenerFacturas, anularFactura, obtenerFacturaPorId, sincronizarNumeroActualTimbrado } from './firebase.js';
 import { FirebaseCache } from './firebase-cache.js';
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, getDoc } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js';
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, limit, getDoc } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js';
 
 // ========================================
 // VARIABLES GLOBALES
@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Solo ejecutar si estamos en la página de facturación
     const tablaTimbradosElement = document.getElementById('tablaTimbrados');
     if (!tablaTimbradosElement) {
-        console.log('📋 Módulo de facturación cargado (funciones disponibles)');
+        // console.log('📋 Módulo de facturación cargado (funciones disponibles)');
         return; // No estamos en facturacion.html, solo exportar funciones
     }
 
@@ -82,6 +82,19 @@ function inicializarTabla() {
 }
 
 function inicializarTablaFacturas() {
+    // Registrar tipo de ordenamiento personalizado para números de factura
+    // DataTables requiere el sufijo '-pre' para la función de preprocesamiento
+    $.fn.dataTable.ext.type.order['factura-numero-pre'] = function (data) {
+        // Extraer el número numérico del formato "002-002-0000019"
+        // Buscar el último segmento numérico después del último guión
+        if (!data) return 0;
+        const match = String(data).match(/(\d+)$/);
+        if (match) {
+            return parseInt(match[1], 10);
+        }
+        return 0;
+    };
+
     tablaFacturas = $('#tablaFacturas').DataTable({
         language: {
             url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
@@ -91,9 +104,13 @@ function inicializarTablaFacturas() {
         // quitar filtro (search) por defecto, usamos nuestro input personalizado
         dom: 'lrtip',
         pageLength: 10,
-        order: [[4, 'desc']],
+        order: [[1, 'desc']], // Ordenar por número de factura (columna 1) descendente (mayor a menor)
         columnDefs: [
             { targets: 0, visible: false },
+            { 
+                targets: 1, // Columna de número de factura
+                type: 'factura-numero' // Usar tipo de ordenamiento personalizado
+            },
             { targets: 6, orderable: false }
         ]
     });
@@ -264,6 +281,46 @@ async function cargarTimbrados() {
         const q = query(timbradosRef, orderBy('fechaCreacion', 'desc'));
         const querySnapshot = await getDocs(q);
 
+        // Obtener todas las facturas para encontrar la última de cada timbrado
+        let ultimasFacturasPorTimbrado = {};
+        try {
+            // Obtener todas las facturas (sin filtros complejos para evitar problemas de índices)
+            const facturasRef = collection(db, 'Facturas');
+            const facturasQuery = query(facturasRef, orderBy('fechaTS', 'desc'), limit(500));
+            const facturasSnapshot = await getDocs(facturasQuery);
+            
+            console.log(`📋 Total facturas obtenidas: ${facturasSnapshot.size}`);
+            
+            // Procesar facturas: filtrar por estado activa y agrupar por timbradoId
+            facturasSnapshot.forEach((docSnap) => {
+                const factura = docSnap.data();
+                const timbradoId = factura.timbradoId;
+                
+                // Debug: mostrar información de facturas
+                if (factura.numeroFormateado) {
+                    console.log(`📄 Factura: ${factura.numeroFormateado}, TimbradoId: ${timbradoId}, Estado: ${factura.estado}, Número: ${factura.numero}`);
+                }
+                
+                // Solo procesar facturas activas (o sin estado, para compatibilidad)
+                const estadoValido = !factura.estado || factura.estado === 'activa';
+                if (timbradoId && estadoValido && factura.numero) {
+                    // Si no existe o si esta factura tiene un número mayor, actualizar
+                    if (!ultimasFacturasPorTimbrado[timbradoId] || 
+                        factura.numero > (ultimasFacturasPorTimbrado[timbradoId].numero || 0)) {
+                        ultimasFacturasPorTimbrado[timbradoId] = {
+                            numeroFormateado: factura.numeroFormateado || null,
+                            numero: factura.numero || 0
+                        };
+                    }
+                }
+            });
+            
+            console.log('📊 Últimas facturas por timbrado:', ultimasFacturasPorTimbrado);
+        } catch (error) {
+            console.error('❌ Error al obtener facturas para mostrar última factura:', error);
+            // Continuar sin las facturas, mostrará el número inicial del rango
+        }
+
         // Limpiar tabla
         tablaTimbrados.clear();
 
@@ -285,8 +342,18 @@ async function cargarTimbrados() {
                 estadoBadge = `<span class="badge bg-success">Activo (${diasRestantes}d)</span>`;
             }
 
-            // Formatear número actual
-            const numeroActual = `${timbrado.establecimiento}-${timbrado.puntoExpedicion}-${String(timbrado.numeroActual || timbrado.rangoDesde).padStart(7, '0')}`;
+            // Obtener la última factura emitida de este timbrado
+            let numeroActual;
+            const ultimaFactura = ultimasFacturasPorTimbrado[id];
+            if (ultimaFactura && ultimaFactura.numeroFormateado) {
+                // Mostrar la última factura emitida
+                numeroActual = ultimaFactura.numeroFormateado;
+                console.log(`✅ Timbrado ${id}: Última factura encontrada: ${numeroActual}`);
+            } else {
+                // Si no hay facturas, mostrar el número inicial del rango
+                numeroActual = `${timbrado.establecimiento}-${timbrado.puntoExpedicion}-${String(timbrado.rangoDesde).padStart(7, '0')}`;
+                console.log(`⚠️ Timbrado ${id}: No se encontraron facturas, usando rango inicial: ${numeroActual}`);
+            }
 
             // Formatear rango
             const rango = `${String(timbrado.rangoDesde).padStart(7, '0')} - ${String(timbrado.rangoHasta).padStart(7, '0')}`;
@@ -296,6 +363,9 @@ async function cargarTimbrados() {
 
             // Botones de acción
             const acciones = `
+        <button class="btn btn-sm btn-info" onclick="sincronizarTimbrado('${id}')" title="Sincronizar número actual">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
         <button class="btn btn-sm btn-warning" onclick="editarTimbrado('${id}')" title="Editar">
           <i class="bi bi-pencil"></i>
         </button>
@@ -493,6 +563,50 @@ export async function incrementarNumeroFactura(timbradoId) {
 }
 
 // ========================================
+// SINCRONIZAR NÚMERO ACTUAL DEL TIMBRADO
+// ========================================
+window.sincronizarTimbrado = async function (id) {
+    const result = await Swal.fire({
+        title: '¿Sincronizar número actual?',
+        text: 'Se verificará la última factura emitida y se actualizará el número actual del timbrado.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0d6efd',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, sincronizar',
+        cancelButtonText: 'Cancelar',
+        showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            try {
+                const resultado = await sincronizarNumeroActualTimbrado(id);
+                return resultado;
+            } catch (error) {
+                Swal.showValidationMessage(`Error: ${error.message}`);
+                return false;
+            }
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    });
+
+    if (result.isConfirmed && result.value) {
+        const data = result.value;
+        await Swal.fire({
+            icon: 'success',
+            title: 'Sincronizado',
+            html: `
+                <p>${data.mensaje}</p>
+                <p><strong>Nuevo número actual:</strong> ${data.numeroActual}</p>
+            `,
+            timer: 3000,
+            showConfirmButton: true
+        });
+        
+        // Recargar timbrados para mostrar el número actualizado
+        await cargarTimbrados();
+    }
+};
+
+// ========================================
 // ELIMINAR TIMBRADO
 // ========================================
 window.eliminarTimbrado = async function (id) {
@@ -541,4 +655,4 @@ window.editarTimbrado = function (id) {
     });
 };
 
-console.log('✅ facturacion.js cargado correctamente');
+// console.log('✅ facturacion.js cargado correctamente');

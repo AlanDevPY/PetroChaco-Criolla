@@ -56,7 +56,7 @@ export class FirebaseCache {
         try {
             const cacheItem = memoryCache[this.cacheKey];
             if (!cacheItem) {
-                console.log(`ℹ️ ${this.collection} no encontrado en caché`);
+                // console.log(`ℹ️ ${this.collection} no encontrado en caché`);
                 return null;
             }
 

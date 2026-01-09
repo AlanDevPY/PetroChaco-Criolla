@@ -81,7 +81,7 @@ export function initClientesDataTable() {
 
         // Callbacks
         initComplete: function () {
-            console.log('✅ DataTable de Clientes inicializado correctamente');
+            // console.log('✅ DataTable de Clientes inicializado correctamente');
         }
     });
 
@@ -161,19 +161,41 @@ export function actualizarClienteEnTabla(cliente) {
  */
 export function eliminarClienteDeTabla(id) {
     const table = $('#tablaClientes').DataTable();
+    
+    if (!table) {
+        console.error('DataTable no está inicializado');
+        return false;
+    }
 
-    // Buscar y eliminar la fila
-    table.rows().every(function () {
+    // Buscar y eliminar la fila usando el ID directamente
+    let filaEncontrada = false;
+    let rowIndex = -1;
+    
+    table.rows().every(function (rowIdx) {
         const row = this;
         const node = row.node();
         const btnEliminar = $(node).find('.btn-eliminar-cliente');
+        const clienteId = btnEliminar.data('id');
 
-        if (btnEliminar.data('id') === id) {
-            row.remove();
+        if (clienteId === id) {
+            rowIndex = rowIdx;
+            filaEncontrada = true;
+            return false; // Salir del loop
         }
     });
 
-    table.draw();
+    if (filaEncontrada && rowIndex >= 0) {
+        // Eliminar la fila usando el índice
+        table.row(rowIndex).remove();
+        table.draw(false); // false para mantener el orden actual sin recargar
+        // console.log(`✅ Cliente ${id} eliminado de la tabla (fila ${rowIndex})`);
+        return true;
+    } else {
+        // Si no se encuentra, probablemente el listener en tiempo real ya la eliminó
+        // No mostrar warning, simplemente retornar false
+        // El listener en tiempo real se encargará de actualizar la tabla
+        return false;
+    }
 }
 
 /**

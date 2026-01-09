@@ -24,6 +24,7 @@ import {
   runTransaction,
   serverTimestamp,
   query,
+  where,
   orderBy,
   limit
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
@@ -128,7 +129,7 @@ onAuthStateChanged(auth, async (user) => {
     if (docSnap.exists()) {
       const rol = docSnap.data().rol;
       const nombre = docSnap.data().nombre;
-      console.log("✅ Usuario autenticado - Rol:", rol, "Nombre:", nombre);
+      // console.log("✅ Usuario autenticado - Rol:", rol, "Nombre:", nombre);
       
       // Actualizar nombre de usuario en la UI
       const usuarioLogueadoEl = document.getElementById("usuarioLogueado");
@@ -164,7 +165,7 @@ const aplicarPermisos = (rol) => {
   // Función interna para aplicar los permisos
   const aplicar = () => {
     const elementosAdmin = document.querySelectorAll(".solo-admin");
-    console.log(`🔐 Aplicando permisos para rol: ${rol}, elementos encontrados: ${elementosAdmin.length}`);
+    // console.log(`🔐 Aplicando permisos para rol: ${rol}, elementos encontrados: ${elementosAdmin.length}`);
 
     if (rol === "admin") {
       // Mostrar botones y secciones exclusivas
@@ -188,7 +189,7 @@ const aplicarPermisos = (rol) => {
         el.classList.add('admin-visible');
         // Establecer el display correcto
         el.style.setProperty('display', displayValue, 'important');
-        console.log(`✅ Mostrando elemento admin con display: ${displayValue}`, el.className, el);
+        // console.log(`✅ Mostrando elemento admin con display: ${displayValue}`, el.className, el);
       });
     } else {
       // Ocultar todo lo que es solo para administradores
@@ -229,7 +230,7 @@ const aplicarPermisos = (rol) => {
 // O persistencia de sesión (pierde sesión al cerrar el navegador)
 setPersistence(auth, browserSessionPersistence)
   .then(() => {
-    console.log("Persistencia de sesión activada");
+    // console.log("Persistencia de sesión activada");
   })
   .catch((error) => {
     console.error("Error al activar la persistencia de sesión:", error);
@@ -271,7 +272,7 @@ export const obtenerStock = async () => {
 // FUNCION PARA OBTENER STOCK EN TIEMPO REAL - Usa onSnapshot para escuchar cambios
 export const obtenerStockTiempoReal = (callback) => {
   try {
-    console.log("📡 Suscribiéndose a cambios de Stock en tiempo real...");
+    // console.log("📡 Suscribiéndose a cambios de Stock en tiempo real...");
     const q = query(
       collection(db, "Stock"),
       orderBy("item"),
@@ -282,7 +283,7 @@ export const obtenerStockTiempoReal = (callback) => {
     return onSnapshot(q, 
       (querySnapshot) => {
         const stock = querySnapshot.docs.map((docSnap) => ({ ...docSnap.data(), id: docSnap.id }));
-        console.log(`✅ Stock actualizado en tiempo real: ${stock.length} productos`);
+        // console.log(`✅ Stock actualizado en tiempo real: ${stock.length} productos`);
         callback(stock);
       },
       (error) => {
@@ -525,7 +526,7 @@ export const obtenerClientesCached = async () => {
 // FUNCION PARA OBTENER CLIENTES EN TIEMPO REAL - Usa onSnapshot para escuchar cambios
 export const obtenerClientesTiempoReal = (callback) => {
   try {
-    console.log("📡 Suscribiéndose a cambios de Clientes en tiempo real...");
+    // console.log("📡 Suscribiéndose a cambios de Clientes en tiempo real...");
     const q = query(
       collection(db, "Clientes"),
       limit(500) // Límite de seguridad
@@ -535,7 +536,7 @@ export const obtenerClientesTiempoReal = (callback) => {
     return onSnapshot(q, 
       (querySnapshot) => {
         const clientes = querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
-        console.log(`✅ Clientes actualizados en tiempo real: ${clientes.length}`);
+        // console.log(`✅ Clientes actualizados en tiempo real: ${clientes.length}`);
         callback(clientes);
       },
       (error) => {
@@ -553,11 +554,16 @@ export const obtenerClientesTiempoReal = (callback) => {
 // FUNCION PARA ELIMINAR CLIENTE
 export const eliminarClientePorID = async (id) => {
   try {
+    if (!id) {
+      throw new Error("ID de cliente no proporcionado");
+    }
     const clienteRef = doc(db, "Clientes", id);
     await deleteDoc(clienteRef);
-    console.log("Cliente eliminado con éxito");
+    console.log("✅ Cliente eliminado con éxito");
+    return { success: true };
   } catch (error) {
-    console.error("Error al eliminar cliente:", error);
+    console.error("❌ Error al eliminar cliente:", error);
+    throw error; // Relanzar el error para que se maneje en el código que llama
   }
 };
 
@@ -614,14 +620,14 @@ export const obtenerCajas = async () => {
 // FUNCION PARA OBTENER CAJAS EN TIEMPO REAL - Usa onSnapshot para escuchar cambios
 export const obtenerCajasTiempoReal = (callback) => {
   try {
-    console.log("📡 Suscribiéndose a cambios de Cajas en tiempo real...");
+    // console.log("📡 Suscribiéndose a cambios de Cajas en tiempo real...");
     const q = collection(db, "Caja");
     
     // Retornar el unsubscribe function para poder limpiar el listener
     return onSnapshot(q, 
       (querySnapshot) => {
         const cajas = querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
-        console.log(`✅ Cajas actualizadas en tiempo real: ${cajas.length}`);
+        // console.log(`✅ Cajas actualizadas en tiempo real: ${cajas.length}`);
         callback(cajas);
       },
       (error) => {
@@ -765,6 +771,73 @@ export const anularFactura = async (id, { motivo = null, usuario = null } = {}) 
     console.log("Factura anulada con éxito");
   } catch (e) {
     console.error('Error al anular factura', e);
+    throw e;
+  }
+};
+
+// Sincronizar número actual del timbrado basándose en la última factura emitida
+export const sincronizarNumeroActualTimbrado = async (timbradoId) => {
+  try {
+    // Buscar todas las facturas activas de este timbrado, ordenadas por número descendente
+    const facturasRef = collection(db, 'Facturas');
+    const q = query(
+      facturasRef,
+      where('timbradoId', '==', timbradoId),
+      where('estado', '==', 'activa'),
+      orderBy('numero', 'desc'),
+      limit(1)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      // No hay facturas, usar el rangoDesde del timbrado
+      const timbradoRef = doc(db, 'timbrados', timbradoId);
+      const timbradoSnap = await getDoc(timbradoRef);
+      if (timbradoSnap.exists()) {
+        const timbrado = timbradoSnap.data();
+        const numeroInicial = timbrado.rangoDesde || 1;
+        await updateDoc(timbradoRef, { numeroActual: numeroInicial });
+        return { 
+          success: true, 
+          mensaje: `No se encontraron facturas. Número actual establecido en ${numeroInicial}`,
+          numeroActual: numeroInicial
+        };
+      }
+      throw new Error('Timbrado no encontrado');
+    }
+    
+    // Obtener la última factura (mayor número)
+    const ultimaFactura = querySnapshot.docs[0].data();
+    const ultimoNumero = ultimaFactura.numero || 0;
+    
+    // El número actual debe ser el último número usado + 1 (para la próxima factura)
+    const nuevoNumeroActual = ultimoNumero + 1;
+    
+    // Actualizar el timbrado
+    const timbradoRef = doc(db, 'timbrados', timbradoId);
+    const timbradoSnap = await getDoc(timbradoRef);
+    if (!timbradoSnap.exists()) {
+      throw new Error('Timbrado no encontrado');
+    }
+    
+    const timbrado = timbradoSnap.data();
+    
+    // Verificar que no exceda el rango
+    if (nuevoNumeroActual > timbrado.rangoHasta) {
+      throw new Error(`El número actual (${nuevoNumeroActual}) excede el rango máximo (${timbrado.rangoHasta})`);
+    }
+    
+    await updateDoc(timbradoRef, { numeroActual: nuevoNumeroActual });
+    
+    return {
+      success: true,
+      mensaje: `Número actual sincronizado. Última factura: ${ultimaFactura.numeroFormateado || ultimoNumero}. Nuevo número actual: ${nuevoNumeroActual}`,
+      numeroActual: nuevoNumeroActual,
+      ultimaFactura: ultimaFactura.numeroFormateado || ultimoNumero
+    };
+  } catch (e) {
+    console.error('Error al sincronizar número actual del timbrado:', e);
     throw e;
   }
 };

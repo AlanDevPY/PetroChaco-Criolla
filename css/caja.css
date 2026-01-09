@@ -22,9 +22,26 @@
     background: #fff;
     padding: 12px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    color: #000;
+    color: #000 !important;
     font-size: 12px;
     line-height: 1.2;
+}
+
+/* Estilos específicos para factura fiscal - texto super negro */
+#factura-fiscal-container,
+#factura-fiscal-container * {
+    color: #000 !important;
+    font-weight: 600 !important;
+}
+
+#factura-fiscal-container .ticket-small {
+    color: #000 !important;
+    font-weight: 600 !important;
+}
+
+#factura-fiscal-container .ticket-bold {
+    color: #000 !important;
+    font-weight: 900 !important;
 }
 
 .ticket-center {
@@ -36,7 +53,8 @@
 }
 
 .ticket-bold {
-    font-weight: 700;
+    font-weight: 900;
+    color: #000 !important;
 }
 
 .ticket-header {
@@ -83,7 +101,8 @@
 
 .ticket-small {
     font-size: 11px;
-    color: #333;
+    color: #000;
+    font-weight: 600;
 }
 
 .ticket-msg {
@@ -137,7 +156,40 @@
 
     .ticket-container {
         margin: 0 auto;
+        color: #000 !important;
     }
 
+    /* Factura fiscal - texto super negro en impresión */
+    #factura-fiscal-container,
+    #factura-fiscal-container * {
+        color: #000 !important;
+        font-weight: 700 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    #factura-fiscal-container .ticket-small {
+        color: #000 !important;
+        font-weight: 700 !important;
+    }
+
+    #factura-fiscal-container .ticket-bold {
+        color: #000 !important;
+        font-weight: 900 !important;
+    }
+
+    #factura-fiscal-container .ticket-items th,
+    #factura-fiscal-container .ticket-items td {
+        color: #000 !important;
+        font-weight: 700 !important;
+    }
+
+    #factura-fiscal-container .ticket-header {
+        border-bottom: 2px solid #000 !important;
+    }
+
+    #factura-fiscal-container .ticket-total-row {
+        border-top: 2px solid #000 !important;
+    }
 
 }
