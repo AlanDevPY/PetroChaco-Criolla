@@ -146,6 +146,56 @@ async function cargarFacturas() {
     }
 }
 
+function actualizarTablaFacturas() {
+    if (!tablaFacturas) return;
+    
+    // Limpiar tabla
+    tablaFacturas.clear();
+    
+    // Procesar cada factura del cache
+    facturasCache.forEach((factura) => {
+        const cliente = factura.cliente || {};
+        const nombreCliente = cliente.nombre || 'Consumidor Final';
+        const total = (factura.total || 0).toLocaleString('es-PY');
+        const fecha = factura.fecha || '';
+        const numeroFormateado = factura.numeroFormateado || factura.numero || '';
+        
+        // Badge de estado
+        let estadoBadge = '';
+        if (factura.estado === 'anulada') {
+            estadoBadge = '<span class="badge bg-danger">Anulada</span>';
+        } else {
+            estadoBadge = '<span class="badge bg-success">Activa</span>';
+        }
+        
+        // Botones de acción
+        const acciones = `
+            <button class="btn btn-sm btn-info" onclick="verFactura('${factura.id}')" title="Ver detalle">
+                <i class="bi bi-eye"></i>
+            </button>
+            ${factura.estado !== 'anulada' ? `
+            <button class="btn btn-sm btn-warning" onclick="anularFacturaConfirm('${factura.id}')" title="Anular">
+                <i class="bi bi-x-circle"></i>
+            </button>
+            ` : ''}
+        `;
+        
+        // Agregar fila a la tabla
+        tablaFacturas.row.add([
+            factura.id,              // Id (columna 0, oculta)
+            numeroFormateado,        // Nº Factura
+            nombreCliente,           // Cliente
+            total,                   // Total
+            fecha,                   // Fecha
+            estadoBadge,             // Estado
+            acciones                 // Acciones
+        ]);
+    });
+    
+    // Dibujar tabla
+    tablaFacturas.draw();
+}
+
 // Función pública para actualizar el badge en la UI sin abrir el modal
 export function updateFacturasBadge() {
     try {
