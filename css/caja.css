@@ -122,9 +122,13 @@
         margin: 0;
     }
 
-
-
+    /* Oculta todos los tickets por defecto */
     .ticket-wrapper {
+        display: none !important;
+    }
+
+    /* Solo muestra el ticket si tiene la clase .show-print */
+    .ticket-wrapper.show-print {
         display: flex !important;
         justify-content: center;
         background: none;

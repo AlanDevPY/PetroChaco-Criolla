@@ -490,6 +490,10 @@ if (cierreModalEl) {
 
 function imprimirCierre(caja) {
   const fechaCierre = dayjs().format("DD/MM/YYYY HH:mm:ss");
+  
+  // Limpiar todos los show-print de otros wrappers (especialmente factura fiscal)
+  document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
+  
   let wrapper = document.getElementById("ticket-wrapper");
   if (!wrapper) {
     wrapper = document.createElement('div');
@@ -609,11 +613,19 @@ function imprimirCierre(caja) {
   document.getElementById("ticket-pago-efec").textContent = efectivoEnCaja.toLocaleString();
   document.getElementById("ticket-pago-tarj").textContent = tarjeta.toLocaleString();
   document.getElementById("ticket-pago-transf").textContent = transferencia.toLocaleString();
+  
+  // Agregar show-print al wrapper del ticket de cierre antes de imprimir
+  wrapper.classList.add('show-print');
+  
   setTimeout(() => { window.print(); }, 300);
+  
   // Ocultar el ticket una vez que finaliza la impresión
   const hideTicket = () => {
     const w = document.getElementById('ticket-wrapper');
-    if (w) w.innerHTML = '';
+    if (w) {
+      w.classList.remove('show-print');
+      w.innerHTML = '';
+    }
     window.removeEventListener('afterprint', hideTicket);
   };
   window.addEventListener('afterprint', hideTicket);
