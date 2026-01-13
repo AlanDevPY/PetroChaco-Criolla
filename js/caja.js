@@ -765,9 +765,11 @@ async function imprimirFacturaFiscalDesdeCaja(venta) {
           if (msg) msg.innerHTML = mensaje;
           document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
           fiscalWrapper.classList.add('show-print');
+          // Agregar clase para ambas copias (Cliente y Comercio) - texto más oscuro
+          fiscalWrapper.classList.add('copia-oscura');
           window.print();
           setTimeout(() => {
-            fiscalWrapper.classList.remove('show-print');
+            fiscalWrapper.classList.remove('show-print', 'copia-oscura');
             if (callback) callback();
           }, 500);
         }

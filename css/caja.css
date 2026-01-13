@@ -196,4 +196,33 @@
         border-top: 2px solid #000 !important;
     }
 
+    /* Copias (Cliente y Comercio) - texto ULTRA oscuro */
+    .ticket-wrapper.copia-oscura #factura-fiscal-container,
+    .ticket-wrapper.copia-oscura #factura-fiscal-container * {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        text-shadow: 0 0 0.5px #000000 !important;
+    }
+
+    .ticket-wrapper.copia-oscura #factura-fiscal-container .ticket-small {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        text-shadow: 0 0 0.5px #000000 !important;
+    }
+
+    .ticket-wrapper.copia-oscura #factura-fiscal-container .ticket-bold {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        text-shadow: 0 0 0.5px #000000 !important;
+    }
+
+    .ticket-wrapper.copia-oscura #factura-fiscal-container .ticket-items th,
+    .ticket-wrapper.copia-oscura #factura-fiscal-container .ticket-items td {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        text-shadow: 0 0 0.5px #000000 !important;
+    }
+
 }
