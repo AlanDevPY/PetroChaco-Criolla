@@ -1,7 +1,8 @@
 :root {
     --ticket-width: 260px;
     /* ancho ideal para 58mm */
-    --ticket-font: "Courier New", Courier, monospace;
+    --ticket-font: "Arial", "Helvetica", sans-serif;
+    /* Cambio a fuente más gruesa para mejor impresión */
 }
 
 .ticket-wrapper {
@@ -31,12 +32,12 @@
 #factura-fiscal-container,
 #factura-fiscal-container * {
     color: #000 !important;
-    font-weight: 600 !important;
+    font-weight: 900 !important;
 }
 
 #factura-fiscal-container .ticket-small {
     color: #000 !important;
-    font-weight: 600 !important;
+    font-weight: 900 !important;
 }
 
 #factura-fiscal-container .ticket-bold {
@@ -58,7 +59,7 @@
 }
 
 .ticket-header {
-    border-bottom: 1px dashed #000;
+    border-bottom: 2px solid #000;
     padding-bottom: 8px;
     margin-bottom: 8px;
 }
@@ -73,10 +74,12 @@
 .ticket-items td {
     padding: 2px 0;
     font-size: 12px;
+    color: #000 !important;
 }
 
 .ticket-items th {
-    font-weight: 700;
+    font-weight: 900;
+    border-bottom: 1px solid #000;
 }
 
 .ticket-qty {
@@ -94,15 +97,16 @@
 }
 
 .ticket-total-row {
-    border-top: 1px dashed #000;
+    border-top: 2px solid #000;
     padding-top: 6px;
     margin-top: 6px;
+    font-weight: 900;
 }
 
 .ticket-small {
     font-size: 11px;
-    color: #000;
-    font-weight: 600;
+    color: #000 !important;
+    font-weight: 700;
 }
 
 .ticket-msg {
@@ -111,6 +115,8 @@
     padding-top: 8px;
     font-size: 12px;
     text-align: center;
+    color: #000 !important;
+    font-weight: 900;
 }
 
 @media print {
@@ -121,6 +127,8 @@
 
     body {
         margin: 0;
+        color: #000 !important;
+        font-family: "Arial", "Helvetica", sans-serif !important;
     }
 
     /* Oculta todos los tickets por defecto */
@@ -132,7 +140,8 @@
     .ticket-wrapper.show-print {
         display: flex !important;
         justify-content: center;
-        background: none;
+        background: white;
+        /* Asegurar fondo blanco */
         padding: 0;
     }
 
@@ -141,22 +150,29 @@
         margin: 0 auto;
         width: var(--ticket-width);
         color: #000 !important;
-        filter: contrast(150%);
+        background: white;
+        filter: none !important;
+        /* Eliminamos filtro de contraste */
     }
 
     .no-print {
         display: none !important;
     }
 
-    /* REGLA MAESTRA PARA NEGRO PURO */
+    /* REGLA MAESTRA PARA NEGRO PURO SIN SOMBRAS */
     .ticket-container * {
         color: #000000 !important;
         fill: #000000 !important;
         border-color: #000000 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        /* Efecto negrita sintética para todo */
-        text-shadow: 0 0 0.1px #000000 !important;
+
+        /* Sin sombras, negro sólido */
+        text-shadow: none !important;
+        font-weight: 900 !important;
+        /* Negrita forzada */
+        opacity: 1 !important;
+        /* Opacidad total */
     }
 
     /* Factura fiscal - texto super negro en impresión */
@@ -177,8 +193,7 @@
     b {
         color: #000 !important;
         font-weight: 900 !important;
-        /* Más intensidad para negritas */
-        text-shadow: 0 0 0.5px #000000 !important;
+        text-shadow: none !important;
     }
 
     #factura-fiscal-container .ticket-items th,
@@ -193,13 +208,5 @@
 
     #factura-fiscal-container .ticket-total-row {
         border-top: 2px solid #000 !important;
-    }
-
-    /* Copias (Cliente y Comercio) - Mantener selectores por compatibilidad pero ya cubierto arriba */
-    .ticket-wrapper.copia-oscura #factura-fiscal-container,
-    .ticket-wrapper.copia-oscura #factura-fiscal-container * {
-        color: #000000 !important;
-        font-weight: 900 !important;
-        text-shadow: 0 0 0.5px #000000 !important;
     }
 }
