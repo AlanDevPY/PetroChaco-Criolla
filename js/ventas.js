@@ -778,10 +778,19 @@ const actualizarCacheStock = async (productosVendidos) => {
 
 // ?FUNCIONES CON MODAL GESTION DE CLIENTES
 
+// Bandera para prevenir doble clic en registro de cliente
+let registrandoCliente = false;
+
 
 // Evento submit para registrar cliente
 document.getElementById("formCliente").addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  // Prevenir doble clic
+  if (registrandoCliente) {
+    console.log('⚠️ Ya se está registrando un cliente, ignorando doble clic');
+    return;
+  }
 
   const nombre = document
     .getElementById("clienteNombre")
@@ -813,17 +822,34 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
     return;
   }
 
-  await registrarCliente(cliente);
-  alertaExito("Cliente registrado", `${nombre} ha sido registrado correctamente.`);
+  // Activar bandera y deshabilitar botón
+  registrandoCliente = true;
+  const btnGuardar = document.querySelector('#modalRegistrarCliente button[type="submit"]');
+  const textoOriginal = btnGuardar.innerHTML;
+  btnGuardar.disabled = true;
+  btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Guardando...';
 
-  // Cerrar el modal de registro
-  const modalRegistrar = bootstrap.Modal.getInstance(document.getElementById('modalRegistrarCliente'));
-  if (modalRegistrar) {
-    modalRegistrar.hide();
+  try {
+    await registrarCliente(cliente);
+    alertaExito("Cliente registrado", `${nombre} ha sido registrado correctamente.`);
+
+    // Cerrar el modal de registro
+    const modalRegistrar = bootstrap.Modal.getInstance(document.getElementById('modalRegistrarCliente'));
+    if (modalRegistrar) {
+      modalRegistrar.hide();
+    }
+
+    // Limpiar formulario
+    document.getElementById("formCliente").reset();
+  } catch (error) {
+    console.error('Error al registrar cliente:', error);
+    alertaError("Error", "No se pudo registrar el cliente. Por favor, intente nuevamente.");
+  } finally {
+    // Restaurar botón y desactivar bandera
+    btnGuardar.disabled = false;
+    btnGuardar.innerHTML = textoOriginal;
+    registrandoCliente = false;
   }
-
-  // Limpiar formulario
-  document.getElementById("formCliente").reset();
 
   // No es necesario llamar mostrarClientes() - el listener en tiempo real actualiza automáticamente
 });
