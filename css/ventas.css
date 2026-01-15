@@ -138,21 +138,33 @@
     margin: 0 auto;
     width: var(--ticket-width);
     color: #000 !important;
-    filter: contrast(150%); /* Aumentar contraste */
+    filter: contrast(200%);
+    /* Contraste máximo */
   }
 
-  /* FORZAR NEGRO PURO EN TODO */
+  /* FORZAR NEGRO PURO EN TODO Y ELIMINAR SOMBRAS */
   .ticket-container * {
     color: #000000 !important;
     fill: #000000 !important;
     border-color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    text-shadow: 0 0 0.1px #000; /* Efecto negrita extra */
+    text-shadow: none !important;
+    /* Elimina efecto borroso */
+    font-weight: 900 !important;
+    /* Fuerza negrita máxima */
   }
 
-  .ticket-bold, strong, b, h1, h2, h3, h4, h5, h6 {
+  .ticket-bold,
+  strong,
+  b,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-weight: 900 !important;
-    text-shadow: 0 0 0.3px #000; /* Más negrita para textos importantes */
+    text-shadow: none !important;
   }
 }
