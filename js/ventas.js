@@ -178,7 +178,7 @@ document.getElementById("agregarProductoForm").addEventListener("submit", async 
     // Validar stock disponible contra la cantidad total solicitada
     if (stockItem.cantidad < cantidadTotalSolicitada) {
       hideLoading(loadingToast);
-      alertaAdvertencia("Stock insuficiente", 
+      alertaAdvertencia("Stock insuficiente",
         `Stock disponible: ${stockItem.cantidad} unidades. ` +
         `Ya tiene ${cantidadEnPedido} en el pedido. ` +
         `Solicita ${cantidad} más. ` +
@@ -361,23 +361,58 @@ if (efectivoInput && tarjetaInput && transferenciaInput) {
 
 const buscarClientePorRuc = debounce(() => {
   const ruc = clienteRucCobro.value.trim();
-  if (!ruc) return;
+
+  // Si no hay RUC, limpiar campos
+  if (!ruc) {
+    clienteNombreCobro.value = '';
+    clienteDireccionCobro.value = '';
+    clienteTelefonoCobro.value = '';
+    clienteRucCobro.classList.remove('is-valid', 'is-invalid');
+    return;
+  }
+
   // Usar cache de clientes en tiempo real si está disponible, sino consultar
   if (clientesCache.length > 0) {
     cliente = clientesCache.find((c) => c.ruc === ruc);
     if (cliente) {
+      // Cliente encontrado - llenar campos
+      console.log('✅ Cliente encontrado:', cliente.nombre);
       clienteNombreCobro.value = cliente.nombre;
       clienteDireccionCobro.value = cliente.direccion;
       clienteTelefonoCobro.value = cliente.telefono;
+      // Feedback visual - borde verde
+      clienteRucCobro.classList.remove('is-invalid');
+      clienteRucCobro.classList.add('is-valid');
+    } else {
+      // Cliente NO encontrado - limpiar campos
+      console.log('⚠️ Cliente no encontrado para RUC:', ruc);
+      clienteNombreCobro.value = '';
+      clienteDireccionCobro.value = '';
+      clienteTelefonoCobro.value = '';
+      // Feedback visual - borde rojo
+      clienteRucCobro.classList.remove('is-valid');
+      clienteRucCobro.classList.add('is-invalid');
     }
   } else {
     // Si no hay cache, consultar (fallback)
     obtenerClientes().then(clientes => {
       cliente = clientes.find((c) => c.ruc === ruc);
       if (cliente) {
+        // Cliente encontrado
+        console.log('✅ Cliente encontrado (sin cache):', cliente.nombre);
         clienteNombreCobro.value = cliente.nombre;
         clienteDireccionCobro.value = cliente.direccion;
         clienteTelefonoCobro.value = cliente.telefono;
+        clienteRucCobro.classList.remove('is-invalid');
+        clienteRucCobro.classList.add('is-valid');
+      } else {
+        // Cliente NO encontrado
+        console.log('⚠️ Cliente no encontrado (sin cache) para RUC:', ruc);
+        clienteNombreCobro.value = '';
+        clienteDireccionCobro.value = '';
+        clienteTelefonoCobro.value = '';
+        clienteRucCobro.classList.remove('is-valid');
+        clienteRucCobro.classList.add('is-invalid');
       }
     });
   }
@@ -407,12 +442,12 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   }
 
   // Validar estructura del pedido
-  const pedidoInvalido = pedido.find(item => 
-    !item.id || 
-    !item.item || 
-    !item.cantidad || 
-    Number(item.cantidad) <= 0 || 
-    !item.costo || 
+  const pedidoInvalido = pedido.find(item =>
+    !item.id ||
+    !item.item ||
+    !item.cantidad ||
+    Number(item.cantidad) <= 0 ||
+    !item.costo ||
     Number(item.costo) < 0 ||
     !item.subTotal ||
     Number(item.subTotal) < 0
@@ -427,7 +462,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   // Validar que el total calculado coincida con la suma de subtotales
   const totalCalculado = calcularTotalPedido();
   const sumaSubtotales = pedido.reduce((sum, item) => sum + (Number(item.subTotal) || 0), 0);
-  
+
   if (Math.abs(totalCalculado - sumaSubtotales) > 1) { // Permitir diferencia de 1 Gs por redondeos
     console.error("❌ Discrepancia en totales:", { totalCalculado, sumaSubtotales });
     alertaError("Error de cálculo", "Hay una discrepancia en los totales. Por favor, recargue la página y vuelva a intentar.");
@@ -476,14 +511,14 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
       // Obtener stock actual de todos los productos en la venta
       const itemsIds = [...new Set(ventaActual.venta.map(i => i.id).filter(id => id))]; // Filtrar IDs nulos/undefined
-      
+
       if (itemsIds.length === 0) {
         throw new Error("No se encontraron IDs válidos en el pedido");
       }
 
       // Usar cache de stock en tiempo real si está disponible, sino consultar
       const stockActual = stockCache.length > 0 ? stockCache : await obtenerStock();
-      
+
       // Agrupar cantidades por producto en el pedido
       const cantidadesPedido = {};
       ventaActual.venta.forEach(item => {
@@ -499,7 +534,7 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
         }
         cantidadesPedido[item.id] += cantidad;
       });
-      
+
       // Validar que haya stock suficiente para cada producto
       for (const [id, cantidadPedido] of Object.entries(cantidadesPedido)) {
         const producto = stockActual.find(p => p.id === id);
@@ -530,13 +565,13 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
         }
         itemsAgrupados[item.id] += Number(item.cantidad) || 0;
       });
-      
+
       // Convertir a array para la función de descuento
       const itemsDescuento = Object.entries(itemsAgrupados).map(([id, cantidad]) => ({
         id,
         cantidad
       }));
-      
+
       console.log(`📦 Descontando stock para ${itemsDescuento.length} productos...`);
       await descontarStockTransaccional(itemsDescuento);
       console.log(`✅ Stock descontado exitosamente`);
@@ -730,19 +765,19 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   // Limpiar el formulario y resetear el pedido
   pedido = [];
   cliente = null; // Limpiar cliente también
-  
+
   // Limpiar formulario de cobro
   document.getElementById("modalCobrarForm").reset();
-  
+
   // Limpiar formulario de agregar producto
   document.getElementById("agregarProductoForm").reset();
-  
+
   // Limpiar campos de cliente en el modal de cobro
   if (clienteRucCobro) clienteRucCobro.value = '';
   if (clienteNombreCobro) clienteNombreCobro.value = '';
   if (clienteDireccionCobro) clienteDireccionCobro.value = '';
   if (clienteTelefonoCobro) clienteTelefonoCobro.value = '';
-  
+
   // Actualizar la vista del pedido (debe estar vacío)
   mostrarPedidoCargado();
   actualizarCobro();
@@ -857,7 +892,7 @@ document.getElementById("formCliente").addEventListener("submit", async (e) => {
 // FUNCION PARA ACTUALIZAR CLIENTES (tiempo real)
 const actualizarClientes = (clientes) => {
   clientesCache = clientes; // Actualizar cache
-  
+
   // Solo actualizar la tabla si el modal está visible
   const modalVerClientes = document.getElementById('modalVerClientes');
   if (modalVerClientes && modalVerClientes.classList.contains('show')) {
@@ -900,23 +935,23 @@ function configurarEventosClientes() {
       const btnEliminar = $(this);
       btnEliminar.prop('disabled', true);
       btnEliminar.html('<i class="bi bi-hourglass-split"></i> Eliminando...');
-      
+
       // Eliminar de Firebase directamente
       await eliminarClientePorID(id);
-      
+
       // Actualizar cache local removiendo el cliente eliminado
       clientesCache = clientesCache.filter(c => c.id !== id);
-      
+
       // Intentar eliminar de la tabla (opcional, el listener en tiempo real también lo hará)
       eliminarClienteDeTabla(id);
-      
+
       alertaExito("Cliente eliminado", `${nombreCliente} ha sido eliminado correctamente.`);
-      
+
       // El listener en tiempo real actualizará automáticamente cuando Firebase propague el cambio
     } catch (error) {
       console.error('❌ Error al eliminar cliente:', error);
       alertaError("Error al eliminar", `No se pudo eliminar el cliente: ${error.message || 'Error desconocido'}`);
-      
+
       // Rehabilitar el botón en caso de error
       const btnEliminar = $(this);
       btnEliminar.prop('disabled', false);
@@ -933,9 +968,9 @@ function configurarEventosClientes() {
 const actualizarEstadoCaja = (cajas) => {
   const cajaAbierta = cajas.find((caja) => caja.estado === "abierta");
   const badge = document.getElementById("estadoCajaBadge");
-  
+
   if (!badge) return;
-  
+
   if (cajaAbierta) {
     badge.innerHTML = '<i class="bi bi-unlock"></i> Caja Abierta';
     badge.classList.remove("bg-danger");
@@ -949,7 +984,7 @@ const actualizarEstadoCaja = (cajas) => {
 
 window.addEventListener("DOMContentLoaded", async () => {
   configurarEventosClientes();
-  
+
   let primeraCargaStock = true;
   let primeraCargaClientes = true;
   let primeraCargaCajas = true;
