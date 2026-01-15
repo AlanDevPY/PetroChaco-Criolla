@@ -158,8 +158,8 @@
 
     /* Sin sombras, negro sólido */
     text-shadow: none !important;
-    font-weight: 900 !important;
-    /* Negrita forzada */
+    font-weight: 700 !important;
+    /* Bold estándar - optimizado para impresoras térmicas */
     opacity: 1 !important;
     /* Opacidad total */
   }
@@ -173,7 +173,7 @@
   h4,
   h5,
   h6 {
-    font-weight: 900 !important;
+    font-weight: 700 !important;
     text-shadow: none !important;
   }
 }

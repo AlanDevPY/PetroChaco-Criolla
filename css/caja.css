@@ -32,17 +32,17 @@
 #factura-fiscal-container,
 #factura-fiscal-container * {
     color: #000 !important;
-    font-weight: 900 !important;
+    font-weight: 700 !important;
 }
 
 #factura-fiscal-container .ticket-small {
     color: #000 !important;
-    font-weight: 900 !important;
+    font-weight: 700 !important;
 }
 
 #factura-fiscal-container .ticket-bold {
     color: #000 !important;
-    font-weight: 900 !important;
+    font-weight: 700 !important;
 }
 
 .ticket-center {
@@ -54,7 +54,7 @@
 }
 
 .ticket-bold {
-    font-weight: 900;
+    font-weight: 700;
     color: #000 !important;
 }
 
@@ -78,7 +78,7 @@
 }
 
 .ticket-items th {
-    font-weight: 900;
+    font-weight: 700;
     border-bottom: 1px solid #000;
 }
 
@@ -100,7 +100,7 @@
     border-top: 2px solid #000;
     padding-top: 6px;
     margin-top: 6px;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .ticket-small {
@@ -116,7 +116,7 @@
     font-size: 12px;
     text-align: center;
     color: #000 !important;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 @media print {
@@ -169,8 +169,8 @@
 
         /* Sin sombras, negro sólido */
         text-shadow: none !important;
-        font-weight: 900 !important;
-        /* Negrita forzada */
+        font-weight: 700 !important;
+        /* Bold estándar - optimizado para impresoras térmicas */
         opacity: 1 !important;
         /* Opacidad total */
     }
@@ -179,12 +179,12 @@
     #factura-fiscal-container,
     #factura-fiscal-container * {
         color: #000 !important;
-        font-weight: 900 !important;
+        font-weight: 700 !important;
     }
 
     #factura-fiscal-container .ticket-small {
         color: #000 !important;
-        font-weight: 900 !important;
+        font-weight: 700 !important;
     }
 
     #factura-fiscal-container .ticket-bold,
@@ -192,14 +192,14 @@
     strong,
     b {
         color: #000 !important;
-        font-weight: 900 !important;
+        font-weight: 700 !important;
         text-shadow: none !important;
     }
 
     #factura-fiscal-container .ticket-items th,
     #factura-fiscal-container .ticket-items td {
         color: #000 !important;
-        font-weight: 900 !important;
+        font-weight: 700 !important;
     }
 
     #factura-fiscal-container .ticket-header {
