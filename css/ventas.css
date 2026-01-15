@@ -22,7 +22,7 @@
   background: #fff;
   padding: 12px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  color: #000;
+  color: #000 !important;
   font-size: 12px;
   line-height: 1.2;
 }
@@ -36,11 +36,12 @@
 }
 
 .ticket-bold {
-  font-weight: 700;
+  font-weight: 900;
+  color: #000 !important;
 }
 
 .ticket-header {
-  border-bottom: 1px dashed #000;
+  border-bottom: 2px solid #000;
   padding-bottom: 8px;
   margin-bottom: 8px;
 }
@@ -55,10 +56,12 @@
 .ticket-items td {
   padding: 2px 0;
   font-size: 12px;
+  color: #000 !important;
 }
 
 .ticket-items th {
-  font-weight: 700;
+  font-weight: 900;
+  border-bottom: 1px solid #000;
 }
 
 .ticket-qty {
@@ -76,14 +79,16 @@
 }
 
 .ticket-total-row {
-  border-top: 1px dashed #000;
+  border-top: 2px solid #000;
   padding-top: 6px;
   margin-top: 6px;
+  font-weight: 700;
 }
 
 .ticket-small {
   font-size: 11px;
-  color: #333;
+  color: #000 !important;
+  font-weight: 700;
 }
 
 .ticket-msg {
@@ -92,6 +97,8 @@
   padding-top: 8px;
   font-size: 12px;
   text-align: center;
+  color: #000 !important;
+  font-weight: 700;
 }
 
 @media print {
@@ -102,12 +109,14 @@
 
   body {
     margin: 0;
+    color: #000 !important;
   }
 
   #contenidoPrincipal,
   .animated-bg,
   .footer-ventas,
-  #spinnerCarga {
+  #spinnerCarga,
+  .modal {
     display: none !important;
   }
 
@@ -128,5 +137,22 @@
     box-shadow: none;
     margin: 0 auto;
     width: var(--ticket-width);
+    color: #000 !important;
+    filter: contrast(150%); /* Aumentar contraste */
+  }
+
+  /* FORZAR NEGRO PURO EN TODO */
+  .ticket-container * {
+    color: #000000 !important;
+    fill: #000000 !important;
+    border-color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    text-shadow: 0 0 0.1px #000; /* Efecto negrita extra */
+  }
+
+  .ticket-bold, strong, b, h1, h2, h3, h4, h5, h6 {
+    font-weight: 900 !important;
+    text-shadow: 0 0 0.3px #000; /* Más negrita para textos importantes */
   }
 }
