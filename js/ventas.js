@@ -39,6 +39,9 @@ import { mejorarDatalist } from "./datalist-mejorado.js";
 import { obtenerTimbradoActivo, incrementarNumeroFactura } from "./facturacion.js";
 import { registrarFactura } from "./firebase.js";
 
+// Importar módulo de auditoría
+import { auditarVenta, auditarCliente } from "./auditoria.js";
+
 // VARIABLES GLOBALES
 let pedido = [];
 let pedidoGenerado = {};
@@ -660,6 +663,9 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
 
       hideLoading(loadingVenta);
 
+      // REGISTRAR EN AUDITORÍA
+      await auditarVenta(venta);
+
       // Imprimir según checkbox: ticket o factura legal
       await procesarImpresion(venta);
 
@@ -746,6 +752,9 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
       }
 
       hideLoading(loadingVenta);
+
+      // REGISTRAR EN AUDITORÍA
+      await auditarVenta(venta);
 
       // Imprimir según checkbox: ticket o factura legal
       await procesarImpresion(venta);
