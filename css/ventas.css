@@ -1,7 +1,8 @@
 :root {
   --ticket-width: 260px;
   /* ancho ideal para 58mm */
-  --ticket-font: "Courier New", Courier, monospace;
+  --ticket-font: "Arial", "Helvetica", sans-serif;
+  /* Cambio a fuente más gruesa para mejor impresión */
 }
 
 .ticket-wrapper {
@@ -110,6 +111,7 @@
   body {
     margin: 0;
     color: #000 !important;
+    font-family: "Arial", "Helvetica", sans-serif !important;
   }
 
   #contenidoPrincipal,
@@ -129,7 +131,8 @@
   .ticket-wrapper.show-print {
     display: flex !important;
     justify-content: center;
-    background: none;
+    background: white;
+    /* Asegurar fondo blanco */
     padding: 0;
   }
 
@@ -138,21 +141,27 @@
     margin: 0 auto;
     width: var(--ticket-width);
     color: #000 !important;
-    filter: contrast(200%);
-    /* Contraste máximo */
+    background: white;
+    /* Eliminamos el filtro de contraste que puede estar causando problemas */
+    filter: none !important;
   }
 
-  /* FORZAR NEGRO PURO EN TODO Y ELIMINAR SOMBRAS */
+  /* FORZAR NEGRO PURO EN TODO SIN SOMBRAS */
   .ticket-container * {
     color: #000000 !important;
     fill: #000000 !important;
     border-color: #000000 !important;
+
+    /* Configuración estándar para impresión exacta */
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+
+    /* Sin sombras, negro sólido */
     text-shadow: none !important;
-    /* Elimina efecto borroso */
     font-weight: 900 !important;
-    /* Fuerza negrita máxima */
+    /* Negrita forzada */
+    opacity: 1 !important;
+    /* Opacidad total */
   }
 
   .ticket-bold,
