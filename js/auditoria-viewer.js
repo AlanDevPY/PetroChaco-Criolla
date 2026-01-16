@@ -4,7 +4,7 @@
  */
 
 import { db } from "./firebase.js";
-import { collection, query, orderBy, limit, getDocs, where } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+import { collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
 let auditoriaTable;
 let todosLosRegistros = [];
@@ -13,7 +13,10 @@ let todosLosRegistros = [];
 function ocultarSpinner() {
     const spinner = document.getElementById('globalSpinner');
     if (spinner) {
-        spinner.style.display = 'none';
+        spinner.style.setProperty('display', 'none', 'important');
+        console.log('✅ Spinner ocultado');
+    } else {
+        console.warn('⚠️ No se encontró el spinner');
     }
 }
 
@@ -94,23 +97,59 @@ async function cargarAuditoria() {
             ...doc.data()
         }));
 
-        renderizarTabla(todosLosRegistros);
-        poblarFiltroUsuarios(todosLosRegistros);
+        if (todosLosRegistros.length === 0) {
+            console.warn("No hay registros de auditoría aún");
+            const tbody = document.querySelector('#auditoriaTable tbody');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4"><i class="bi bi-info-circle me-2"></i>No hay registros de auditoría aún. Las acciones se registrarán automáticamente.</td></tr>';
+        } else {
+            renderizarTabla(todosLosRegistros);
+            poblarFiltroUsuarios(todosLosRegistros);
+        }
 
     } catch (error) {
         console.error("Error cargando auditoría:", error);
-        alert("Error al cargar los registros de auditoría. Verifica tus permisos.");
+
+        // Mostrar error específico
+        let mensaje = "Error al cargar los registros de auditoría.";
+        if (error.code === 'permission-denied') {
+            mensaje = "No tienes permisos para ver la auditoría. Debes ser administrador.";
+        } else if (error.code === 'unavailable') {
+            mensaje = "No se puede conectar a Firebase. Verifica tu conexión.";
+        }
+
+        // Mostrar error en la tabla
+        const tbody = document.querySelector('#auditoriaTable tbody');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-2"></i>${mensaje}</td></tr>`;
+        }
+
+        alert(mensaje + "\n\nDetalle técnico: " + error.message);
     }
 }
 
 // Renderizar tabla con DataTables
 function renderizarTabla(registros) {
-    if (auditoriaTable) {
-        auditoriaTable.destroy();
+    const tbody = document.querySelector('#auditoriaTable tbody');
+    if (!tbody) {
+        console.error("No se encontró el tbody de la tabla");
+        return;
     }
 
-    const tbody = document.querySelector('#auditoriaTable tbody');
+    // Destruir DataTable existente si hay
+    if (auditoriaTable) {
+        try {
+            auditoriaTable.destroy();
+        } catch (e) {
+            console.warn("Error destruyendo DataTable:", e);
+        }
+    }
+
     tbody.innerHTML = '';
+
+    if (registros.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No hay registros que coincidan con los filtros.</td></tr>';
+        return;
+    }
 
     registros.forEach(reg => {
         const row = tbody.insertRow();
@@ -128,25 +167,32 @@ function renderizarTabla(registros) {
     `;
     });
 
-    auditoriaTable = $('#auditoriaTable').DataTable({
-        language: {
-            url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
-        },
-        order: [[0, 'desc']],
-        pageLength: 50,
-        lengthMenu: [[25, 50, 100, -1], [25, 50, 100, "Todos"]],
-        responsive: true
-    });
+    // Inicializar DataTable solo si hay registros
+    try {
+        auditoriaTable = $('#auditoriaTable').DataTable({
+            language: {
+                url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+            },
+            order: [[0, 'desc']],
+            pageLength: 50,
+            lengthMenu: [[25, 50, 100, -1], [25, 50, 100, "Todos"]],
+            responsive: true
+        });
+    } catch (error) {
+        console.error("Error inicializando DataTable:", error);
+    }
 }
 
 // Poblar filtro de usuarios
 function poblarFiltroUsuarios(registros) {
     const usuarios = [...new Set(registros.map(r => r.usuario))].sort();
     const select = document.getElementById('filtroUsuario');
-    select.innerHTML = '<option value="">Todos los usuarios</option>';
-    usuarios.forEach(u => {
-        select.innerHTML += `<option value="${u}">${u}</option>`;
-    });
+    if (select) {
+        select.innerHTML = '<option value="">Todos los usuarios</option>';
+        usuarios.forEach(u => {
+            select.innerHTML += `<option value="${u}">${u}</option>`;
+        });
+    }
 }
 
 // Aplicar filtros
@@ -189,13 +235,25 @@ window.verDetalles = function (id) {
 
 // Refrescar datos
 window.refreshAuditoria = async function () {
-    auditoriaTable.destroy();
+    if (auditoriaTable) {
+        auditoriaTable.destroy();
+    }
     await cargarAuditoria();
 };
 
 // Inicializar al cargar la página
 window.addEventListener('DOMContentLoaded', async () => {
-    await cargarNavbar();
-    await cargarAuditoria();
-    ocultarSpinner();
+    try {
+        console.log("🔄 Iniciando carga de auditoría...");
+        await cargarNavbar();
+        await cargarAuditoria();
+        console.log("✅ Carga completada");
+    } catch (error) {
+        console.error("❌ Error al inicializar:", error);
+        alert("Error al cargar la página de auditoría. Por favor, recarga la página.");
+    } finally {
+        // SIEMPRE ocultar el spinner, incluso si hay error
+        console.log("🎯 Ocultando spinner...");
+        ocultarSpinner();
+    }
 });
