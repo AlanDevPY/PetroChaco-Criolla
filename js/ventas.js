@@ -14,7 +14,7 @@ import {
   descontarStockTransaccional,
   sumarStockTransaccional,
 } from "./firebase.js";
-import { formatGs, mostrarAviso, debounce, parseGs, calcularDiferencia } from "./utils.js";
+import { formatGs, mostrarAviso, debounce, parseGs, calcularDiferencia, imprimirIframe } from "./utils.js";
 import { toastSwal } from "./swal-utils.js";
 import { showLoading, hideLoading } from "./toast-utils.js";
 import {
@@ -1162,71 +1162,34 @@ async function imprimirFacturaFiscal(venta, timbrado) {
 
   // Nota: la numeración se reservó y actualizó dentro de registrarFactura (transacción).
 
-  // --- OCULTAR MODAL DE COBRO Y ESPERAR ANTES DE IMPRIMIR SOLO FACTURA FISCAL ---
-  // Oculta el modal de cobro si está visible
+  // --- OCULTAR MODAL DE COBRO ---
   const modalCobroEl = document.getElementById('modalCobro');
   if (modalCobroEl && modalCobroEl.classList.contains('show')) {
     const modalCobro = bootstrap.Modal.getInstance(modalCobroEl);
     if (modalCobro) modalCobro.hide();
   }
-  // Esperar a que el modal y el toast se oculten completamente (toastSwal dura 3s)
+
+  // Ahora usamos la nueva función de impresión por iframe
+  // Imprimimos el Original
+  const fiscalHtml = document.getElementById('factura-fiscal-container').outerHTML;
+
+  // Función para imprimir con etiqueta de original/copia
+  const imprimirCopiaFiscal = (tipoCopia) => {
+    const contenedorTemporal = document.createElement('div');
+    contenedorTemporal.innerHTML = fiscalHtml;
+    const msgFinal = contenedorTemporal.querySelector('.ticket-msg');
+    if (msgFinal) msgFinal.innerHTML = `${tipoCopia}<br>Petro Chaco Criolla`;
+
+    imprimirIframe(contenedorTemporal.innerHTML, `Factura - ${tipoCopia}`);
+  };
+
+  // Imprimir Original al instante
+  imprimirCopiaFiscal('Original: Cliente');
+
+  // Pequeño delay para que no se encimen los diálogos de impresión
   setTimeout(() => {
-    try {
-      // Oculta todos los .ticket-wrapper
-      document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
-      // Solo muestra la factura fiscal
-      const fiscalWrapper = document.getElementById('factura-fiscal-container')?.closest('.ticket-wrapper');
-      if (!fiscalWrapper) return;
-
-      // --- IMPRESIÓN DOBLE: ORIGINAL Y COPIA SOLO PARA FACTURA FISCAL ---
-      let paso = 0;
-      let copiaPendiente = false;
-      const msg = document.querySelector('#factura-fiscal-container .ticket-msg');
-      const mensajeOriginal = msg ? msg.innerHTML : '';
-
-      function imprimirConMensaje(mensaje, callback) {
-        if (msg) msg.innerHTML = mensaje;
-        document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
-        fiscalWrapper.classList.add('show-print');
-        window.print();
-        setTimeout(() => {
-          fiscalWrapper.classList.remove('show-print');
-          if (callback) callback();
-        }, 500);
-      }
-
-      function imprimirCopia() {
-        if (copiaPendiente) return; // Evita dobles disparos
-        copiaPendiente = true;
-        setTimeout(() => {
-          imprimirConMensaje('Copia: Comercio', () => {
-            if (msg) msg.innerHTML = mensajeOriginal;
-            window.onafterprint = null;
-          });
-        }, 100);
-      }
-
-      // Imprimir original y preparar handler para la copia
-      paso = 1;
-      copiaPendiente = false;
-      imprimirConMensaje('Original: Cliente', () => {
-        // Handler robusto para onafterprint
-        let handler;
-        handler = function () {
-          window.onafterprint = null;
-          imprimirCopia();
-        };
-        window.onafterprint = handler;
-        // Fallback: si onafterprint no dispara en 1s, forzar la copia
-        setTimeout(() => {
-          if (!copiaPendiente) imprimirCopia();
-        }, 1000);
-      });
-    } catch (err) {
-      console.error('Error durante la preparación de impresión de factura:', err);
-      window.print();
-    }
-  }, 3200); // 3s para el toast + 200ms extra
+    imprimirCopiaFiscal('Copia: Comercio');
+  }, 1000);
 }
 
 // FUNCION PARA GENERAR TICKTE DE VENTA
@@ -1268,26 +1231,9 @@ function imprimirTicket(venta) {
   document.getElementById("ticket-pago").textContent = pago.toLocaleString("es-PY");
   document.getElementById("ticket-vuelto").textContent = vuelto > 0 ? vuelto.toLocaleString("es-PY") : "0";
 
-  // --- MENSAJE FINAL PERSONALIZADO ---
-  const msg = document.getElementById("ticket-msg");
-  // Guardar mensaje original para restaurar luego
-  const mensajeOriginal = `¡Gracias ${cliente.nombre || "por tu compra"}! Vuelve pronto 🚗⛽`;
-  // --- OCULTAR FACTURA, MOSTRAR SOLO TICKET ---
-  document.getElementById("ticket-container").style.display = "block";
-  document.getElementById("factura-fiscal-container").style.display = "none";
-
-  // --- IMPRESIÓN SIMPLE SOLO PARA TICKET ---
-  setTimeout(() => {
-    // Marcar únicamente el wrapper del ticket para impresión (compatibiliza con css .show-print)
-    document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
-    const ticketWrapper = document.getElementById('ticket-container')?.closest('.ticket-wrapper');
-    if (ticketWrapper) ticketWrapper.classList.add('show-print');
-    window.print();
-    setTimeout(() => {
-      if (ticketWrapper) ticketWrapper.classList.remove('show-print');
-    }, 500);
-  }, 3200); // 3s para el toast + 200ms extra
-
+  // --- TICKED ARMADO - AHORA IMPRIMIR ---
+  const ticketHtml = document.getElementById("ticket-container").outerHTML;
+  imprimirIframe(ticketHtml, 'Ticket de Venta');
 }
 
 

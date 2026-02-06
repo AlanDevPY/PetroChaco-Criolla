@@ -4,7 +4,7 @@ import { mostrarStockConDataTable, configurarEventosDataTable, actualizarFilaDat
 import { poblarDataTable } from "./stock-datatable.js";
 import { confirmarEliminacion, alertaAdvertencia } from "./swal-utils.js";
 import { mejorarDatalist } from "./datalist-mejorado.js";
-import { parseGs, formatGs } from "./utils.js";
+import { parseGs, formatGs, imprimirIframe } from "./utils.js";
 import { auditarStock, auditarReposicion, auditarSalida } from "./auditoria.js";
 
 // variables globales
@@ -1314,7 +1314,7 @@ export function generarTicketDesdeNota(nota, tipo) {
 
     const ticketBody = `
       <div class="ticket-container">
-        <div class="ticket-header ticket-center" style="border-bottom:2px solid #000;padding-bottom:1.5mm;margin-bottom:1.5mm;">
+        <div class="ticket-header ticket-center">
           <div class="ticket-bold" style="font-size:15px;letter-spacing:1px;">Petro Chaco Criolla</div>
           <div class="ticket-small">Nota: ${tipo === 'reposicion' ? 'Reposición' : 'Salida'}</div>
         </div>
@@ -1336,66 +1336,20 @@ export function generarTicketDesdeNota(nota, tipo) {
           </tbody>
         </table>
         <div style="border-bottom:1px dashed #000;margin-bottom:1.5mm;"></div>
-        <div class="ticket-total-row" style="background:#f5f5f5;border-radius:1.5mm;padding:1.2mm 0 1.2mm 0;margin-bottom:1.5mm;">
+        <div class="ticket-total-row">
           <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:0.5mm;">
             <span class="ticket-bold">Items</span>
             <span class="ticket-right">${totalItems}</span>
           </div>
         </div>
-        <div class="ticket-msg" id="ticket-msg" style="margin-top:2mm;">Documento interno</div>
+        <div class="ticket-msg" id="ticket-msg">Documento interno</div>
       </div>
     `;
 
-    // Construir un documento HTML mínimo y abrirlo en una nueva ventana para imprimir.
-    const fullHtml = `<!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Ticket</title>
-          <style>
-            @media print { @page { size: 70mm auto; margin: 0; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-            body{ margin:0; padding:0; background:#fff; color:#000; }
-            .ticket-container{ width:70mm; box-sizing:border-box; padding:4px 4px; font-family: 'Courier New', monospace; font-size:12px; line-height:1.3; }
-            .ticket-header{ margin-bottom:6px; }
-            .ticket-center{ text-align:center; }
-            .ticket-bold{ font-weight:700; }
-            .ticket-items{ width:100%; border-collapse:collapse; margin:6px 0; }
-            .ticket-items th, .ticket-items td{ padding:4px 2px; text-align:left; }
-            .ticket-qty{ width:15%; text-align:center; }
-            .ticket-desc{ width:85%; }
-          </style>
-        </head>
-        <body>
-          ${ticketBody}
-        </body>
-      </html>`;
-
-    const printWin = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=400,height=800');
-    if (!printWin) {
-      showInfo('No se pudo abrir la ventana de impresión. Revisa el bloqueador de ventanas emergentes.');
-      return;
-    }
-
-    printWin.document.open();
-    printWin.document.write(fullHtml);
-    printWin.document.close();
-    printWin.focus();
-
-    // Esperar un momento para que el navegador renderice la ventana de impresión
-    setTimeout(() => {
-      try {
-        printWin.print();
-      } catch (e) {
-        console.error('Error al imprimir desde ventana:', e);
-      }
-      // Cerrar la ventana automáticamente unos instantes después de imprimir
-      setTimeout(() => {
-        try { printWin.close(); } catch (e) { /* ignore */ }
-      }, 600);
-    }, 500);
+    imprimirIframe(ticketBody, `Nota de ${tipo}`);
 
   } catch (e) {
-    console.error('Error generando ticket desde nota (fallback):', e);
+    console.error('Error generando ticket desde nota:', e);
   }
 }
 
@@ -1464,7 +1418,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Función para generar ticket de stock por categoría (VERSIÓN IFRAME SILENCIOSO)
+// Función para generar ticket de stock por categoría (VERSIÓN IFRAME SILENCIOSO CENTRALIZADO)
 function generarTicketStockPorCategoria(categoria, productos) {
   try {
     const fecha = dayjs().format('DD/MM/YYYY HH:mm:ss');
@@ -1488,7 +1442,7 @@ function generarTicketStockPorCategoria(categoria, productos) {
 
     const ticketBody = `
       <div class="ticket-container">
-        <div class="ticket-header ticket-center" style="border-bottom:2px solid #000;padding-bottom:1.5mm;margin-bottom:1.5mm;">
+        <div class="ticket-header ticket-center">
           <div class="ticket-bold" style="font-size:15px;letter-spacing:1px;">Petro Chaco Criolla</div>
           <div class="ticket-small">Control de Stock</div>
         </div>
@@ -1510,7 +1464,7 @@ function generarTicketStockPorCategoria(categoria, productos) {
           </tbody>
         </table>
         <div style="border-bottom:1px dashed #000;margin-bottom:1.5mm;"></div>
-        <div class="ticket-total-row" style="background:#f5f5f5;border-radius:1.5mm;padding:1.2mm 0 1.2mm 0;margin-bottom:1.5mm;">
+        <div class="ticket-total-row">
           <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:0.5mm;">
             <span class="ticket-bold">Productos</span>
             <span class="ticket-right">${totalItems}</span>
@@ -1520,62 +1474,11 @@ function generarTicketStockPorCategoria(categoria, productos) {
             <span class="ticket-right">${totalCantidad}</span>
           </div>
         </div>
-        <div class="ticket-msg" id="ticket-msg" style="margin-top:2mm;">Documento para control interno</div>
+        <div class="ticket-msg" id="ticket-msg">Control interno</div>
       </div>
     `;
 
-    // Crear iframe oculto
-    let iframe = document.getElementById('ticketIframe');
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'ticketIframe';
-      iframe.style.position = 'absolute';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = 'none';
-      document.body.appendChild(iframe);
-    }
-
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`
-      <!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Stock por Categoría - ${categoria}</title>
-          <style>
-             @media print { 
-                @page { size: 70mm auto; margin: 0; } 
-                body { margin: 0; padding: 0; }
-                .ticket-container { width: 100%; } 
-             }
-            body{ margin:0; padding:0; background:#fff; color:#000; font-family: 'Courier New', monospace; }
-            .ticket-container{ width:70mm; box-sizing:border-box; padding:4px; font-size:12px; line-height:1.3; }
-            .ticket-header{ margin-bottom:6px; }
-            .ticket-center{ text-align:center; }
-            .ticket-bold{ font-weight:700; }
-            .ticket-items{ width:100%; border-collapse:collapse; margin:6px 0; }
-            .ticket-items th, .ticket-items td{ padding:4px 2px; text-align:left; }
-            .ticket-qty{ width:15%; text-align:center; }
-            .ticket-desc{ width:85%; }
-            .ticket-right{ text-align:right; }
-          </style>
-        </head>
-        <body>
-          ${ticketBody}
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    // Imprimir
-    iframe.contentWindow.focus();
-    setTimeout(() => {
-      iframe.contentWindow.print();
-      // Opcional: remover iframe después
-      // setTimeout(() => document.body.removeChild(iframe), 1000);
-    }, 500);
+    imprimirIframe(ticketBody, `Stock - ${categoria}`);
 
   } catch (error) {
     console.error("Error al generar ticket:", error);

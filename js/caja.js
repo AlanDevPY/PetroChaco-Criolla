@@ -1,6 +1,7 @@
 import { obtenerCajas, obtenerCajaPorId, actualizarCajaporId, sumarStockTransaccional, registrarFactura, obtenerFacturaPorId } from "./firebase.js";
 import { obtenerTimbradoActivo } from "./facturacion.js";
 import { alertaError, alertaExito } from "./swal-utils.js";
+import { imprimirIframe } from "./utils.js";
 
 let idCajaIndividual;
 let tablaCajas; // Variable para DataTable
@@ -391,15 +392,15 @@ const mostrarDetalleCaja = async () => {
       btn.addEventListener('click', async () => {
         const ventaIndex = parseInt(btn.getAttribute('data-index'));
         const venta = caja.ventas[ventaIndex];
-        
+
         // Guardar el estado original del botón
         const btnOriginal = btn;
         const contenidoOriginal = btn.innerHTML;
-        
+
         // Mostrar spinner en el botón
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Cargando factura...';
-        
+
         try {
           // Imprimir factura directamente con los datos de la venta
           await imprimirFacturaFiscalDesdeCaja(venta);
@@ -490,10 +491,10 @@ if (cierreModalEl) {
 
 function imprimirCierre(caja) {
   const fechaCierre = dayjs().format("DD/MM/YYYY HH:mm:ss");
-  
+
   // Limpiar todos los show-print de otros wrappers (especialmente factura fiscal)
   document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
-  
+
   let wrapper = document.getElementById("ticket-wrapper");
   if (!wrapper) {
     wrapper = document.createElement('div');
@@ -613,22 +614,16 @@ function imprimirCierre(caja) {
   document.getElementById("ticket-pago-efec").textContent = efectivoEnCaja.toLocaleString();
   document.getElementById("ticket-pago-tarj").textContent = tarjeta.toLocaleString();
   document.getElementById("ticket-pago-transf").textContent = transferencia.toLocaleString();
-  
-  // Agregar show-print al wrapper del ticket de cierre antes de imprimir
-  wrapper.classList.add('show-print');
-  
-  setTimeout(() => { window.print(); }, 300);
-  
-  // Ocultar el ticket una vez que finaliza la impresión
-  const hideTicket = () => {
-    const w = document.getElementById('ticket-wrapper');
-    if (w) {
-      w.classList.remove('show-print');
-      w.innerHTML = '';
-    }
-    window.removeEventListener('afterprint', hideTicket);
-  };
-  window.addEventListener('afterprint', hideTicket);
+
+  // Imprimir usando iframe
+  const ticketHtml = wrapper.querySelector('.ticket-container').outerHTML;
+  imprimirIframe(ticketHtml, 'Cierre de Caja');
+
+  // Limpiar
+  setTimeout(() => {
+    wrapper.classList.remove('show-print');
+    wrapper.innerHTML = '';
+  }, 1000);
 }
 
 // ========================================
@@ -672,13 +667,13 @@ async function imprimirFacturaFiscalDesdeCaja(venta) {
       // Registrar nueva factura en Firestore y reservar el número de timbrado
       try {
         const registroFacturaInfo = await registrarFactura(
-          { 
-            venta, 
-            cliente: venta.cliente, 
-            total: venta.total, 
-            cajaId: idCajaIndividual, 
-            usuario: document.getElementById('usuarioLogueado')?.textContent || null 
-          }, 
+          {
+            venta,
+            cliente: venta.cliente,
+            total: venta.total,
+            cajaId: idCajaIndividual,
+            usuario: document.getElementById('usuarioLogueado')?.textContent || null
+          },
           timbrado.id
         );
         numeroFactura = registroFacturaInfo.numeroFormateado;
@@ -689,7 +684,7 @@ async function imprimirFacturaFiscalDesdeCaja(venta) {
         numeroFactura = `${timbrado.establecimiento}-${timbrado.puntoExpedicion}-${String(timbrado.numeroActual).padStart(7, '0')}`;
       }
     }
-    
+
     document.getElementById("factura-numero").textContent = numeroFactura;
 
     // --- FECHA ---
@@ -701,7 +696,7 @@ async function imprimirFacturaFiscalDesdeCaja(venta) {
     document.getElementById("factura-cliente-ruc").textContent = cliente.ruc || "0000000-0";
     document.getElementById("factura-cliente-direccion").textContent = cliente.direccion || "-";
     document.getElementById("factura-cliente-telefono").textContent = cliente.telefono || cliente.celular || "-";
-    
+
     // Nombre del cajero (usuario logueado) en el encabezado
     const usuario = document.getElementById('usuarioLogueado')?.textContent || '-';
     document.getElementById("factura-cajero").textContent = usuario;
@@ -745,70 +740,27 @@ async function imprimirFacturaFiscalDesdeCaja(venta) {
     document.getElementById("factura-total").textContent = venta.total.toLocaleString("es-PY") + " Gs";
 
     // --- IMPRESIÓN DOBLE: ORIGINAL Y COPIA ---
+    const fiscalHtml = document.getElementById('factura-fiscal-container').outerHTML;
+
+    const imprimirCopiaFiscal = (tipoCopia) => {
+      const contenedorTemporal = document.createElement('div');
+      contenedorTemporal.innerHTML = fiscalHtml;
+      const msgFinal = contenedorTemporal.querySelector('.ticket-msg');
+      if (msgFinal) msgFinal.innerHTML = `${tipoCopia}<br>Petro Chaco Criolla`;
+
+      imprimirIframe(contenedorTemporal.innerHTML, `Factura - ${tipoCopia}`);
+    };
+
+    // Imprimir Original al instante
+    imprimirCopiaFiscal('Original: Cliente');
+
+    // Pequeño delay para la copia
     setTimeout(() => {
-      try {
-        // Oculta todos los .ticket-wrapper
-        document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
-        // Solo muestra la factura fiscal
-        const fiscalWrapper = document.getElementById('factura-fiscal-container')?.closest('.ticket-wrapper');
-        if (!fiscalWrapper) {
-          console.error('No se encontró el contenedor de factura fiscal');
-          return;
-        }
-
-        let paso = 0;
-        let copiaPendiente = false;
-        const msg = document.querySelector('#factura-fiscal-container .ticket-msg');
-        const mensajeOriginal = msg ? msg.innerHTML : '';
-
-        function imprimirConMensaje(mensaje, callback) {
-          if (msg) msg.innerHTML = mensaje;
-          document.querySelectorAll('.ticket-wrapper').forEach(w => w.classList.remove('show-print'));
-          fiscalWrapper.classList.add('show-print');
-          // Agregar clase para ambas copias (Cliente y Comercio) - texto más oscuro
-          fiscalWrapper.classList.add('copia-oscura');
-          window.print();
-          setTimeout(() => {
-            fiscalWrapper.classList.remove('show-print', 'copia-oscura');
-            if (callback) callback();
-          }, 500);
-        }
-
-        function imprimirCopia() {
-          if (copiaPendiente) return; // Evita dobles disparos
-          copiaPendiente = true;
-          setTimeout(() => {
-            imprimirConMensaje('Copia: Comercio', () => {
-              if (msg) msg.innerHTML = mensajeOriginal;
-              window.onafterprint = null;
-            });
-          }, 100);
-        }
-
-        // Imprimir original y preparar handler para la copia
-        paso = 1;
-        copiaPendiente = false;
-        imprimirConMensaje('Original: Cliente', () => {
-          // Handler robusto para onafterprint
-          let handler;
-          handler = function () {
-            window.onafterprint = null;
-            imprimirCopia();
-          };
-          window.onafterprint = handler;
-          // Fallback: si onafterprint no dispara en 1s, forzar la copia
-          setTimeout(() => {
-            if (!copiaPendiente) imprimirCopia();
-          }, 1000);
-        });
-      } catch (err) {
-        console.error('Error durante la preparación de impresión de factura:', err);
-        window.print();
-      }
-    }, 300);
+      imprimirCopiaFiscal('Copia: Comercio');
+    }, 1000);
   } catch (error) {
-    console.error('Error al imprimir factura fiscal:', error);
-    alertaError('Error', 'No se pudo imprimir la factura. Por favor, intente nuevamente.');
+    console.error('Error en imprimirFacturaFiscalDesdeCaja:', error);
+    alertaError('Error', 'No se pudo generar la factura fiscal.');
   }
 }
 

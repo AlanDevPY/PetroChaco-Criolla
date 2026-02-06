@@ -80,3 +80,49 @@ export function calcularDiferencia(total, efectivo, tarjeta, transferencia) {
     const pagado = safeNumber(efectivo) + safeNumber(tarjeta) + safeNumber(transferencia);
     return t - pagado; // >0 falta, =0 exacto, <0 hay vuelto
 }
+
+// Función genérica para imprimir contenido en un iframe oculto
+export function imprimirIframe(contenidoHtml, titulo = 'Impresión') {
+    let iframe = document.getElementById('impresionIframe');
+
+    if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'impresionIframe';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+    }
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>${titulo}</title>
+      <style>
+        body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background: white; }
+        .ticket-container { width: 260px; background: #fff; padding: 10px; color: #000; font-size: 12px; line-height: 1.2; }
+        .ticket-center { text-align: center; }
+        .ticket-right { text-align: right; }
+        .ticket-bold { font-weight: 900; }
+        .ticket-header { border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
+        .ticket-items { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .ticket-items th, .ticket-items td { padding: 2px 0; font-size: 12px; }
+        .ticket-items th { border-bottom: 1px solid #000; }
+        .ticket-qty { width: 36px; text-align: left; }
+        .ticket-desc { text-align: left; }
+        .ticket-price { width: 70px; text-align: right; }
+        .ticket-total-row { border-top: 2px solid #000; padding-top: 6px; margin-top: 6px; }
+        .ticket-small { font-size: 11px; }
+        .ticket-msg { margin-top: 10px; border-top: 1px dashed #000; padding-top: 8px; text-align: center; font-weight: 700; }
+        @media print { @page { margin: 0; size: auto; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      </style>
+    </head>
+    <body onload="window.print();">
+      ${contenidoHtml}
+    </body>
+    </html>
+  `);
+    doc.close();
+}
