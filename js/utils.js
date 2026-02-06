@@ -101,8 +101,9 @@ export function imprimirIframe(contenidoHtml, titulo = 'Impresión') {
       <meta charset="utf-8">
       <title>${titulo}</title>
       <style>
+        * { box-sizing: border-box; }
         body { margin: 0; padding: 0; font-family: 'Arial', sans-serif; background: white; }
-        .ticket-container { width: 260px; max-width: 80mm; background: #fff; padding: 10px; color: #000; font-size: 13px; line-height: 1.3; }
+        .ticket-container { width: 72mm; max-width: 72mm; background: #fff; padding: 3mm; color: #000; font-size: 13px; line-height: 1.3; margin: 0; }
         .ticket-center { text-align: center; }
         .ticket-right { text-align: right; }
         .ticket-bold { font-weight: 900; }
