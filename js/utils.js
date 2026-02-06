@@ -102,7 +102,7 @@ export function imprimirIframe(contenidoHtml, titulo = 'Impresión') {
       <title>${titulo}</title>
       <style>
         body { margin: 0; padding: 0; font-family: 'Arial', sans-serif; background: white; }
-        .ticket-container { width: 280px; max-width: 80mm; background: #fff; padding: 10px; color: #000; font-size: 13px; line-height: 1.3; }
+        .ticket-container { width: 260px; max-width: 80mm; background: #fff; padding: 10px; color: #000; font-size: 13px; line-height: 1.3; }
         .ticket-center { text-align: center; }
         .ticket-right { text-align: right; }
         .ticket-bold { font-weight: 900; }
