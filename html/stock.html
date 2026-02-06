@@ -15,293 +15,309 @@
     <!-- DataTables Bootstrap 5 -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 
-    <!-- Toastify CSS -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <style>
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
 
+        /* Personalización de scrollbar para que sea más sutil */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #bbb;
+        }
+    </style>
 </head>
 
-<body class="d-flex flex-column min-vh-100">
+<body class="bg-light">
 
-    <!-- Navbar parcial -->
-    <div id="navbar-placeholder"></div>
-
-    <!-- Contenido principal -->
-    <main class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-            <h3 class="fw-bold mb-0">
-                <i class="bi bi-box-seam me-2"></i>Gestión de Stock
-            </h3>
-
-            <div class="d-flex gap-2 flex-wrap">
-                <div class="position-relative" style="min-width: 250px; flex: 1; max-width: 400px;">
-                    <i class="bi bi-search position-absolute"
-                        style="left: 1rem; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.5); pointer-events: none; z-index: 10;"></i>
-                    <input type="text" id="buscarProducto" class="form-control ps-5"
-                        placeholder="Buscar por nombre, categoría o código..." autocomplete="off"
-                        title="Presiona Ctrl+K para buscar rápidamente">
-                    <small class="text-muted position-absolute"
-                        style="right: 0.5rem; bottom: -1.5rem; font-size: 0.75rem;">
-                        <kbd>Ctrl+K</kbd> para buscar
-                    </small>
-                </div>
-                <div class="d-flex gap-2">
-                    <select class="form-select solo-admin" id="selectCategoriaImprimir" style="min-width: 180px;"
-                        title="Selecciona una categoría para imprimir">
-                        <option value="">Seleccionar categoría...</option>
-                        <option value="Comida">Comida</option>
-                        <option value="Bebida">Bebida</option>
-                        <option value="Postres">Postres</option>
-                        <option value="Helados">Helados</option>
-                        <option value="Dulces / Bombones">Dulces / Bombones</option>
-                        <option value="Snacks">Snacks</option>
-                        <option value="Combos">Combos</option>
-                        <option value="Promociones">Promociones</option>
-                        <option value="Insumos / Materia Prima">Insumos / Materia Prima</option>
-                        <option value="Utensilios / Equipamiento">Utensilios / Equipamiento</option>
-                        <option value="Otros">Otros</option>
-                    </select>
-                    <button class="btn btn-outline-primary solo-admin" id="btnImprimirStockCategoria"
-                        title="Imprimir stock de la categoría seleccionada" disabled>
-                        <i class="bi bi-printer me-1"></i> Imprimir Stock
-                    </button>
-                </div>
-                <button class="btn btn-primary solo-admin" id="btnAgregar" data-bs-toggle="modal"
-                    data-bs-target="#modalAgregarProducto" title="Agregar nuevo producto (Ctrl+N)">
-                    <i class="bi bi-plus-circle me-1"></i> Agregar Producto
+    <div class="d-flex h-100">
+        <!-- Sidebar -->
+        <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark"
+            style="width: 260px; height: 100vh; position: fixed; left: 0; top: 0; bottom: 0; z-index: 1000; overflow-y: auto;">
+            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+                <i class="bi bi-box-seam fs-4 me-2"></i>
+                <span class="fs-4 fw-bold">Gestión Stock</span>
+            </a>
+            <hr>
+            <ul class="nav nav-pills flex-column mb-auto">
+                <li class="nav-item">
+                    <a href="../index.html" class="nav-link text-white">
+                        <i class="bi bi-house me-2"></i>
+                        Inicio
+                    </a>
+                </li>
+                <li>
+                    <a href="dashboard.html" class="nav-link text-white">
+                        <i class="bi bi-speedometer2 me-2"></i>
+                        Dashboard
+                    </a>
+                </li>
+            </ul>
+            <hr>
+            <div class="d-grid gap-2 mb-3">
+                <span class="text-uppercase text-white-50 small fw-bold">Acciones Rápidas</span>
+                <button class="btn btn-outline-light text-start" id="btnNuevaSalida" data-bs-toggle="modal"
+                    data-bs-target="#modalNotaSalida">
+                    <i class="bi bi-box-arrow-right me-2"></i>Nota de Salida
+                </button>
+                <button class="btn btn-outline-light text-start" id="btnNuevaNota" data-bs-toggle="modal"
+                    data-bs-target="#modalNotaReposicion">
+                    <i class="bi bi-box-arrow-in-down me-2"></i>Reposición
+                </button>
+                <button class="btn btn-primary text-start" id="btnAgregar" data-bs-toggle="modal"
+                    data-bs-target="#modalAgregarProducto">
+                    <i class="bi bi-plus-circle me-2"></i>Nuevo Producto
                 </button>
             </div>
+            <hr>
+            <div class="dropdown">
+                <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle"
+                    id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center me-2"
+                        style="width: 32px; height: 32px;">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <strong>Usuario</strong>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+                    <li><a class="dropdown-item" href="#" id="btnLogout">Cerrar Sesión</a></li>
+                </ul>
+            </div>
         </div>
-        <!-- Salida de productos / Nota de Salida (solo admin) -->
-        <div class="card mb-4 solo-admin">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span class="fw-semibold">
-                    <i class="bi bi-box-arrow-down-left me-2"></i>Nota de Salida
-                </span>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-primary" id="btnNuevaSalida" data-bs-toggle="collapse"
-                        data-bs-target="#salidaPanel">
-                        <i class="bi bi-pencil-square me-1"></i>Armar Nota
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" id="btnVerHistorialSalidas" data-bs-toggle="modal"
-                        data-bs-target="#modalHistorialSalidas">
-                        <i class="bi bi-clock-history me-1"></i>Historial
-                    </button>
+
+        <!-- Main Content -->
+        <div class="flex-grow-1 d-flex flex-column h-100"
+            style="margin-left: 260px; padding: 1.5rem; overflow: hidden;">
+
+            <!-- Header Container (Fijo) -->
+            <div class="flex-shrink-0">
+                <!-- Filtros de Impresión (solo admin) -->
+                <div class="d-flex justify-content-end mb-3">
+                    <div class="d-flex gap-2">
+                        <select class="form-select w-auto solo-admin" id="selectCategoriaImprimir">
+                            <option value="">Categoría...</option>
+                            <option value="Comida">Comida</option>
+                            <option value="Bebida">Bebida</option>
+                            <option value="Postres">Postres</option>
+                            <option value="Helados">Helados</option>
+                            <option value="Dulces / Bombones">Dulces / Bombones</option>
+                            <option value="Snacks">Snacks</option>
+                            <option value="Combos">Combos</option>
+                            <option value="Promociones">Promociones</option>
+                            <option value="Insumos / Materia Prima">Insumos / Materia Prima</option>
+                            <option value="Utensilios / Equipamiento">Utensilios / Equipamiento</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                        <button class="btn btn-outline-dark solo-admin" id="btnImprimirStockCategoria" disabled>
+                            <i class="bi bi-printer"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cards de estadísticas rápidas (solo admin) -->
+                <div class="card border-0 shadow-sm mb-3 solo-admin">
+                    <div class="card-body p-3">
+                        <div class="row text-center g-0">
+                            <div class="col-md-3 col-6 mb-2 mb-md-0 position-relative">
+                                <h2 class="text-primary fw-bold mb-0" id="totalProductos">0</h2>
+                                <small class="text-muted">Total Productos</small>
+                                <div class="d-none d-md-block position-absolute end-0 top-0 bottom-0 border-end my-2">
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6 mb-2 mb-md-0 position-relative">
+                                <h2 class="text-warning fw-bold mb-0" id="stockBajo">0</h2>
+                                <small class="text-muted">Stock Bajo</small>
+                                <div class="d-none d-md-block position-absolute end-0 top-0 bottom-0 border-end my-2">
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6 position-relative">
+                                <h2 class="text-danger fw-bold mb-0" id="stockAgotado">0</h2>
+                                <small class="text-muted">Sin Stock</small>
+                                <div class="d-none d-md-block position-absolute end-0 top-0 bottom-0 border-end my-2">
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <h2 class="text-success fw-bold mb-0" id="stockOk">0</h2>
+                                <small class="text-muted">Stock Normal</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="collapse" id="salidaPanel">
-                <div class="card-body">
-                    <form id="formAgregarItemSalida" class="row g-3 align-items-end">
-                        <div class="col-md-6">
-                            <label class="form-label">Producto</label>
-                            <div class="position-relative">
-                                <input type="text" class="form-control autocomplete-input" id="salidaProducto"
-                                    placeholder="Buscar producto..." autocomplete="off" required>
-                            </div>
-                            <!-- Datalist oculto para datos -->
-                            <datalist id="listaProductosSalida" style="display: none;"></datalist>
+
+            <!-- Tabla de Productos (Scrollable) -->
+            <div class="card border-0 shadow-sm flex-fill overflow-hidden">
+                <div class="card-body p-0 d-flex flex-column h-100">
+                    <div class="table-responsive flex-grow-1">
+                        <table class="table table-hover align-middle mb-0 sticky-header" id="stockDataTable">
+                            <thead class="table-light sticky-top" style="z-index: 1;">
+                                <tr>
+                                    <th class="ps-3">#</th>
+                                    <th>Producto</th>
+                                    <th>Categoría</th>
+                                    <th>Código</th>
+                                    <th class="text-center">Stock</th>
+                                    <th class="text-end">Compra</th>
+                                    <th class="text-end">Venta</th>
+                                    <th class="text-center pe-3">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stockTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- DataTables genera su propia paginación -->
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- MODALES -->
+
+    <!-- Modal Nota de Salida -->
+    <div class="modal fade" id="modalNotaSalida" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="bi bi-box-arrow-right me-2"></i>Nota de Salida</h5>
+                    <div class="ms-auto">
+                        <button class="btn btn-sm btn-outline-light me-2" data-bs-toggle="modal"
+                            data-bs-target="#modalHistorialSalidas">
+                            <i class="bi bi-clock-history"></i> Historial
+                        </button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <form id="formAgregarItemSalida" class="row g-2 align-items-end mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label small">Producto</label>
+                            <input type="text" class="form-control form-control-sm autocomplete-input"
+                                id="salidaProducto" placeholder="Buscar..." required>
+                            <datalist id="listaProductosSalida"></datalist>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Descripción / Motivo</label>
-                            <input type="text" id="salidaDescripcion" class="form-control"
-                                placeholder="Ej: Nota de salida para local X, pedido de la jefa (opcional)">
-                            <small class="text-muted">Agrega una descripción para identificar la nota.</small>
+                        <div class="col-md-5">
+                            <label class="form-label small">Descripción</label>
+                            <input type="text" id="salidaDescripcion" class="form-control form-control-sm"
+                                placeholder="Motivo...">
                         </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Cantidad</label>
-                            <input type="number" min="1" class="form-control" id="salidaCantidad" value="1" required>
+                        <div class="col-md-1">
+                            <label class="form-label small">Cant.</label>
+                            <input type="number" min="1" class="form-control form-control-sm" id="salidaCantidad"
+                                value="1" required>
                         </div>
-                        <div class="col-md-2 text-end">
-                            <button type="submit" class="btn btn-danger w-100">
-                                <i class="bi bi-dash-lg me-1"></i>Agregar
-                            </button>
-                            <small class="text-muted d-block mt-1">
-                                <kbd>Enter</kbd> para agregar
-                            </small>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-danger btn-sm w-100"><i
+                                    class="bi bi-plus-lg"></i></button>
                         </div>
                     </form>
-                    <hr>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-striped align-middle">
-                            <thead class="table-dark">
+
+                    <div class="table-responsive border rounded mb-3" style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead class="table-light sticky-top">
                                 <tr>
                                     <th>Producto</th>
                                     <th class="text-center">Cant.</th>
-                                    <th class="text-end">Acciones</th>
+                                    <th class="text-end">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="salidaTable"></tbody>
-
                         </table>
                     </div>
-                    <div class="text-end mt-2">
-                        <button class="btn btn-danger" id="btnConfirmarSalida" disabled>
-                            <i class="bi bi-check-circle me-1"></i>Confirmar Salida
-                        </button>
-                        <button class="btn btn-outline-secondary" id="btnCancelarSalida" disabled>
-                            <i class="bi bi-x-circle me-1"></i>Cancelar
-                        </button>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-outline-secondary" id="btnCancelarSalida" disabled>Limpiar</button>
+                        <button class="btn btn-danger" id="btnConfirmarSalida" disabled>Confirmar Salida</button>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Reposición / Nota de Reposición (solo admin) -->
-        <div class="card mb-4 solo-admin">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span class="fw-semibold">
-                    <i class="bi bi-file-earmark-text me-2"></i>Nota de Reposición
-                </span>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-primary" id="btnNuevaNota" data-bs-toggle="collapse"
-                        data-bs-target="#reposicionPanel">
-                        <i class="bi bi-pencil-square me-1"></i>Armar Nota
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" id="btnVerHistorial" data-bs-toggle="modal"
-                        data-bs-target="#modalHistorialReposiciones">
-                        <i class="bi bi-clock-history me-1"></i>Historial
-                    </button>
+    <!-- Modal Nota de Reposición -->
+    <div class="modal fade" id="modalNotaReposicion" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="bi bi-box-arrow-in-down me-2"></i>Nota de Reposición</h5>
+                    <div class="ms-auto">
+                        <button class="btn btn-sm btn-outline-light me-2" data-bs-toggle="modal"
+                            data-bs-target="#modalHistorialReposiciones">
+                            <i class="bi bi-clock-history"></i> Historial
+                        </button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
                 </div>
-            </div>
-            <div class="collapse" id="reposicionPanel">
-                <div class="card-body">
-                    <form id="formAgregarItemReposicion" class="row g-3 align-items-end">
+                <div class="modal-body">
+                    <form id="formAgregarItemReposicion" class="row g-2 align-items-end mb-3">
                         <div class="col-md-4">
-                            <label class="form-label">Producto</label>
-                            <div class="position-relative">
-                                <input type="text" class="form-control autocomplete-input" id="reposicionProducto"
-                                    placeholder="Buscar producto..." autocomplete="off" required>
-                                <i class="bi bi-search position-absolute"
-                                    style="right: 1rem; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.5); pointer-events: none;"></i>
-                            </div>
-                            <!-- Datalist oculto para datos -->
-                            <datalist id="listaProductosReposicion" style="display: none;"></datalist>
+                            <label class="form-label small">Producto</label>
+                            <input type="text" class="form-control form-control-sm autocomplete-input"
+                                id="reposicionProducto" placeholder="Buscar..." required>
+                            <datalist id="listaProductosReposicion"></datalist>
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Cantidad</label>
-                            <input type="number" min="1" class="form-control" id="reposicionCantidad" value="1"
-                                required>
+                            <label class="form-label small">Cant.</label>
+                            <input type="number" min="1" class="form-control form-control-sm" id="reposicionCantidad"
+                                value="1" required>
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Precio Compra</label>
-                            <input type="text" class="form-control text-end" id="reposicionPrecioCompra" placeholder="0"
-                                autocomplete="off">
-                            <small class="text-muted">Opcional</small>
+                            <label class="form-label small">P. Compra</label>
+                            <input type="text" class="form-control form-control-sm text-end" id="reposicionPrecioCompra"
+                                placeholder="0">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Precio Venta</label>
-                            <input type="text" class="form-control text-end" id="reposicionPrecioVenta" placeholder="0"
-                                autocomplete="off">
-                            <small class="text-muted">Opcional</small>
+                            <label class="form-label small">P. Venta</label>
+                            <input type="text" class="form-control form-control-sm text-end" id="reposicionPrecioVenta"
+                                placeholder="0">
                         </div>
                         <div class="col-md-2 text-end">
-                            <button type="submit" class="btn btn-success w-100">
-                                <i class="bi bi-plus-lg me-1"></i>Agregar
-                            </button>
-                            <small class="text-muted d-block mt-1">
-                                <kbd>Enter</kbd> para agregar
-                            </small>
+                            <button type="submit" class="btn btn-success btn-sm w-100"><i class="bi bi-plus-lg"></i>
+                                Agregar</button>
                         </div>
                     </form>
-                    <hr>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-striped align-middle">
-                            <thead class="table-dark">
+
+                    <div class="table-responsive border rounded mb-3" style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead class="table-light sticky-top">
                                 <tr>
                                     <th>Producto</th>
                                     <th class="text-center">Cant.</th>
-                                    <th class="text-end">Precio Compra</th>
-                                    <th class="text-end">Precio Venta</th>
-                                    <th class="text-end">Acciones</th>
+                                    <th class="text-end">P. Compra</th>
+                                    <th class="text-end">P. Venta</th>
+                                    <th class="text-end">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="reposicionTable"></tbody>
-
                         </table>
                     </div>
-                    <div class="text-end mt-2">
-                        <button class="btn btn-primary" id="btnConfirmarReposicion" disabled>
-                            <i class="bi bi-check-circle me-1"></i>Confirmar Reposición
-                        </button>
-                        <button class="btn btn-outline-danger" id="btnCancelarReposicion" disabled>
-                            <i class="bi bi-x-circle me-1"></i>Cancelar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Cards de estadísticas rápidas (solo admin) -->
-        <div class="d-flex flex-wrap gap-3 mb-4 solo-admin">
-            <div class="flex-fill" style="min-width: 200px;">
-                <div class="card text-center h-100 border-0 shadow-sm">
-                    <div class="card-body">
-                        <i class="bi bi-box-seam fs-1 text-primary mb-2"></i>
-                        <h5 class="card-title mb-0" id="totalProductos">0</h5>
-                        <small class="text-muted">Total Productos</small>
-                    </div>
-                </div>
-            </div>
-            <div class="flex-fill" style="min-width: 200px;">
-                <div class="card text-center h-100 border-0 shadow-sm">
-                    <div class="card-body">
-                        <i class="bi bi-exclamation-triangle fs-1 text-warning mb-2"></i>
-                        <h5 class="card-title mb-0" id="stockBajo">0</h5>
-                        <small class="text-muted">Stock Bajo</small>
-                    </div>
-                </div>
-            </div>
-            <div class="flex-fill" style="min-width: 200px;">
-                <div class="card text-center h-100 border-0 shadow-sm">
-                    <div class="card-body">
-                        <i class="bi bi-x-circle fs-1 text-danger mb-2"></i>
-                        <h5 class="card-title mb-0" id="stockAgotado">0</h5>
-                        <small class="text-muted">Sin Stock</small>
-                    </div>
-                </div>
-            </div>
-            <div class="flex-fill" style="min-width: 200px;">
-                <div class="card text-center h-100 border-0 shadow-sm">
-                    <div class="card-body">
-                        <i class="bi bi-check-circle fs-1 text-success mb-2"></i>
-                        <h5 class="card-title mb-0" id="stockOk">0</h5>
-                        <small class="text-muted">Stock Normal</small>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-outline-secondary" id="btnCancelarReposicion" disabled>Limpiar</button>
+                        <button class="btn btn-success" id="btnConfirmarReposicion" disabled>Confirmar
+                            Reposición</button>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Tabla de productos -->
-        <div class="table-responsive">
-            <table class="table table-hover align-middle" id="stockDataTable">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Producto</th>
-                        <th>Categoría</th>
-                        <th>Código de Barra</th>
-                        <th class="text-center">Stock</th>
-                        <th class="text-end">Precio Compra</th>
-                        <th class="text-end">Precio Venta</th>
-                        <th class="text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="stockTable">
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Controles de Paginación -->
-        <div class="d-flex justify-content-between align-items-center mt-3">
-            <div>
-                <small class="text-muted" id="infoPaginacion">Mostrando 0 de 0 productos</small>
-            </div>
-            <nav aria-label="Paginación de productos">
-                <ul class="pagination pagination-sm mb-0" id="paginacionControles">
-                    <!-- Se generará dinámicamente -->
-                </ul>
-            </nav>
-        </div>
-    </main>
+    </div>
 
     <!-- Modal Historial Reposiciones -->
     <div class="modal fade" id="modalHistorialReposiciones" tabindex="-1" aria-hidden="true">
@@ -374,17 +390,13 @@
                 <div class="modal-body">
                     <form id="registrarStockForm">
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-box-seam me-1"></i>Nombre del Producto
-                            </label>
+                            <label class="form-label small fw-bold">Nombre del Producto</label>
                             <input type="text" id="nuevoItemStock" class="form-control"
                                 placeholder="Ej: Lomito Completo" required autocomplete="off">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-tag me-1"></i>Categoría
-                            </label>
+                            <label class="form-label small fw-bold">Categoría</label>
                             <select class="form-select" required id="nuevoCategoriaStock">
                                 <option>Comida</option>
                                 <option>Bebida</option>
@@ -398,49 +410,43 @@
                                 <option>Utensilios / Equipamiento</option>
                                 <option>Otros</option>
                             </select>
-
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-box me-1"></i>Stock
-                            </label>
-                            <input type="number" id="nuevoCantidadStock" required class="form-control text-center"
-                                placeholder="0">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Stock Inicial</label>
+                                <input type="number" id="nuevoCantidadStock" required class="form-control text-center"
+                                    placeholder="0">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Stock Mínimo</label>
+                                <input type="number" id="nuevoStockMinimo" class="form-control text-center"
+                                    placeholder="10" value="10" min="0">
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-exclamation-triangle me-1"></i>Stock Mínimo
-                                <small class="text-muted">(Alerta cuando baje de este nivel)</small>
-                            </label>
-                            <input type="number" id="nuevoStockMinimo" class="form-control text-center" placeholder="10"
-                                value="10" min="0">
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Precio Compra</label>
+                                <input type="text" value="0" autocomplete="off" required id="nuevoPrecioCompraStock"
+                                    class="form-control text-end" placeholder="0">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Precio Venta</label>
+                                <input type="text" value="0" autocomplete="off" required id="nuevoCostoStock"
+                                    class="form-control text-end" placeholder="0">
+                            </div>
                         </div>
+
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-cart-dash me-1"></i>Precio Compra
-                            </label>
-                            <input type="text" value="0" autocomplete="off" required id="nuevoPrecioCompraStock"
-                                class="form-control text-end" placeholder="0">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-currency-exchange me-1"></i>Precio Venta
-                            </label>
-                            <input type="text" value="0" autocomplete="off" required id="nuevoCostoStock"
-                                class="form-control text-end" placeholder="0">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-upc-scan me-1"></i>Código de Barra
-                            </label>
+                            <label class="form-label small fw-bold">Código de Barra</label>
                             <input type="number" id="nuevoCodigoBarraStock" class="form-control"
-                                placeholder="Tickear codigo de barra aqui!!" required autocomplete="off">
+                                placeholder="Escanear aquí..." required autocomplete="off">
                         </div>
 
-                        <div class="modal-footer">
-                            <button type="submit" class="btn btn-success" data-bs-dismiss="modal">
-                                <i class="bi bi-check-circle me-1"></i>Agregar
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle me-1"></i>Guardar Producto
                             </button>
                         </div>
                     </form>
@@ -464,17 +470,13 @@
                 <div class="modal-body">
                     <form id="actualizarStockForm">
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-box-seam me-1"></i>Nombre del Producto
-                            </label>
+                            <label class="form-label small fw-bold">Nombre del Producto</label>
                             <input type="text" id="actualizarItemStock" class="form-control"
                                 placeholder="Ej: Lomito Completo" required autocomplete="off">
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-tag me-1"></i>Categoría
-                            </label>
+                            <label class="form-label small fw-bold">Categoría</label>
                             <select class="form-select" required id="actualizarCategoriaStock">
                                 <option>Comida</option>
                                 <option>Bebida</option>
@@ -490,43 +492,32 @@
                             </select>
                         </div>
 
-                        <!-- Campo de Stock removido: la cantidad se gestiona desde reposición/otras acciones -->
-
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-exclamation-triangle me-1"></i>Stock Mínimo
-                                <small class="text-muted">(Alerta cuando baje de este nivel)</small>
-                            </label>
+                            <label class="form-label small fw-bold">Stock Mínimo</label>
                             <input type="number" id="actualizarStockMinimo" class="form-control text-center"
                                 placeholder="10" value="10" min="0">
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-cart-dash me-1"></i>Precio Compra
-                            </label>
-                            <input type="text" value="0" autocomplete="off" required id="actualizarPrecioCompraStock"
-                                class="form-control text-end" placeholder="0">
-                            <small class="text-muted">Modifique el precio de compra y venta según necesite.</small>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Precio Compra</label>
+                                <input type="text" value="0" autocomplete="off" required
+                                    id="actualizarPrecioCompraStock" class="form-control text-end" placeholder="0">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Precio Venta</label>
+                                <input type="text" autocomplete="off" required id="actualizarCostoStock"
+                                    class="form-control text-end" placeholder="0">
+                            </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-currency-exchange me-1"></i>Precio Venta
-                            </label>
-                            <input type="text" autocomplete="off" required id="actualizarCostoStock"
-                                class="form-control text-end" placeholder="0">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-upc-scan me-1"></i>Código de Barra
-                            </label>
+                            <label class="form-label small fw-bold">Código de Barra</label>
                             <input type="number" id="actualizarCodigoBarraStock" class="form-control"
-                                placeholder="Tickear codigo de barra aqui!!" required autocomplete="off">
+                                placeholder="Escanear aquí..." required autocomplete="off">
                         </div>
 
-                        <div class="modal-footer">
+                        <div class="d-grid">
                             <button type="submit" class="btn btn-success">
                                 <i class="bi bi-check-circle me-1"></i>Actualizar
                             </button>
@@ -573,11 +564,6 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-dark text-white text-center py-3 mt-auto">
-        <small>© 2025 Todos los derechos reservados | Creado por <strong>AlanDevPy</strong></small>
-    </footer>
-
     <!-- jQuery (requerido para DataTables) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
@@ -596,8 +582,6 @@
 
     <!-- Day.js -->
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
-
-    <script type="module" src="../js/navbar.js"></script>
 
     <!-- Custom JS -->
     <script type="module" src="../js/stock.js"></script>

@@ -130,7 +130,7 @@ onAuthStateChanged(auth, async (user) => {
       const rol = docSnap.data().rol;
       const nombre = docSnap.data().nombre;
       // console.log("✅ Usuario autenticado - Rol:", rol, "Nombre:", nombre);
-      
+
       // Actualizar nombre de usuario en la UI
       const usuarioLogueadoEl = document.getElementById("usuarioLogueado");
       if (usuarioLogueadoEl) {
@@ -147,7 +147,7 @@ onAuthStateChanged(auth, async (user) => {
 
       // Aplicar permisos DESPUÉS de exponer el rol
       aplicarPermisos(rol);
-      
+
       // Redirigir de la antigua vista de cajaUnica a la nueva unificada
       const paginaActual = window.location.pathname.split("/").pop();
       if (paginaActual === 'cajaUnica.html') {
@@ -172,7 +172,7 @@ const aplicarPermisos = (rol) => {
       elementosAdmin.forEach(el => {
         // Determinar el display correcto según las clases del elemento
         let displayValue = 'block'; // Por defecto
-        
+
         if (el.classList.contains('d-flex') || el.classList.contains('flex')) {
           displayValue = 'flex';
         } else if (el.classList.contains('d-inline-flex')) {
@@ -184,7 +184,7 @@ const aplicarPermisos = (rol) => {
         } else if (el.classList.contains('card')) {
           displayValue = 'block';
         }
-        
+
         // Agregar clase para indicar que está visible
         el.classList.add('admin-visible');
         // Establecer el display correcto
@@ -243,10 +243,12 @@ setPersistence(auth, browserSessionPersistence)
 // * FUNCION QUE TENGA QUE VER CON LA BASE DE DATOS DE STOCK
 export const registrarStock = async (stock) => {
   try {
-    await addDoc(collection(db, "Stock"), { ...stock, fechaTS: serverTimestamp() });
+    const docRef = await addDoc(collection(db, "Stock"), { ...stock, fechaTS: serverTimestamp() });
     console.log("stock registrado con éxito");
+    return docRef.id;
   } catch (error) {
     console.error("Error al registrar stock:", error);
+    throw error;
   }
 };
 
@@ -278,9 +280,9 @@ export const obtenerStockTiempoReal = (callback) => {
       orderBy("item"),
       limit(1000) // Límite de seguridad
     );
-    
+
     // Retornar el unsubscribe function para poder limpiar el listener
-    return onSnapshot(q, 
+    return onSnapshot(q,
       (querySnapshot) => {
         const stock = querySnapshot.docs.map((docSnap) => ({ ...docSnap.data(), id: docSnap.id }));
         // console.log(`✅ Stock actualizado en tiempo real: ${stock.length} productos`);
@@ -294,7 +296,7 @@ export const obtenerStockTiempoReal = (callback) => {
   } catch (error) {
     console.error("❌ Error al suscribirse a stock en tiempo real:", error);
     callback([]); // Llamar callback con array vacío en caso de error
-    return () => {}; // Retornar función vacía si falla
+    return () => { }; // Retornar función vacía si falla
   }
 };
 
@@ -531,9 +533,9 @@ export const obtenerClientesTiempoReal = (callback) => {
       collection(db, "Clientes"),
       limit(500) // Límite de seguridad
     );
-    
+
     // Retornar el unsubscribe function para poder limpiar el listener
-    return onSnapshot(q, 
+    return onSnapshot(q,
       (querySnapshot) => {
         const clientes = querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
         // console.log(`✅ Clientes actualizados en tiempo real: ${clientes.length}`);
@@ -547,7 +549,7 @@ export const obtenerClientesTiempoReal = (callback) => {
   } catch (error) {
     console.error("❌ Error al suscribirse a clientes en tiempo real:", error);
     callback([]); // Llamar callback con array vacío en caso de error
-    return () => {}; // Retornar función vacía si falla
+    return () => { }; // Retornar función vacía si falla
   }
 };
 
@@ -622,9 +624,9 @@ export const obtenerCajasTiempoReal = (callback) => {
   try {
     // console.log("📡 Suscribiéndose a cambios de Cajas en tiempo real...");
     const q = collection(db, "Caja");
-    
+
     // Retornar el unsubscribe function para poder limpiar el listener
-    return onSnapshot(q, 
+    return onSnapshot(q,
       (querySnapshot) => {
         const cajas = querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
         // console.log(`✅ Cajas actualizadas en tiempo real: ${cajas.length}`);
@@ -638,7 +640,7 @@ export const obtenerCajasTiempoReal = (callback) => {
   } catch (error) {
     console.error("❌ Error al suscribirse a cajas en tiempo real:", error);
     callback([]); // Llamar callback con array vacío en caso de error
-    return () => {}; // Retornar función vacía si falla
+    return () => { }; // Retornar función vacía si falla
   }
 };
 
@@ -787,9 +789,9 @@ export const sincronizarNumeroActualTimbrado = async (timbradoId) => {
       orderBy('numero', 'desc'),
       limit(1)
     );
-    
+
     const querySnapshot = await getDocs(q);
-    
+
     if (querySnapshot.empty) {
       // No hay facturas, usar el rangoDesde del timbrado
       const timbradoRef = doc(db, 'timbrados', timbradoId);
@@ -798,38 +800,38 @@ export const sincronizarNumeroActualTimbrado = async (timbradoId) => {
         const timbrado = timbradoSnap.data();
         const numeroInicial = timbrado.rangoDesde || 1;
         await updateDoc(timbradoRef, { numeroActual: numeroInicial });
-        return { 
-          success: true, 
+        return {
+          success: true,
           mensaje: `No se encontraron facturas. Número actual establecido en ${numeroInicial}`,
           numeroActual: numeroInicial
         };
       }
       throw new Error('Timbrado no encontrado');
     }
-    
+
     // Obtener la última factura (mayor número)
     const ultimaFactura = querySnapshot.docs[0].data();
     const ultimoNumero = ultimaFactura.numero || 0;
-    
+
     // El número actual debe ser el último número usado + 1 (para la próxima factura)
     const nuevoNumeroActual = ultimoNumero + 1;
-    
+
     // Actualizar el timbrado
     const timbradoRef = doc(db, 'timbrados', timbradoId);
     const timbradoSnap = await getDoc(timbradoRef);
     if (!timbradoSnap.exists()) {
       throw new Error('Timbrado no encontrado');
     }
-    
+
     const timbrado = timbradoSnap.data();
-    
+
     // Verificar que no exceda el rango
     if (nuevoNumeroActual > timbrado.rangoHasta) {
       throw new Error(`El número actual (${nuevoNumeroActual}) excede el rango máximo (${timbrado.rangoHasta})`);
     }
-    
+
     await updateDoc(timbradoRef, { numeroActual: nuevoNumeroActual });
-    
+
     return {
       success: true,
       mensaje: `Número actual sincronizado. Última factura: ${ultimaFactura.numeroFormateado || ultimoNumero}. Nuevo número actual: ${nuevoNumeroActual}`,

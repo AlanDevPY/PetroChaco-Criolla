@@ -5,6 +5,7 @@ import { poblarDataTable } from "./stock-datatable.js";
 import { confirmarEliminacion, alertaAdvertencia } from "./swal-utils.js";
 import { mejorarDatalist } from "./datalist-mejorado.js";
 import { parseGs, formatGs } from "./utils.js";
+import { auditarStock, auditarReposicion, auditarSalida } from "./auditoria.js";
 
 // variables globales
 
@@ -115,7 +116,7 @@ function obtenerBadgeStock(cantidad) {
 // Función para actualizar stock cuando hay cambios en tiempo real
 const actualizarStockDesdeTiempoReal = (stock) => {
   _cacheStock = stock;
-  
+
   if (USAR_DATATABLES) {
     // Actualizar DataTable
     poblarDataTable(stock);
@@ -124,10 +125,10 @@ const actualizarStockDesdeTiempoReal = (stock) => {
     productosFiltrados = [...stock];
     renderizarPagina();
   }
-  
+
   // Actualizar estadísticas
   actualizarEstadisticas();
-  
+
   // Poblar datalist para reposición
   const dl = document.getElementById('listaProductosReposicion');
   if (dl) {
@@ -356,7 +357,7 @@ actualizarStockForm.addEventListener("submit", async (e) => {
     const item = document.getElementById("actualizarItemStock").value.trim().toUpperCase();
     const categoria = document.getElementById("actualizarCategoriaStock").value;
     const codigoBarra = document.getElementById("actualizarCodigoBarraStock").value;
-    
+
     // Convertir el costo de string a number usando parseGs
     const costoInput = document.getElementById("actualizarCostoStock");
     const costo = parseGs(costoInput.value);
@@ -377,26 +378,31 @@ actualizarStockForm.addEventListener("submit", async (e) => {
 
     // Verificar si el código de barra ya existe en otro producto (no en el actual)
     const obtenerStockTotal = await obtenerStock();
-    const codigoDuplicado = obtenerStockTotal.find((producto) => 
+    const codigoDuplicado = obtenerStockTotal.find((producto) =>
       producto.codigoBarra === codigoBarra && producto.id !== idStock
     );
-    
+
     if (codigoDuplicado) {
       alertaAdvertencia("⚠️ Código duplicado", "El código de barra ya existe en otro producto");
       return;
     }
 
     // Incluir todos los campos en el objeto de actualización
-    const stockData = { 
-      item, 
-      categoria, 
-      codigoBarra, 
-      costo, 
-      costoCompra, 
-      stockMinimo 
+    const stockData = {
+      item,
+      categoria,
+      codigoBarra,
+      costo,
+      costoCompra,
+      stockMinimo
     };
 
     await actualizarStockporId(idStock, stockData);
+
+    // 🔍 Auditoría
+    const productoAudit = { ...stockData, id: idStock };
+    await auditarStock('ACTUALIZAR', productoAudit);
+
     modalActualizarProducto.hide();
 
     showSuccess("✅ Stock actualizado correctamente");
@@ -456,9 +462,12 @@ registrarStockForm.addEventListener("submit", async (e) => {
     // ⚡ Mostrar notificación de carga
     const loadingToast = showLoading("Agregando stock...");
 
-    await registrarStock(stockData);
-
     // ⚡ Registrar stock en Firebase
+    const nuevoId = await registrarStock(stockData);
+
+    // 🔍 Auditoría
+    await auditarStock('CREADO', { ...stockData, id: nuevoId });
+
     hideLoading(loadingToast);
     showSuccess("✅ Stock agregado correctamente");
 
@@ -509,13 +518,13 @@ let primeraCargaStock = true;
 window.addEventListener("DOMContentLoaded", async () => {
   loadingToastStock = showLoading("Conectando a stock en tiempo real...");
   primeraCargaStock = true;
-  
+
   // Inicializar DataTable primero si está activado
   if (USAR_DATATABLES) {
     const { initDataTable } = await import('./stock-datatable.js');
     initDataTable();
   }
-  
+
   // Suscribirse a cambios en tiempo real
   unsubscribeStock = obtenerStockTiempoReal((stock) => {
     // Primera carga - ocultar loading
@@ -548,7 +557,16 @@ window.addEventListener("DOMContentLoaded", async () => {
         modalActualizarProducto.show();
       },
       onEliminar: async (id) => {
+        // Encontrar producto para auditar antes de eliminar (usando cache)
+        const stockAudit = _cacheStock.find(s => s.id === id);
+
         await eliminarStockPorID(id);
+
+        // 🔍 Auditoría
+        if (stockAudit) {
+          await auditarStock('ELIMINADO', stockAudit);
+        }
+
         showSuccess("✅ Stock eliminado correctamente");
         // No es necesario llamar mostrarStock() porque el listener en tiempo real se encargará
       }
@@ -982,6 +1000,9 @@ if (btnConfirmarSalida) {
       };
       await registrarSalida(nota);
 
+      // 🔍 Auditoría
+      await auditarSalida(nota);
+
       // limpiar y refrescar
       salidaLista = [];
       if (salidaDescripcion) salidaDescripcion.value = '';
@@ -1042,6 +1063,9 @@ if (btnConfirmarReposicion) {
       };
       await registrarReposicion(nota);
 
+      // 🔍 Auditoría
+      await auditarReposicion(nota);
+
       // limpiar y refrescar
       reposicionLista = [];
       renderReposicionTabla();
@@ -1088,7 +1112,7 @@ if (modalHistorial) {
       // Attach click handlers
       const btnVer = tbody.querySelector(`button[data-note-id="${n.id}"][data-action="ver"]`);
       if (btnVer) btnVer.addEventListener('click', () => mostrarDetalleNotaModal(n, 'reposicion'));
-      
+
       const btnEliminar = tbody.querySelector(`button[data-note-id="${n.id}"][data-action="eliminar"]`);
       if (btnEliminar) btnEliminar.addEventListener('click', () => eliminarReposicionHandler(n));
     });
@@ -1129,7 +1153,7 @@ if (modalHistorialSalidas) {
       // Attach click handlers
       const btnVer = tbody.querySelector(`button[data-note-id="${n.id}"][data-action="ver"]`);
       if (btnVer) btnVer.addEventListener('click', () => mostrarDetalleNotaModal(n, 'salida'));
-      
+
       const btnEliminar = tbody.querySelector(`button[data-note-id="${n.id}"][data-action="eliminar"]`);
       if (btnEliminar) btnEliminar.addEventListener('click', () => eliminarSalidaHandler(n));
     });
@@ -1173,9 +1197,9 @@ async function eliminarReposicionHandler(nota) {
       confirmButtonColor: '#dc3545',
       cancelButtonColor: '#6c757d'
     });
-    
+
     if (!confirmado.isConfirmed) return;
-    
+
     if (!confirmado) return;
 
     // Mostrar loading
@@ -1230,9 +1254,9 @@ async function eliminarSalidaHandler(nota) {
       confirmButtonColor: '#dc3545',
       cancelButtonColor: '#6c757d'
     });
-    
+
     if (!confirmado.isConfirmed) return;
-    
+
     if (!confirmado) return;
 
     // Mostrar loading
@@ -1375,26 +1399,77 @@ export function generarTicketDesdeNota(nota, tipo) {
   }
 }
 
-// Botón imprimir en modal detalle
-document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('btnImprimirNota');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    const current = window._notaActualDetalle;
-    if (!current || !current.nota) {
-      showInfo('No hay nota seleccionada para imprimir');
-      return;
+// Eventos al cargar el DOM
+document.addEventListener('DOMContentLoaded', async () => {
+  // Inicializar tooltips y componentes de Bootstrap si es necesario
+
+  // Listener para filtro de impresión
+  const btnImprimirStockCategoria = document.getElementById('btnImprimirStockCategoria');
+  const selectCategoriaImprimir = document.getElementById('selectCategoriaImprimir');
+
+  if (btnImprimirStockCategoria && selectCategoriaImprimir) {
+    // Habilitar botón solo si hay selección
+    selectCategoriaImprimir.addEventListener('change', () => {
+      btnImprimirStockCategoria.disabled = !selectCategoriaImprimir.value;
+    });
+
+    // Click en imprimir
+    btnImprimirStockCategoria.addEventListener('click', async () => {
+      const categoria = selectCategoriaImprimir.value;
+      if (!categoria) return;
+
+      // Obtener productos de esa categoría desde el caché
+      const productosFiltrados = _cacheStock.filter(p => p.categoria === categoria);
+
+      if (productosFiltrados.length === 0) {
+        showInfo(`No hay productos en la categoría "${categoria}"`);
+        return;
+      }
+
+      // Generar ticket
+      generarTicketStockPorCategoria(categoria, productosFiltrados);
+    });
+  }
+
+  // Listener para botón de imprimir en detalle nota
+  const btnParamImprimirNota = document.getElementById('btnImprimirNota');
+  if (btnParamImprimirNota) {
+    btnParamImprimirNota.addEventListener('click', () => {
+      const current = window._notaActualDetalle;
+      if (!current || !current.nota) {
+        showInfo('No hay nota seleccionada para imprimir');
+        return;
+      }
+      generarTicketDesdeNota(current.nota, current.tipo);
+    });
+  }
+
+  // Iniciar con spinner
+  let loadingToast = showLoading("Cargando stock...");
+
+  // Cargar datos iniciales
+  try {
+    if (!USAR_DATATABLES) {
+      await mostrarStock();
+    } else {
+      // Si usamos DataTables, la carga inicial la maneja la suscripción en tiempo real o llamada manual
+      // Pero necesitamos inicializar
+      await mostrarStock();
     }
-    generarTicketDesdeNota(current.nota, current.tipo);
-  });
+  } catch (error) {
+    console.error("Error al cargar stock:", error);
+    showError("Error al cargar el stock inicial");
+  } finally {
+    hideLoading(loadingToast);
+  }
 });
 
-// Función para generar ticket de stock por categoría
+// Función para generar ticket de stock por categoría (VERSIÓN IFRAME SILENCIOSO)
 function generarTicketStockPorCategoria(categoria, productos) {
   try {
     const fecha = dayjs().format('DD/MM/YYYY HH:mm:ss');
     const usuario = (document.getElementById('usuarioLogueado')?.textContent || '').trim() || '-';
-    
+
     // Ordenar productos por nombre
     const productosOrdenados = productos.sort((a, b) => {
       const nombreA = (a.item || '').toUpperCase();
@@ -1449,16 +1524,34 @@ function generarTicketStockPorCategoria(categoria, productos) {
       </div>
     `;
 
-    // Construir un documento HTML mínimo y abrirlo en una nueva ventana para imprimir
-    const fullHtml = `<!doctype html>
+    // Crear iframe oculto
+    let iframe = document.getElementById('ticketIframe');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'ticketIframe';
+      iframe.style.position = 'absolute';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+    }
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <!doctype html>
       <html>
         <head>
           <meta charset="utf-8">
           <title>Stock por Categoría - ${categoria}</title>
           <style>
-            @media print { @page { size: 70mm auto; margin: 0; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-            body{ margin:0; padding:0; background:#fff; color:#000; }
-            .ticket-container{ width:70mm; box-sizing:border-box; padding:4px 4px; font-family: 'Courier New', monospace; font-size:12px; line-height:1.3; }
+             @media print { 
+                @page { size: 70mm auto; margin: 0; } 
+                body { margin: 0; padding: 0; }
+                .ticket-container { width: 100%; } 
+             }
+            body{ margin:0; padding:0; background:#fff; color:#000; font-family: 'Courier New', monospace; }
+            .ticket-container{ width:70mm; box-sizing:border-box; padding:4px; font-size:12px; line-height:1.3; }
             .ticket-header{ margin-bottom:6px; }
             .ticket-center{ text-align:center; }
             .ticket-bold{ font-weight:700; }
@@ -1472,78 +1565,24 @@ function generarTicketStockPorCategoria(categoria, productos) {
         <body>
           ${ticketBody}
         </body>
-      </html>`;
+      </html>
+    `);
+    doc.close();
 
-    const printWin = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=400,height=800');
-    if (!printWin) {
-      showInfo('No se pudo abrir la ventana de impresión. Revisa el bloqueador de ventanas emergentes.');
-      return;
-    }
-
-    printWin.document.open();
-    printWin.document.write(fullHtml);
-    printWin.document.close();
-    printWin.focus();
-
-    // Esperar un momento para que el navegador renderice la ventana de impresión
+    // Imprimir
+    iframe.contentWindow.focus();
     setTimeout(() => {
-      try {
-        printWin.print();
-      } catch (e) {
-        console.error('Error al imprimir desde ventana:', e);
-      }
-      // Cerrar la ventana automáticamente unos instantes después de imprimir
-      setTimeout(() => {
-        try { printWin.close(); } catch (e) { /* ignore */ }
-      }, 600);
+      iframe.contentWindow.print();
+      // Opcional: remover iframe después
+      // setTimeout(() => document.body.removeChild(iframe), 1000);
     }, 500);
 
-  } catch (e) {
-    console.error('Error generando ticket de stock por categoría:', e);
-    showError('❌ Error al generar el ticket. Por favor, intente nuevamente.');
+  } catch (error) {
+    console.error("Error al generar ticket:", error);
+    showError("No se pudo generar el ticket");
   }
 }
 
-// Configurar selector de categoría y botón de imprimir
-document.addEventListener('DOMContentLoaded', () => {
-  const selectCategoria = document.getElementById('selectCategoriaImprimir');
-  const btnImprimirStock = document.getElementById('btnImprimirStockCategoria');
 
-  if (!selectCategoria || !btnImprimirStock) return;
-
-  // Habilitar/deshabilitar botón según selección
-  selectCategoria.addEventListener('change', () => {
-    btnImprimirStock.disabled = !selectCategoria.value;
-  });
-
-  // Evento click en botón imprimir
-  btnImprimirStock.addEventListener('click', async () => {
-    const categoria = selectCategoria.value;
-    if (!categoria) {
-      showWarning('⚠️ Por favor, selecciona una categoría');
-      return;
-    }
-
-    try {
-      // Obtener stock actualizado
-      const stock = await obtenerStock();
-      
-      // Filtrar productos por categoría
-      const productosCategoria = stock.filter(p => p.categoria === categoria);
-      
-      if (productosCategoria.length === 0) {
-        showWarning(`⚠️ No hay productos en la categoría "${categoria}"`);
-        return;
-      }
-
-      // Generar y imprimir ticket
-      generarTicketStockPorCategoria(categoria, productosCategoria);
-      showSuccess(`✅ Ticket generado para ${productosCategoria.length} productos de ${categoria}`);
-    } catch (error) {
-      console.error('Error al imprimir stock por categoría:', error);
-      showError('❌ Error al obtener el stock. Por favor, intente nuevamente.');
-    }
-  });
-});
 
 
