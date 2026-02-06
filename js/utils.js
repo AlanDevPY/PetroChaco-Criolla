@@ -101,22 +101,25 @@ export function imprimirIframe(contenidoHtml, titulo = 'Impresión') {
       <meta charset="utf-8">
       <title>${titulo}</title>
       <style>
-        body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background: white; }
-        .ticket-container { width: 260px; background: #fff; padding: 10px; color: #000; font-size: 12px; line-height: 1.2; }
+        body { margin: 0; padding: 0; font-family: 'Arial', sans-serif; background: white; }
+        .ticket-container { width: 280px; max-width: 80mm; background: #fff; padding: 10px; color: #000; font-size: 13px; line-height: 1.3; }
         .ticket-center { text-align: center; }
         .ticket-right { text-align: right; }
         .ticket-bold { font-weight: 900; }
-        .ticket-header { border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
-        .ticket-items { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-        .ticket-items th, .ticket-items td { padding: 2px 0; font-size: 12px; }
-        .ticket-items th { border-bottom: 1px solid #000; }
-        .ticket-qty { width: 36px; text-align: left; }
-        .ticket-desc { text-align: left; }
-        .ticket-price { width: 70px; text-align: right; }
-        .ticket-total-row { border-top: 2px solid #000; padding-top: 6px; margin-top: 6px; }
+        .ticket-header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
+        .ticket-items { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .ticket-items th, .ticket-items td { padding: 4px 0; font-size: 12px; }
+        .ticket-items th { border-bottom: 1.5px solid #000; text-transform: uppercase; }
+        .ticket-qty { width: 40px; text-align: center; }
+        .ticket-desc { text-align: left; padding-left: 5px; }
+        .ticket-price { width: 90px; text-align: right; }
+        .ticket-total-row { border-top: 2px solid #000; padding-top: 8px; margin-top: 8px; }
         .ticket-small { font-size: 11px; }
-        .ticket-msg { margin-top: 10px; border-top: 1px dashed #000; padding-top: 8px; text-align: center; font-weight: 700; }
-        @media print { @page { margin: 0; size: auto; } body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        .ticket-msg { margin-top: 15px; border-top: 1px dashed #000; padding-top: 10px; text-align: center; font-weight: 700; font-size: 14px; }
+        @media print { 
+            @page { margin: 0; size: 80mm auto; } 
+            body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
+        }
       </style>
     </head>
     <body onload="window.print();">
