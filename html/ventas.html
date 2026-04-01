@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ventas — Petro Chaco Criolla POS</title>
+  <title>Ventas - Petro Chaco Criolla POS</title>
 
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -48,7 +48,7 @@
   </div>
 
 
-  <!-- Todo tu contenido, como navbar y demás, puede ir aquí -->
+  <!-- Todo tu contenido, como navbar y demas, puede ir aqui -->
   <div id="contenidoPrincipal">
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -56,14 +56,14 @@
         <!-- Nombre del sistema -->
         <a class="navbar-brand fw-bold" href="ventas.html">Petro Chaco Criolla POS</a>
 
-        <!-- Botón de hamburguesa para responsive -->
+        <!-- Boton de hamburguesa para responsive -->
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
           <span class="navbar-toggler-icon"></span>
         </button>
 
         <!-- Opciones -->
         <div class="collapse navbar-collapse" id="navbarContent">
-          <!-- Enlaces de navegación -->
+          <!-- Enlaces de navegacion -->
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="clientesDropdown" role="button" data-bs-toggle="dropdown"
@@ -89,7 +89,7 @@
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle solo-admin" href="#" id="configDropdown" role="button"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-gear"></i> Configuración
+                <i class="bi bi-gear"></i> Configuracion
               </a>
               <ul class="dropdown-menu" aria-labelledby="configDropdown">
                 <li><a class="dropdown-item" href="usuario.html">
@@ -99,7 +99,7 @@
                     <i class="bi bi-box-seam"></i> Stock
                   </a></li>
                 <li><a class="dropdown-item" href="facturacion.html">
-                    <i class="bi bi-receipt"></i> Facturación
+                    <i class="bi bi-receipt"></i> Facturacion
                   </a></li>
               </ul>
             </li>
@@ -177,17 +177,17 @@
                 </tr>
               </thead>
               <tbody id="carritoTableBody">
-                <!-- Los items se cargan dinámicamente -->
+                <!-- Los items se cargan dinamicamente -->
               </tbody>
             </table>
           </div>
 
-          <!-- Total y botón cobrar -->
+          <!-- Total y boton cobrar -->
           <div class="mt-auto">
             <div class="alert alert-light border-primary text-primary fs-6 text-end animate__animated animate__pulse">
               <i class="bi bi-cash-coin"></i> Total: <strong id="totalPedido">0 Gs</strong>
             </div>
-            <!-- Botón que abre el modal -->
+            <!-- Boton que abre el modal -->
             <button class="btn btn-lg btn-success w-100" disabled id="btnCobrar" data-bs-toggle="modal"
               data-bs-target="#modalCobro">
               <i class="bi bi-wallet2"></i> Cobrar
@@ -210,7 +210,7 @@
           </div>
           <div class="col-md-6 text-center text-md-end">
             <span class="footer-text">
-              © 2025 Petro Chaco Criolla - Sistema POS
+              &copy; 2025 Petro Chaco Criolla - Sistema POS
             </span>
           </div>
         </div>
@@ -219,12 +219,12 @@
 
     <!-- Modal de Cobro -->
     <div class="modal fade" id="modalCobro" tabindex="-1" aria-labelledby="modalCobroLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg"> <!-- más ancho -->
+      <div class="modal-dialog modal-lg"> <!-- mas ancho -->
         <div class="modal-content">
           <form id="modalCobrarForm">
             <div class="modal-header">
               <h5 class="modal-title" id="modalCobroLabel">
-                <i class="bi bi-wallet2"></i> Cobro y Facturación
+                <i class="bi bi-wallet2"></i> Cobro y Facturacion
               </h5>
             </div>
             <div class="modal-body">
@@ -270,7 +270,7 @@
                     <label for="clienteRuc" class="form-label">
                       <i class="bi bi-card-text"></i> RUC / CI
                     </label>
-                    <input type="text" class="form-control" id="clienteRucCobro" placeholder="RUC o Cédula" required>
+                    <input type="text" class="form-control" id="clienteRucCobro" placeholder="RUC o Cedula" required>
                   </div>
 
                   <div class="mb-3">
@@ -284,18 +284,28 @@
 
                   <div class="mb-3">
                     <label for="clienteDireccion" class="form-label">
-                      <i class="bi bi-geo-alt"></i> Dirección
+                      <i class="bi bi-geo-alt"></i> Direccion
                     </label>
                     <input type="text" disabled class="form-control" id="clienteDireccionCobro"
-                      placeholder="Dirección del cliente">
+                      placeholder="Direccion del cliente">
                   </div>
 
                   <div class="mb-3">
                     <label for="clienteTelefono" class="form-label">
-                      <i class="bi bi-telephone"></i> Teléfono
+                      <i class="bi bi-telephone"></i> Telefono
                     </label>
                     <input type="text" disabled class="form-control" id="clienteTelefonoCobro"
-                      placeholder="Teléfono de contacto">
+                      placeholder="Telefono de contacto">
+                  </div>
+
+                  <div class="form-check form-switch mt-4">
+                    <input class="form-check-input" type="checkbox" id="emitirFacturaLegal">
+                    <label class="form-check-label fw-semibold" for="emitirFacturaLegal">
+                      Emitir factura legal
+                    </label>
+                    <div class="form-text">
+                      Si no se marca, se imprimira el ticket normal.
+                    </div>
                   </div>
                 </div>
               </div>
@@ -343,7 +353,7 @@
                   </div>
                   <div class="mb-3">
                     <label class="form-label">
-                      <i class="bi bi-telephone"></i> Teléfono
+                      <i class="bi bi-telephone"></i> Telefono
                     </label>
                     <input type="text" autocomplete="off" class="form-control" id="clienteTelefono"
                       name="clienteTelefono">
@@ -353,10 +363,10 @@
                 <div class="col-md-6">
                   <div class="mb-3">
                     <label class="form-label">
-                      <i class="bi bi-geo-alt"></i> Dirección
+                      <i class="bi bi-geo-alt"></i> Direccion
                     </label>
                     <textarea class="form-control" autocomplete="off" id="clienteDireccion" name="clienteDireccion"
-                      rows="3" placeholder="Ingrese la dirección completa del cliente"></textarea>
+                      rows="3" placeholder="Ingrese la direccion completa del cliente"></textarea>
                   </div>
                 </div>
               </div>
@@ -393,13 +403,13 @@
                 <tr>
                   <th><i class="bi bi-person"></i> Nombre</th>
                   <th><i class="bi bi-card-text"></i> RUC/CI</th>
-                  <th><i class="bi bi-telephone"></i> Teléfono</th>
-                  <th><i class="bi bi-geo-alt"></i> Dirección</th>
+                  <th><i class="bi bi-telephone"></i> Telefono</th>
+                  <th><i class="bi bi-geo-alt"></i> Direccion</th>
                   <th class="text-center"><i class="bi bi-gear"></i> Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                <!-- Los clientes se cargan dinámicamente con DataTables -->
+                <!-- Los clientes se cargan dinamicamente con DataTables -->
               </tbody>
             </table>
           </div>
@@ -411,7 +421,7 @@
       </div>
     </div>
 
-    <!-- Modal de aviso dinámico -->
+    <!-- Modal de aviso dinamico -->
     <div class="modal fade" id="modalAviso" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -419,7 +429,7 @@
             <h5 class="modal-title" id="modalAvisoTitulo"></h5>
           </div>
           <div class="modal-body" id="modalAvisoMensaje">
-            <!-- Mensaje dinámico -->
+            <!-- Mensaje dinamico -->
           </div>
         </div>
       </div>
@@ -432,7 +442,7 @@
     <div class="ticket-container" id="ticket-container">
       <div class="ticket-header ticket-center">
         <div class="ticket-bold">Petro Chaco Criolla</div>
-        <div class="ticket-small">Ruta N20° - Santiago, Misiones</div>
+        <div class="ticket-small">Ruta N20&deg; - Santiago, Misiones</div>
         <div class="ticket-small">Tel: 0984 000 000</div>
       </div>
 
@@ -446,7 +456,7 @@
         <thead>
           <tr>
             <th class="ticket-qty">Cant</th>
-            <th class="ticket-desc">Descripción</th>
+            <th class="ticket-desc">Descripcion</th>
             <th class="ticket-price">Subtotal</th>
           </tr>
         </thead>
@@ -479,12 +489,12 @@
       </div>
 
       <div class="ticket-msg" id="ticket-msg">
-        ¡Gracias por elegirnos! Vuelve pronto 🚗⛽
+        Gracias por elegirnos. Vuelve pronto.
       </div>
 
       <div class="ticket-center ticket-small" style="margin-top:6px;">
         <div>-----------------------------</div>
-        <div>¡Vuelva siempre!</div>
+        <div>Vuelva siempre.</div>
       </div>
     </div>
   </div>
@@ -512,7 +522,7 @@
       <!-- Datos Timbrado -->
       <div style="font-size:11px;margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;">
-          <span class="ticket-small ticket-bold">Timbrado N°:</span>
+          <span class="ticket-small ticket-bold">Timbrado N&deg;:</span>
           <span class="ticket-small" id="factura-timbrado">18426298</span>
         </div>
         <div style="display:flex;justify-content:space-between;">
@@ -520,7 +530,7 @@
           <span class="ticket-small" id="factura-vigencia">05/11/2025 - 30/11/2026</span>
         </div>
         <div style="display:flex;justify-content:space-between;">
-          <span class="ticket-small ticket-bold">Factura N°:</span>
+          <span class="ticket-small ticket-bold">Factura N&deg;:</span>
           <span class="ticket-small ticket-bold" id="factura-numero">002-002-0000001</span>
         </div>
         <div style="display:flex;justify-content:space-between;">
@@ -528,7 +538,7 @@
           <span class="ticket-small" id="factura-fecha">--/--/---- --:--</span>
         </div>
         <div style="display:flex;justify-content:space-between;">
-          <span class="ticket-small ticket-bold">Condición:</span>
+          <span class="ticket-small ticket-bold">Condicion:</span>
           <span class="ticket-small">CONTADO</span>
         </div>
       </div>
@@ -543,9 +553,9 @@
         <div><span class="ticket-small ticket-bold">Cliente:</span> <span id="factura-cliente-nombre">Consumidor
             Final</span></div>
         <div><span class="ticket-small ticket-bold">RUC/CI:</span> <span id="factura-cliente-ruc">0000000-0</span></div>
-        <div><span class="ticket-small ticket-bold">Dirección:</span> <span id="factura-cliente-direccion">-</span>
+        <div><span class="ticket-small ticket-bold">Direccion:</span> <span id="factura-cliente-direccion">-</span>
         </div>
-        <div><span class="ticket-small ticket-bold">Teléfono:</span> <span id="factura-cliente-telefono">-</span></div>
+        <div><span class="ticket-small ticket-bold">Telefono:</span> <span id="factura-cliente-telefono">-</span></div>
       </div>
 
       <!-- Separador -->
@@ -558,12 +568,12 @@
         <thead>
           <tr>
             <th class="ticket-qty">Cant</th>
-            <th class="ticket-desc">Descripción</th>
+            <th class="ticket-desc">Descripcion</th>
             <th class="ticket-price">Subtotal</th>
           </tr>
         </thead>
         <tbody id="factura-items-body">
-          <!-- filas dinámicas -->
+          <!-- filas dinamicas -->
         </tbody>
       </table>
 
@@ -624,7 +634,7 @@
       </div>
 
       <div class="ticket-center ticket-small" style="margin-top:6px;">
-        <div>¡Gracias por su compra!</div>
+        <div>Gracias por su compra.</div>
         <div>-----------------------------</div>
         <div>Sistema POS - Petro Chaco</div>
       </div>

@@ -786,6 +786,8 @@ document.getElementById("modalCobrarForm").addEventListener("submit", async (e) 
   if (clienteNombreCobro) clienteNombreCobro.value = '';
   if (clienteDireccionCobro) clienteDireccionCobro.value = '';
   if (clienteTelefonoCobro) clienteTelefonoCobro.value = '';
+  const emitirFacturaLegal = document.getElementById('emitirFacturaLegal');
+  if (emitirFacturaLegal) emitirFacturaLegal.checked = false;
 
   // Actualizar la vista del pedido (debe estar vacío)
   mostrarPedidoCargado();
